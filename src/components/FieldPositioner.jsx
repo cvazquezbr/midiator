@@ -367,20 +367,19 @@ const FieldPositioner = ({
       sx={{
         position: 'relative',
         background: backgroundValue,
-        width: '100%',
-        height: '100%',
         aspectRatio: aspectRatio,
+        width: '100%',
+        height: 'auto',
         maxWidth: '100%',
         maxHeight: '100%',
         border: '2px solid #ddd',
         borderRadius: 2,
         overflow: 'hidden',
-        margin: 'auto',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        display: 'block',
         objectFit: 'contain',
+        margin: 'auto',
       }}
+
       onTouchStart={handleContainerTouchStart}
       onTouchEnd={handleContainerTouchEnd}
     >

@@ -237,50 +237,83 @@ const PageEditor = ({
           </Box>
         </Box>
       </DialogTitle>
-      <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
+      <DialogContent
+        dividers
+        sx={{
+          p: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          flexGrow: 1,
+          minHeight: 0,
+        }}
+      >
         <Box
           sx={{
             flex: 1,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: 0,
+            flexDirection: 'row', // importante!
             minHeight: 0,
-            overflow: 'hidden',
-            position: 'relative',
+            minWidth: 0,
           }}
         >
+          {/* --- Preview central --- */}
           <Box
             sx={{
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              maxWidth: '100%',
-              maxHeight: '100%',
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              aspectRatio: aspectRatio || '1 / 1',
-              // Truque principal ↓
-              '& > *': {
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              },
+              minWidth: 0,
+              minHeight: 0,
+              overflow: 'hidden',
+              position: 'relative',
             }}
           >
-            <FieldPositioner
-              editorState={editorState}
-              setEditorState={setEditorState}
-              selectedField={selectedField}
-              setSelectedField={setSelectedField}
-              originalImageSize={originalImageSize}
-              onOpenHtmlEditor={handleOpenHtmlEditor}
-              currentPreviewIndex={0}
-            />
+            <Box
+              sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                aspectRatio: aspectRatio || '1 / 1',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                }}
+              >
+                <FieldPositioner
+                  editorState={editorState}
+                  setEditorState={setEditorState}
+                  selectedField={selectedField}
+                  setSelectedField={setSelectedField}
+                  originalImageSize={originalImageSize}
+                  onOpenHtmlEditor={handleOpenHtmlEditor}
+                  currentPreviewIndex={0}
+                />
+              </Box>
+            </Box>
           </Box>
+
+          {/* --- Painel lateral --- */}
           {!isMobile && (
-            <Box sx={{ flex: '0 0 320px', borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
+            <Box
+              sx={{
+                flex: '0 0 320px',
+                borderLeft: 1,
+                borderColor: 'divider',
+                overflowY: 'auto',
+              }}
+            >
               <FormattingPanel
                 editorState={editorState}
                 setEditorState={setEditorState}
@@ -298,6 +331,7 @@ const PageEditor = ({
           )}
         </Box>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={handleSave} color="primary" variant="contained">Salvar Edições</Button>
