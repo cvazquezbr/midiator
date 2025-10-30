@@ -98,13 +98,28 @@ export async function publishPost(fetch, post, accessToken) {
     }
 
     const videoUrn = post.post_content?.video;
-    const payload = {
-        author: authorUrn,
-        content: postText,
-        images: imageUrns,
-        video: videoUrn,
-        title: post.post_content?.titulo || 'Video Post'
-    };
+
+    // A estrutura do payload muda se tivermos múltiplas imagens.
+    let payload;
+    if (imageUrns.length > 1) {
+        payload = {
+            author: authorUrn,
+            content: postText,
+            multiImage: imageUrns.map(urn => ({ id: urn })),
+            title: post.post_content?.titulo || 'Multi-Image Post'
+        };
+    } else {
+        payload = {
+            author: authorUrn,
+            content: postText,
+            // Se houver apenas uma imagem, envie-a no campo 'media' para compatibilidade.
+            // O proxy espera 'images' como um array, então enviamos um array com um elemento.
+            images: imageUrns.length === 1 ? imageUrns : [],
+            video: videoUrn,
+            title: post.post_content?.titulo || 'Post'
+        };
+    }
+
 
     return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
