@@ -181,7 +181,7 @@ async function handleGetProfile(fetch, request, response) {
         const data = await linkedinResponse.json();
         return response.status(linkedinResponse.status).json(data);
     } catch (error) {
-        console.error('Error during proxied getProfile:', error);
+        console.error('Error during proxied getProfile:', error.message);
         return response.status(500).json({ error: 'Internal Server Error' });
     }
 }
@@ -211,6 +211,13 @@ async function handleCreatePost(fetch, request, response) {
         // Make the function more flexible by handling both formats from the UI and the scheduler.
         let { targetId, targetType, content, images, video, title, author } = payload;
         let authorUrn;
+
+        if (payload.image1) {
+            images = Object.keys(payload)
+                .filter(key => key.startsWith('image'))
+                .sort()
+                .map(key => payload[key]);
+        }
 
         if (author) {
             // Format sent by the scheduler, which already has the full URN.
@@ -248,12 +255,21 @@ async function handleCreatePost(fetch, request, response) {
                 }
             };
         } else if (images && images.length > 0) {
-            // Multi-image post
-            postData.content = {
-                multiImage: {
-                    images: images.map(urn => ({ id: urn }))
-                }
-            };
+            if (images.length === 1) {
+                // Single-image post
+                postData.content = {
+                    media: {
+                        id: images[0]
+                    }
+                };
+            } else {
+                // Multi-image post
+                postData.content = {
+                    multiImage: {
+                        images: images.map(urn => ({ id: urn }))
+                    }
+                };
+            }
         }
 
         console.log('[DEBUG] Calling handleGenericPost with new Posts API payload:', JSON.stringify(postData, null, 2));
