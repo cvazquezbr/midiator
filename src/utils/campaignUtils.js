@@ -71,13 +71,9 @@ export function getTranslatableFields(campaign) {
       addField('cta', post.cta, post);
       addField('titulo', post.titulo, post);
       addField('conteudo', post.conteudo, post);
-      if (Array.isArray(post.hashtags_sugeridas)) {
-        post.hashtags_sugeridas.forEach((tag, index) => {
-            if (typeof tag === 'string' && tag.trim()) {
-                // For arrays of strings, the key is the index
-                fields.push({ key: String(index), value: tag, owner: post.hashtags_sugeridas });
-            }
-        });
+      if (Array.isArray(post.hashtags_sugeridas) && post.hashtags_sugeridas.length > 0) {
+        // Group hashtags and add as a single field
+        fields.push({ key: 'hashtags_sugeridas', value: post.hashtags_sugeridas, owner: post });
       }
     });
   }
@@ -90,12 +86,9 @@ export function getTranslatableFields(campaign) {
     addField('conteudo', content.conteudo, content);
     addField('conteudoMedio', content.conteudoMedio, content);
     addField('conteudoPequeno', content.conteudoPequeno, content);
-    if (Array.isArray(content.hashtags)) {
-        content.hashtags.forEach((tag, index) => {
-            if (typeof tag === 'string' && tag.trim()) {
-                fields.push({ key: String(index), value: tag, owner: content.hashtags });
-            }
-        });
+    if (Array.isArray(content.hashtags) && content.hashtags.length > 0) {
+       // Group hashtags and add as a single field
+       fields.push({ key: 'hashtags', value: content.hashtags, owner: content });
     }
   }
 

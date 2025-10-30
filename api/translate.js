@@ -40,6 +40,17 @@ async function handler(req, res) {
     // URL da API Gemini atualizada
     const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${geminiModel}:generateContent`;
 
+    // Handle both string and array of strings
+    const isArray = Array.isArray(text);
+    let prompt;
+
+    if (isArray) {
+      const jsonText = JSON.stringify(text);
+      prompt = `Translate each string in the following JSON array to ${targetLanguage}. Return ONLY a valid JSON array string with the translated strings in the same order. Do not include any other text or formatting. Input: ${jsonText}`;
+    } else {
+      prompt = `Translate the following text to ${targetLanguage}, preserving markdown formatting: "${text}"`;
+    }
+
     const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
@@ -49,7 +60,7 @@ async function handler(req, res) {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Translate the following text to ${targetLanguage}, preserving markdown formatting: "${text}"`
+            text: prompt
           }]
         }]
       }),
@@ -71,7 +82,25 @@ async function handler(req, res) {
         return res.status(500).json({ error: 'Invalid response structure from translation service.' });
     }
 
-    const translatedText = data.candidates[0].content.parts[0].text;
+    let translatedText = data.candidates[0].content.parts[0].text;
+
+    if (isArray) {
+      try {
+        // The response should be a string that is a valid JSON array.
+        translatedText = JSON.parse(translatedText);
+      } catch (e) {
+        console.error('Failed to parse translated array from Gemini:', translatedText);
+        // Fallback or error handling: maybe try to clean the string
+        const cleanedText = translatedText.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+        try {
+          translatedText = JSON.parse(cleanedText);
+        } catch (e2) {
+           console.error('Failed to parse cleaned translated array from Gemini:', cleanedText);
+           return res.status(500).json({ error: 'Translation service returned an invalid array format.' });
+        }
+      }
+    }
+
     res.status(200).json({ translatedText });
   } catch (error) {
     console.error('Error calling Gemini API:', error);

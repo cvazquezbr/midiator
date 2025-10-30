@@ -182,9 +182,17 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
   const handleManualTextChange = (index, newText) => {
     const field = translatableFields[index];
-    setTranslatedFields(prev => ({ ...prev, [index]: newText }));
+    const isArray = Array.isArray(field.value);
 
-    field.owner[field.key] = newText;
+    if (isArray) {
+        const newArray = newText.split(',').map(s => s.trim());
+        setTranslatedFields(prev => ({ ...prev, [index]: newArray }));
+        field.owner[field.key] = newArray;
+    } else {
+        setTranslatedFields(prev => ({ ...prev, [index]: newText }));
+        field.owner[field.key] = newText;
+    }
+
     setClonedCampaign(prev => ({ ...prev }));
   };
 
@@ -255,13 +263,17 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
                       secondary={
                         <Box>
                           <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
-                            {field.value}
+                            {Array.isArray(field.value) ? field.value.join(', ') : field.value}
                           </Typography>
                           <TextField
                             fullWidth
                             variant="outlined"
                             size="small"
-                            value={translatedFields[index] || ''}
+                            value={
+                                translatedFields[index] !== undefined
+                                    ? (Array.isArray(translatedFields[index]) ? translatedFields[index].join(', ') : translatedFields[index])
+                                    : ''
+                            }
                             onChange={(e) => handleManualTextChange(index, e.target.value)}
                             sx={{ mt: 1 }}
                             placeholder={status === 'translating' ? 'Traduzindo...' : ''}
