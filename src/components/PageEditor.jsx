@@ -129,9 +129,17 @@ const PageEditor = ({
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
   const previewContainerRef = useRef(null);
 
+  // No PageEditor.jsx, atualize o useEffect:
+
   useEffect(() => {
+    console.log('%c[PREVIEW SIZE] useEffect triggered', 'color: blue; font-weight: bold', { aspectRatio, open });
+
     const updatePreviewSize = () => {
       if (!previewContainerRef.current || !aspectRatio) {
+        console.log('%c[PREVIEW SIZE] Skipped - no ref or aspectRatio', 'color: orange', {
+          hasRef: !!previewContainerRef.current,
+          aspectRatio
+        });
         return;
       }
 
@@ -139,27 +147,46 @@ const PageEditor = ({
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
+      console.log('%c[PREVIEW SIZE] Container dimensions:', 'color: green', {
+        containerWidth,
+        containerHeight
+      });
+
       const ratioStr = aspectRatio.toString().replace(/\s/g, '');
       const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
 
-      if (!w || !h) return;
+      if (!w || !h) {
+        console.error('[PREVIEW SIZE] Invalid aspect ratio:', aspectRatio);
+        return;
+      }
 
       const targetRatio = w / h;
       const containerRatio = containerWidth / containerHeight;
 
-      // Calcula as dimensões exatas em pixels
+      console.log('%c[PREVIEW SIZE] Ratios:', 'color: purple', {
+        targetRatio,
+        containerRatio,
+        willLimitBy: containerRatio > targetRatio ? 'HEIGHT' : 'WIDTH'
+      });
+
       if (containerRatio > targetRatio) {
-        // Limita pela altura
         const calculatedHeight = containerHeight;
         const calculatedWidth = calculatedHeight * targetRatio;
+        console.log('%c[PREVIEW SIZE] Setting dimensions (HEIGHT limited):', 'color: red; font-weight: bold', {
+          width: `${calculatedWidth}px`,
+          height: `${calculatedHeight}px`
+        });
         setPreviewSize({
           width: `${calculatedWidth}px`,
           height: `${calculatedHeight}px`
         });
       } else {
-        // Limita pela largura
         const calculatedWidth = containerWidth;
         const calculatedHeight = calculatedWidth / targetRatio;
+        console.log('%c[PREVIEW SIZE] Setting dimensions (WIDTH limited):', 'color: red; font-weight: bold', {
+          width: `${calculatedWidth}px`,
+          height: `${calculatedHeight}px`
+        });
         setPreviewSize({
           width: `${calculatedWidth}px`,
           height: `${calculatedHeight}px`
@@ -168,7 +195,10 @@ const PageEditor = ({
     };
 
     const timeoutId = setTimeout(updatePreviewSize, 100);
-    const resizeObserver = new ResizeObserver(updatePreviewSize);
+    const resizeObserver = new ResizeObserver(() => {
+      console.log('%c[PREVIEW SIZE] ResizeObserver triggered', 'color: cyan');
+      updatePreviewSize();
+    });
 
     if (previewContainerRef.current) {
       resizeObserver.observe(previewContainerRef.current);
@@ -179,7 +209,7 @@ const PageEditor = ({
       resizeObserver.disconnect();
     };
   }, [aspectRatio, open]);
-
+  
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
 
