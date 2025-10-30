@@ -421,6 +421,37 @@ function HomePage() {
     }
 };
 
+  const handleLoadClonedCampaign = (clonedCampaign) => {
+    toast.info(`Carregando "${clonedCampaign.name}" como uma nova campanha...`);
+    setIsLoading(true);
+
+    try {
+      // The cloned campaign is not in the database yet, so there's no ID.
+      // We directly apply its state to the editor.
+      const campaignToApply = {
+        // No ID or Name, as it's not saved yet. The name is in campaign_data.
+        campaign_data: clonedCampaign.campaign_data || {},
+        pendingAssets: clonedCampaign.pendingAssets || {},
+      };
+
+      applyLoadedCampaign(campaignToApply);
+
+      // If the cloned campaign has CSV data, set the input method to manual.
+      if (clonedCampaign.campaign_data?.csvData?.length > 0) {
+        setInputMethod('manual');
+      } else {
+        setInputMethod('ia'); // Default to IA if no data
+      }
+
+      toast.success(`Campanha clonada carregada. Salve para criar a nova campanha.`);
+      setActiveStep(2); // Go to "Posts Curtos" step to review/edit
+    } catch (err) {
+      toast.error(`Falha ao carregar campanha clonada: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const parseCsvFile = async (file) => {
     if (!file) return;
     try {
@@ -895,7 +926,7 @@ function HomePage() {
           <Toolbar />
           {currentView === 'campaigns' && (
             <>
-              {activeStep === 0 && campaignsView === 'my-campaigns' && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, autorList, personaList }} />}
+              {activeStep === 0 && campaignsView === 'my-campaigns' && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, onCloneComplete: handleLoadClonedCampaign, autorList, personaList }} />}
               {activeStep === 0 && campaignsView === 'shared-campaigns' && <SharedCampaignsStep {...{ onEditCampaign: handleEditCampaign }} />}
               {activeStep === 1 && <Campaign {...{ steps, activeStep, ...campaignState, setCampaignState, isGeneratingCampaign, campaignGenerationFailed, generationError, handleGenerateCampaignContent, handleResetCampaign, handleExportHtml: () => exportHtml(memorialCampaignData), editingField, setEditingField: (field) => { setEditingField(field); setIsHtmlField(field === 'conteudoFormatado'); }, isGeneratingSummaryMedio, handleGenerateSummary, isGeneratingSummaryPequeno, isGeneratingConteudoFormatado, handleGenerateFormattedContent, isGeneratingFollowup: campaignState.isGeneratingFollowup, handleGenerateFollowupPosts, isGeneratingImage, handleGenerateImage, onEditFollowup: handleEditFollowup, palettes, autorList, selectedAutorForCampaign, personaList, selectedPersonaForCampaign, onRequestNewAutor: handleRequestNewAutor, onRequestNewPersona: handleRequestNewPersona, paletteId: campaignState.paletteId, customPalette: campaignState.customPalette }} />}
               {activeStep === 2 && <PostsCurtosStep {...{ steps, inputMethod, setInputMethod, handleDrop, handleDragOver, fileInputRef, handleCSVUpload, downloadExampleCsv, setShowSetupModal, promptNumRecords: campaignState.promptNumRecords, setPromptNumRecords: (v) => setCampaignState({ promptNumRecords: v }), promptText: campaignState.promptText, setPromptText: (v) => setCampaignState({ promptText: v }), handleGenerateIAContent, isGenerating, csvData, csvHeaders, onDadosAlterados: handleDadosAlterados, darkMode, exportCsv: () => exportCsv(csvData, csvHeaders), aspectRatio, setAspectRatio: (v) => setCampaignState({ aspectRatio: v }), sidebarOpen }} />}
