@@ -131,51 +131,84 @@ const PageEditor = ({
 
   // No PageEditor.jsx, atualize o useEffect:
 
- useEffect(() => {
-  const updatePreviewSize = () => {
-    if (!previewContainerRef.current || !aspectRatio) return;
+  useEffect(() => {
+    console.log('%c[PREVIEW SIZE] useEffect triggered', 'color: blue; font-weight: bold', { aspectRatio, open });
 
-    const container = previewContainerRef.current;
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
+    const updatePreviewSize = () => {
+      if (!previewContainerRef.current || !aspectRatio) {
+        console.log('%c[PREVIEW SIZE] Skipped - no ref or aspectRatio', 'color: orange', {
+          hasRef: !!previewContainerRef.current,
+          aspectRatio
+        });
+        return;
+      }
 
-    const ratioStr = aspectRatio.toString().replace(/\s/g, '');
-    const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
+      const container = previewContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
 
-    if (!w || !h) return;
-
-    const targetRatio = w / h;
-    const containerRatio = containerWidth / containerHeight;
-
-    if (containerRatio > targetRatio) {
-      const calculatedHeight = containerHeight;
-      const calculatedWidth = calculatedHeight * targetRatio;
-      setPreviewSize({
-        width: `${calculatedWidth}px`,
-        height: `${calculatedHeight}px`
+      console.log('%c[PREVIEW SIZE] Container dimensions:', 'color: green', {
+        containerWidth,
+        containerHeight
       });
-    } else {
-      const calculatedWidth = containerWidth;
-      const calculatedHeight = calculatedWidth / targetRatio;
-      setPreviewSize({
-        width: `${calculatedWidth}px`,
-        height: `${calculatedHeight}px`
+
+      const ratioStr = aspectRatio.toString().replace(/\s/g, '');
+      const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
+
+      if (!w || !h) {
+        console.error('[PREVIEW SIZE] Invalid aspect ratio:', aspectRatio);
+        return;
+      }
+
+      const targetRatio = w / h;
+
+      // Calcula ambas as possibilidades
+      const widthBasedHeight = containerWidth / targetRatio;
+      const heightBasedWidth = containerHeight * targetRatio;
+
+      let finalWidth, finalHeight;
+
+      // Escolhe o que cabe melhor
+      if (widthBasedHeight <= containerHeight) {
+        // Cabe limitando pela largura
+        finalWidth = containerWidth;
+        finalHeight = widthBasedHeight;
+        console.log('%c[PREVIEW SIZE] Limited by WIDTH', 'color: blue; font-weight: bold');
+      } else {
+        // Não cabe pela largura, limita pela altura
+        finalWidth = heightBasedWidth;
+        finalHeight = containerHeight;
+        console.log('%c[PREVIEW SIZE] Limited by HEIGHT', 'color: red; font-weight: bold');
+      }
+
+      console.log('%c[PREVIEW SIZE] Final dimensions:', 'color: green; font-weight: bold', {
+        width: `${finalWidth}px`,
+        height: `${finalHeight}px`,
+        ratio: finalWidth / finalHeight,
+        targetRatio
       });
+
+      setPreviewSize({
+        width: `${finalWidth}px`,
+        height: `${finalHeight}px`
+      });
+    };
+
+    const timeoutId = setTimeout(updatePreviewSize, 100);
+    const resizeObserver = new ResizeObserver(() => {
+      console.log('%c[PREVIEW SIZE] ResizeObserver triggered', 'color: cyan');
+      updatePreviewSize();
+    });
+
+    if (previewContainerRef.current) {
+      resizeObserver.observe(previewContainerRef.current);
     }
-  };
 
-  const timeoutId = setTimeout(updatePreviewSize, 100);
-  const resizeObserver = new ResizeObserver(updatePreviewSize);
-  
-  if (previewContainerRef.current) {
-    resizeObserver.observe(previewContainerRef.current);
-  }
-
-  return () => {
-    clearTimeout(timeoutId);
-    resizeObserver.disconnect();
-  };
-}, [aspectRatio, open]);
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [aspectRatio, open]);
 
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
