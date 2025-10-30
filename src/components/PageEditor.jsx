@@ -131,85 +131,52 @@ const PageEditor = ({
 
   // No PageEditor.jsx, atualize o useEffect:
 
-  useEffect(() => {
-    console.log('%c[PREVIEW SIZE] useEffect triggered', 'color: blue; font-weight: bold', { aspectRatio, open });
+ useEffect(() => {
+  const updatePreviewSize = () => {
+    if (!previewContainerRef.current || !aspectRatio) return;
 
-    const updatePreviewSize = () => {
-      if (!previewContainerRef.current || !aspectRatio) {
-        console.log('%c[PREVIEW SIZE] Skipped - no ref or aspectRatio', 'color: orange', {
-          hasRef: !!previewContainerRef.current,
-          aspectRatio
-        });
-        return;
-      }
+    const container = previewContainerRef.current;
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
 
-      const container = previewContainerRef.current;
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
+    const ratioStr = aspectRatio.toString().replace(/\s/g, '');
+    const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
 
-      console.log('%c[PREVIEW SIZE] Container dimensions:', 'color: green', {
-        containerWidth,
-        containerHeight
+    if (!w || !h) return;
+
+    const targetRatio = w / h;
+    const containerRatio = containerWidth / containerHeight;
+
+    if (containerRatio > targetRatio) {
+      const calculatedHeight = containerHeight;
+      const calculatedWidth = calculatedHeight * targetRatio;
+      setPreviewSize({
+        width: `${calculatedWidth}px`,
+        height: `${calculatedHeight}px`
       });
-
-      const ratioStr = aspectRatio.toString().replace(/\s/g, '');
-      const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
-
-      if (!w || !h) {
-        console.error('[PREVIEW SIZE] Invalid aspect ratio:', aspectRatio);
-        return;
-      }
-
-      const targetRatio = w / h;
-      const containerRatio = containerWidth / containerHeight;
-
-      console.log('%c[PREVIEW SIZE] Ratios:', 'color: purple', {
-        targetRatio,
-        containerRatio,
-        willLimitBy: containerRatio > targetRatio ? 'HEIGHT' : 'WIDTH'
+    } else {
+      const calculatedWidth = containerWidth;
+      const calculatedHeight = calculatedWidth / targetRatio;
+      setPreviewSize({
+        width: `${calculatedWidth}px`,
+        height: `${calculatedHeight}px`
       });
-
-      if (containerRatio > targetRatio) {
-        const calculatedHeight = containerHeight;
-        const calculatedWidth = calculatedHeight * targetRatio;
-        console.log('%c[PREVIEW SIZE] Setting dimensions (HEIGHT limited):', 'color: red; font-weight: bold', {
-          width: `${calculatedWidth}px`,
-          height: `${calculatedHeight}px`
-        });
-        setPreviewSize({
-          width: `${calculatedWidth}px`,
-          height: `${calculatedHeight}px`
-        });
-      } else {
-        const calculatedWidth = containerWidth;
-        const calculatedHeight = calculatedWidth / targetRatio;
-        console.log('%c[PREVIEW SIZE] Setting dimensions (WIDTH limited):', 'color: red; font-weight: bold', {
-          width: `${calculatedWidth}px`,
-          height: `${calculatedHeight}px`
-        });
-        setPreviewSize({
-          width: `${calculatedWidth}px`,
-          height: `${calculatedHeight}px`
-        });
-      }
-    };
-
-    const timeoutId = setTimeout(updatePreviewSize, 100);
-    const resizeObserver = new ResizeObserver(() => {
-      console.log('%c[PREVIEW SIZE] ResizeObserver triggered', 'color: cyan');
-      updatePreviewSize();
-    });
-
-    if (previewContainerRef.current) {
-      resizeObserver.observe(previewContainerRef.current);
     }
+  };
 
-    return () => {
-      clearTimeout(timeoutId);
-      resizeObserver.disconnect();
-    };
-  }, [aspectRatio, open]);
+  const timeoutId = setTimeout(updatePreviewSize, 100);
+  const resizeObserver = new ResizeObserver(updatePreviewSize);
   
+  if (previewContainerRef.current) {
+    resizeObserver.observe(previewContainerRef.current);
+  }
+
+  return () => {
+    clearTimeout(timeoutId);
+    resizeObserver.disconnect();
+  };
+}, [aspectRatio, open]);
+
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
 
