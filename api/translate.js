@@ -2,6 +2,8 @@ import fetch from 'node-fetch';
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function handler(req, res) {
   // O middleware withAuth já lidou com a autenticação.
   // req.user está disponível.
@@ -51,25 +53,42 @@ async function handler(req, res) {
       prompt = `Translate the following text to ${targetLanguage}, preserving markdown formatting: "${text}"`;
     }
 
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': geminiApiKey, // Enviar a chave da API no cabeçalho
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
+    let response;
+    let lastErrorBody;
+    const maxRetries = 4;
+
+    for (let i = 0; i < maxRetries; i++) {
+      response = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiApiKey, // Enviar a chave da API no cabeçalho
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
           }]
-        }]
-      }),
-    });
+        }),
+      });
+
+      if (response.status !== 429) {
+        break; // Sai do loop se a resposta não for 429
+      }
+
+      lastErrorBody = await response.json().catch(() => response.text());
+      const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s, 8s
+      console.log(`Gemini API rate limit exceeded. Retrying in ${delay}ms...`);
+      await sleep(delay);
+    }
+
 
     if (!response.ok) {
-      const errorBody = await response.json().catch(() => response.text());
+      // Se o último status foi 429, usamos o lastErrorBody que salvamos.
+      // Caso contrário, lemos o corpo da resposta atual.
+      const errorBody = response.status === 429 ? lastErrorBody : await response.json().catch(() => response.text());
       console.error('Gemini API request failed:', errorBody);
-      // Retornar a mensagem de erro da API Gemini se disponível
       const errorMessage = errorBody?.error?.message || JSON.stringify(errorBody);
       return res.status(response.status).json({ error: `Gemini API request failed: ${errorMessage}` });
     }
