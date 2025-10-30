@@ -831,9 +831,9 @@ const Campaign = ({
                             </Grid>
                             {imageTabError && <Grid item xs={12}><Alert severity="error">{imageTabError}</Alert></Grid>}
                             {generatedPageUrl && !isGeneratingImage && (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mt: 2, width: '100%', height: 'calc(100vh - 400px)', minHeight: '300px' }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
-                                        <Typography variant="h6">Página Gerada</Typography>
+                                <Box sx={{ maxWidth: '600px', margin: 'auto' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
+                                        <Typography variant="h6" gutterBottom>Página Gerada</Typography>
                                         <Box>
                                             <Button onClick={handleSaveToDrive} disabled={isSavingToDrive || isGeneratingImage} startIcon={<SaveIcon />}>
                                                 {isSavingToDrive ? 'Salvando...' : 'Salvar na Coleção'}
@@ -848,9 +848,7 @@ const Campaign = ({
                                             </Button>
                                         </Box>
                                     </Box>
-                                    <Box sx={{ flexGrow: 1, width: '100%', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
-                                        <img src={generatedPageUrl} alt="Página gerada pela IA" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }} />
-                                    </Box>
+                                    <img src={generatedPageUrl} alt="Página gerada pela IA" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
                                 </Box>
                             )}
                             {isGeneratingImage && (
