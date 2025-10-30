@@ -267,6 +267,7 @@ const PageEditor = ({
                 />
           </Box>
         )}
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
