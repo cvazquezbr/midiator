@@ -594,7 +594,10 @@ const Publisher = ({
             // Salva o texto final, já formatado, para garantir consistência.
             fullText: content,
             // Mantém as imagens associadas.
-            images: permanentImageUrls,
+            ...permanentImageUrls.reduce((acc, url, index) => {
+                acc[`image${index + 1}`] = url;
+                return acc;
+            }, {}),
             // Mantém o título para exibição na lista de agendamentos.
             titulo: campaignContent?.titulo || 'Post Agendado',
         },
