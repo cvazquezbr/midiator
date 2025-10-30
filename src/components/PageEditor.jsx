@@ -238,7 +238,7 @@ const PageEditor = ({
         </Box>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'row', height: '100%' }}>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, width: '100%', height: '100%' }}>
           <FieldPositioner
             editorState={editorState}
             setEditorState={setEditorState}
