@@ -24,7 +24,7 @@ import CloneCampaignModal from './CloneCampaignModal';
 import { traverseState } from '../utils/stateTraversal';
 import { deserializeCampaignData } from '../utils/campaignState.js';
 
-const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
+const MyCampaignsStep = ({ onEditCampaign, onCreateNew, onCloneComplete }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -75,7 +75,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
       campaign_data: finalState,
       pendingAssets: newlyCreatedAssets,
     };
-    onEditCampaign(rehydratedCampaign);
+    onCloneComplete(rehydratedCampaign);
   };
 
   useEffect(() => {
