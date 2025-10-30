@@ -1,26 +1,22 @@
+/* Default to single column */
 .grid-sizer,
 .grid-item {
-  width: 33.333%;
+  width: 100%;
   padding: 8px;
 }
 
-@media (min-width: 1200px) {
-  .grid-sizer,
-  .grid-item {
-    width: 25%;
-  }
-}
-
-@media (max-width: 960px) {
+/* 2 columns for small screens and up */
+@media (min-width: 600px) {
   .grid-sizer,
   .grid-item {
     width: 50%;
   }
 }
 
-@media (max-width: 600px) {
+/* 4 columns for medium screens and up */
+@media (min-width: 900px) {
   .grid-sizer,
   .grid-item {
-    width: 100%;
+    width: 25%;
   }
 }
