@@ -126,6 +126,43 @@ const PageEditor = ({
     prevImagesRef.current = currentImages;
   }, [editorState?.pageTemplate?.images]);
 
+  const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
+  const previewContainerRef = useRef(null);
+
+  useEffect(() => {
+    const updatePreviewSize = () => {
+      if (!previewContainerRef.current || !aspectRatio) return;
+
+      const container = previewContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      // Parse aspect ratio (ex: "16:9" ou "16 / 9")
+      const [w, h] = aspectRatio.toString().split(/[:/]/).map(n => parseFloat(n.trim()));
+      const targetRatio = w / h;
+      const containerRatio = containerWidth / containerHeight;
+
+      // Decide qual dimensão usar como base
+      if (containerRatio > targetRatio) {
+        // Container é mais largo - limita pela altura
+        setPreviewSize({ width: 'auto', height: '100%' });
+      } else {
+        // Container é mais alto - limita pela largura
+        setPreviewSize({ width: '100%', height: 'auto' });
+      }
+    };
+
+    updatePreviewSize();
+
+    // Atualiza quando a janela redimensiona
+    const resizeObserver = new ResizeObserver(updatePreviewSize);
+    if (previewContainerRef.current) {
+      resizeObserver.observe(previewContainerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [aspectRatio]);
+
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
 
@@ -258,6 +295,7 @@ const PageEditor = ({
         >
           {/* --- Preview central --- */}
           <Box
+            ref={previewContainerRef}
             sx={{
               flex: 1,
               display: 'flex',
@@ -267,48 +305,27 @@ const PageEditor = ({
               minHeight: 0,
               overflow: 'hidden',
               position: 'relative',
+              padding: 2,
             }}
           >
             <Box
               sx={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 aspectRatio: aspectRatio || '1 / 1',
-                width: '100%',
-                height: 'auto',
+                width: previewSize.width,
+                height: previewSize.height,
                 maxWidth: '100%',
                 maxHeight: '100%',
-                flexShrink: 0,
-                '& > *': {
-                  width: '100%',
-                  height: 'auto',
-                  objectFit: 'contain',
-                },
               }}
             >
-              <Box
-                sx={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                }}
-              >
-                <FieldPositioner
-                  editorState={editorState}
-                  setEditorState={setEditorState}
-                  selectedField={selectedField}
-                  setSelectedField={setSelectedField}
-                  originalImageSize={originalImageSize}
-                  onOpenHtmlEditor={handleOpenHtmlEditor}
-                  currentPreviewIndex={0}
-                />
-              </Box>
+              <FieldPositioner
+                editorState={editorState}
+                setEditorState={setEditorState}
+                selectedField={selectedField}
+                setSelectedField={setSelectedField}
+                originalImageSize={originalImageSize}
+                onOpenHtmlEditor={handleOpenHtmlEditor}
+                currentPreviewIndex={0}
+              />
             </Box>
           </Box>
 
@@ -338,32 +355,34 @@ const PageEditor = ({
             </Box>
           )}
         </Box>
-      </DialogContent>
+      </DialogContent >
 
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={handleSave} color="primary" variant="contained">Salvar Edições</Button>
       </DialogActions>
-      {isMobile && (
-        <>
-          <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><Edit /></Fab>
-          <FormattingDrawer
-            open={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            editorState={editorState}
-            setEditorState={setEditorState}
-            selectedField={selectedField}
-            setSelectedField={setSelectedField}
-            onOpenHtmlEditor={handleOpenHtmlEditor}
-            showImageLoaders={true}
-            handleImageUpload={handleLocalImageUpload}
-            onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
-            onSaveToDrive={handleSaveToDriveClick}
-            campaignSwatches={campaignState.colors}
-            imageSwatches={imageSwatches}
-          />
-        </>
-      )}
+      {
+        isMobile && (
+          <>
+            <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><Edit /></Fab>
+            <FormattingDrawer
+              open={isDrawerOpen}
+              onClose={() => setIsDrawerOpen(false)}
+              editorState={editorState}
+              setEditorState={setEditorState}
+              selectedField={selectedField}
+              setSelectedField={setSelectedField}
+              onOpenHtmlEditor={handleOpenHtmlEditor}
+              showImageLoaders={true}
+              handleImageUpload={handleLocalImageUpload}
+              onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+              onSaveToDrive={handleSaveToDriveClick}
+              campaignSwatches={campaignState.colors}
+              imageSwatches={imageSwatches}
+            />
+          </>
+        )
+      }
       <GoogleDriveFolderPicker
         open={isDrivePickerOpen}
         onClose={() => setIsDrivePickerOpen(false)}
@@ -378,7 +397,7 @@ const PageEditor = ({
         onSave={handleSaveHtmlContent}
         onClose={() => setEditingField(null)}
       />
-    </Dialog>
+    </Dialog >
   );
 };
 
