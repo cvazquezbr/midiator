@@ -849,7 +849,7 @@ const Campaign = ({
                                         </Box>
                                     </Box>
                                     <Box sx={{ flexGrow: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                                        <img src={generatedPageUrl} alt="Página gerada pela IA" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }} />
+                                        <img src={generatedPageUrl} alt="Página gerada pela IA" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }} />
                                     </Box>
                                 </Box>
                             )}
