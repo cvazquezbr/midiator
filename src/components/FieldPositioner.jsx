@@ -138,17 +138,17 @@ const FieldPositioner = ({
       // Handle images
       const imageIndex = pageTemplate.images?.findIndex(img => img.id === id);
       if (imageIndex > -1) {
-          const newImages = [...pageTemplate.images];
-          newImages[imageIndex] = { ...newImages[imageIndex], ...newPosition };
-          return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages }};
+        const newImages = [...pageTemplate.images];
+        newImages[imageIndex] = { ...newImages[imageIndex], ...newPosition };
+        return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages } };
       }
 
       // Handle brand elements
       const brandElementIndex = (brandElements || []).findIndex(el => el.id === id);
       if (brandElementIndex > -1) {
-          const newBrandElements = [...brandElements];
-          newBrandElements[brandElementIndex] = { ...newBrandElements[brandElementIndex], ...newPosition };
-          return { ...prevState, brandElements: newBrandElements };
+        const newBrandElements = [...brandElements];
+        newBrandElements[brandElementIndex] = { ...newBrandElements[brandElementIndex], ...newPosition };
+        return { ...prevState, brandElements: newBrandElements };
       }
 
       return prevState;
@@ -183,17 +183,17 @@ const FieldPositioner = ({
       // Handle images
       const imageIndex = pageTemplate.images?.findIndex(img => img.id === id);
       if (imageIndex > -1) {
-          const newImages = [...pageTemplate.images];
-          newImages[imageIndex] = { ...newImages[imageIndex], ...newSize };
-          return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages }};
+        const newImages = [...pageTemplate.images];
+        newImages[imageIndex] = { ...newImages[imageIndex], ...newSize };
+        return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages } };
       }
 
       // Handle brand elements
       const brandElementIndex = (brandElements || []).findIndex(el => el.id === id);
       if (brandElementIndex > -1) {
-          const newBrandElements = [...brandElements];
-          newBrandElements[brandElementIndex] = { ...newBrandElements[brandElementIndex], ...newSize };
-          return { ...prevState, brandElements: newBrandElements };
+        const newBrandElements = [...brandElements];
+        newBrandElements[brandElementIndex] = { ...newBrandElements[brandElementIndex], ...newSize };
+        return { ...prevState, brandElements: newBrandElements };
       }
 
       return prevState;
@@ -232,7 +232,7 @@ const FieldPositioner = ({
     if (isInteracting) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
-      
+
       return () => {
         document.body.style.overflow = '';
         document.body.style.touchAction = '';
@@ -244,10 +244,10 @@ const FieldPositioner = ({
     const safeHeaders = Array.isArray(csvHeaders) ? csvHeaders : [];
     const styles = {};
     if (!fieldStyles) {
-        safeHeaders.forEach(header => {
-            styles[header] = { ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER };
-        });
-        return styles;
+      safeHeaders.forEach(header => {
+        styles[header] = { ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER };
+      });
+      return styles;
     }
     safeHeaders.forEach(header => {
       styles[header] = {
@@ -263,36 +263,36 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        const imageUrl = image.src || image.imageUrl;
-        if (image.visible === false || !imageUrl) return;
-        const elementType = image.type === 'background' ? 'image' : image.type;
+      const imageUrl = image.src || image.imageUrl;
+      if (image.visible === false || !imageUrl) return;
+      const elementType = image.type === 'background' ? 'image' : image.type;
 
-        elements.push({
-            id: image.id,
-            type: elementType,
-            position: { ...image, zIndex: Math.max(image.zIndex || 0, 0) },
-            style: { ...image.filters, ...image },
-            content: imageUrl,
-            rotation: image.rotation || 0,
-            fontScale: 1,
-            enableHtmlRendering: false,
-        });
+      elements.push({
+        id: image.id,
+        type: elementType,
+        position: { ...image, zIndex: Math.max(image.zIndex || 0, 0) },
+        style: { ...image.filters, ...image },
+        content: imageUrl,
+        rotation: image.rotation || 0,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      });
     });
 
     // Add cropbox if needed for the selected image.
     const selectedImage = isCropping && pageTemplate.images?.find(img => img.id === selectedField);
     if (selectedImage) {
-        elements.push({
-            id: '__cropbox__',
-            type: 'cropbox',
-            position: selectedImage.crop || { x: 10, y: 10, width: 80, height: 80 },
-            style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-            content: '',
-            zIndex: 1000, // Should be on top of everything
-            rotation: 0,
-            fontScale: 1,
-            enableHtmlRendering: false,
-        });
+      elements.push({
+        id: '__cropbox__',
+        type: 'cropbox',
+        position: selectedImage.crop || { x: 10, y: 10, width: 80, height: 80 },
+        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+        content: '',
+        zIndex: 1000, // Should be on top of everything
+        rotation: 0,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      });
     }
 
     const textElements = (csvHeaders || [])
@@ -347,11 +347,11 @@ const FieldPositioner = ({
     const stops = colors.join(', ');
 
     if (gradient.type === 'linear') {
-        const angle = gradient.angle || 90;
-        return `linear-gradient(${angle}deg, ${stops})`;
+      const angle = gradient.angle || 90;
+      return `linear-gradient(${angle}deg, ${stops})`;
     }
     if (gradient.type === 'radial') {
-        return `radial-gradient(circle, ${stops})`;
+      return `radial-gradient(circle, ${stops})`;
     }
     return 'none';
   };
@@ -373,6 +373,8 @@ const FieldPositioner = ({
         maxHeight: '100%',
         minWidth: 0,
         minHeight: 0,
+        width: '100%',
+        height: '100%',
         border: '2px solid #ddd',
         borderRadius: 2,
         overflow: 'hidden',

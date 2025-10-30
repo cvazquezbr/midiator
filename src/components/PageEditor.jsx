@@ -125,16 +125,16 @@ const PageEditor = ({
     }
     prevImagesRef.current = currentImages;
   }, [editorState?.pageTemplate?.images]);
-  
+
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
 
   const handlePasteStyle = () => {
     pasteStyleFromClipboard((pastedData) => {
-        setEditorState(prev => ({
-            ...prev,
-            ...pastedData,
-        }));
+      setEditorState(prev => ({
+        ...prev,
+        ...pastedData,
+      }));
     });
   };
 
@@ -214,13 +214,13 @@ const PageEditor = ({
 
   const handleSaveHtmlContent = (newContent) => {
     if (editorState.csvData && editingField) {
-        setEditorState(prev => {
-            const newCsvData = [...prev.csvData];
-            if (newCsvData[0]) {
-                newCsvData[0] = { ...newCsvData[0], [editingField]: newContent };
-            }
-            return { ...prev, csvData: newCsvData };
-        });
+      setEditorState(prev => {
+        const newCsvData = [...prev.csvData];
+        if (newCsvData[0]) {
+          newCsvData[0] = { ...newCsvData[0], [editingField]: newContent };
+        }
+        return { ...prev, csvData: newCsvData };
+      });
     }
     setEditingField(null);
   };
@@ -238,35 +238,46 @@ const PageEditor = ({
         </Box>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0 }}>
-          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, minWidth: 0, minHeight: 0, overflow: 'auto' }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', height: '100%', minHeight: 0 }}>
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              minWidth: 0,
+              minHeight: 0,
+              overflow: 'hidden',
+            }}
+          >
             <FieldPositioner
               editorState={editorState}
               setEditorState={setEditorState}
-            selectedField={selectedField}
-            setSelectedField={setSelectedField}
-            originalImageSize={originalImageSize}
-            onOpenHtmlEditor={handleOpenHtmlEditor}
-            currentPreviewIndex={0}
-          />
-        </Box>
-        {!isMobile && (
-          <Box sx={{ flex: '0 0 320px', borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
-            <FormattingPanel
-              editorState={editorState}
-              setEditorState={setEditorState}
-                  selectedField={selectedField}
-                  setSelectedField={setSelectedField}
-                  onOpenHtmlEditor={handleOpenHtmlEditor}
-                  showImageLoaders={true}
-                  handleImageUpload={handleLocalImageUpload}
-                  onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
-                  onSaveToDrive={handleSaveToDriveClick}
-                  campaignSwatches={campaignState.colors}
-                  imageSwatches={imageSwatches}
-                />
+              selectedField={selectedField}
+              setSelectedField={setSelectedField}
+              originalImageSize={originalImageSize}
+              onOpenHtmlEditor={handleOpenHtmlEditor}
+              currentPreviewIndex={0}
+            />
           </Box>
-        )}
+          {!isMobile && (
+            <Box sx={{ flex: '0 0 320px', borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
+              <FormattingPanel
+                editorState={editorState}
+                setEditorState={setEditorState}
+                selectedField={selectedField}
+                setSelectedField={setSelectedField}
+                onOpenHtmlEditor={handleOpenHtmlEditor}
+                showImageLoaders={true}
+                handleImageUpload={handleLocalImageUpload}
+                onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                onSaveToDrive={handleSaveToDriveClick}
+                campaignSwatches={campaignState.colors}
+                imageSwatches={imageSwatches}
+              />
+            </Box>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>
