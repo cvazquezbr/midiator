@@ -76,7 +76,7 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
 function HomePage() {
-  const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
+  const { user, loading, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
   const { campaignId } = useParams();
   const navigate = useNavigate();
@@ -242,12 +242,12 @@ function HomePage() {
   const fetchPalettesForCampaign = useCallback(() => getPalettes().then(setPalettes).catch(err => toast.error('Could not load palettes.')), []);
 
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       fetchPersonasForCampaign();
       fetchAutoresForCampaign();
       fetchPalettesForCampaign();
     }
-  }, [user, fetchPersonasForCampaign, fetchAutoresForCampaign, fetchPalettesForCampaign]);
+  }, [loading, user, fetchPersonasForCampaign, fetchAutoresForCampaign, fetchPalettesForCampaign]);
 
   useEffect(() => {
     const loadInitialData = async () => {
