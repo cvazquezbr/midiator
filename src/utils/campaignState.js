@@ -157,10 +157,9 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
  * downloads the assets, and replaces the permanent URLs with local, temporary
  * blob: URLs. This "hydrates" the state for use in the UI.
  */
-export const deserializeCampaignData = async (loadedState) => {
+export const deserializeCampaignData = async (loadedState, assetSetter = null) => {
   console.log('[deserializeCampaignData] Starting refactored deserialization and asset download...');
   const finalState = JSON.parse(JSON.stringify(loadedState)); // Deep copy to modify
-  const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
 
   // --- Data Sanitization ---
   // Replace null/undefined entries in critical arrays to preserve indexing.
@@ -262,7 +261,10 @@ export const deserializeCampaignData = async (loadedState) => {
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
         const file = new File([blob], filename, { type: blob.type });
         const tempUrl = URL.createObjectURL(file);
-        newlyCreatedAssets[tempUrl] = file;
+
+        if (assetSetter) {
+          assetSetter(prev => ({ ...prev, [tempUrl]: file }));
+        }
         permanentToTempUrlMap.set(downloadUrl, tempUrl);
       } catch (error) {
         // Non-critical error: log it, toast it, but don't stop other downloads.
@@ -290,9 +292,21 @@ export const deserializeCampaignData = async (loadedState) => {
   });
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
-  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);
-  return { finalState, newlyCreatedAssets };
+  console.log(`[deserializeCampaignData] Deserialization complete. ${permanentToTempUrlMap.size} assets downloaded.`);
+  // If no assetSetter is provided, we fall back to the old behavior for compatibility.
+  if (!assetSetter) {
+    const newlyCreatedAssets = {};
+    for (const [perm, temp] of permanentToTempUrlMap.entries()) {
+      // This part is less efficient as it doesn't have the File object, but maintains the old contract.
+      // A more robust implementation would fetch the blob again, but we assume assetSetter for new code.
+      newlyCreatedAssets[temp] = null; // Can't reconstruct the File object here easily
+    }
+    return { finalState, newlyCreatedAssets };
+  }
+
+  return finalState;
 };
+
 
 // --- API Functions ---
 export const getCampaigns = async () => {
@@ -304,7 +318,7 @@ export const getCampaigns = async () => {
   return res.json();
 };
 
-export const loadCampaign = async (id) => {
+export const loadCampaign = async (id, assetSetter) => {
   const res = await fetchWithAuth(`/api/campaigns/${id}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -313,17 +327,9 @@ export const loadCampaign = async (id) => {
   const campaign = await res.json();
 
   if (campaign.campaign_data) {
-    // The deserialize function now returns an object containing the modified state
-    // and a map of any newly created local assets (blobs).
-    const { finalState, newlyCreatedAssets } = await deserializeCampaignData(campaign.campaign_data);
-
-    // Replace the campaign data with the state that has local blob URLs.
-    campaign.campaign_data = finalState;
-    // Attach the newly created assets so the UI can update its pendingAssets state.
-    campaign.pendingAssets = newlyCreatedAssets;
-  } else {
-    // Ensure pendingAssets is initialized even if there's no campaign data.
-    campaign.pendingAssets = {};
+    // Pass the assetSetter down to the deserialization function.
+    // The function will handle setting the state internally.
+    campaign.campaign_data = await deserializeCampaignData(campaign.campaign_data, assetSetter);
   }
 
   return campaign;

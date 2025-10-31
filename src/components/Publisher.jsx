@@ -240,30 +240,20 @@ const Publisher = ({
         const hydrationPromises = schedules.map(async (schedule) => {
           if (schedule.campaign_data) {
             try {
-              const { finalState, newlyCreatedAssets } = await deserializeCampaignData(schedule.campaign_data);
-              return { ...schedule, campaign_data: finalState, newlyCreatedAssets };
+              // Pass the setter directly to the deserialization function
+              const finalState = await deserializeCampaignData(schedule.campaign_data, setPendingAssets);
+              return { ...schedule, campaign_data: finalState };
             } catch (e) {
               console.error(`Failed to hydrate schedule ${schedule.id}`, e);
-              return { ...schedule, newlyCreatedAssets: {} }; // Return original on failure
+              return schedule; // Return original on failure
             }
           }
-          return { ...schedule, newlyCreatedAssets: {} };
-        });
-
-        const hydratedSchedulesResults = await Promise.all(hydrationPromises);
-
-        const allNewAssets = {};
-        const finalSchedules = hydratedSchedulesResults.map(result => {
-          Object.assign(allNewAssets, result.newlyCreatedAssets);
-          const { newlyCreatedAssets, ...schedule } = result;
           return schedule;
         });
 
-        if (Object.keys(allNewAssets).length > 0) {
-          setPendingAssets(prev => ({ ...prev, ...allNewAssets }));
-        }
+        const hydratedSchedules = await Promise.all(hydrationPromises);
 
-        const parsedSchedules = finalSchedules.map(s => ({
+        const parsedSchedules = hydratedSchedules.map(s => ({
           ...s,
           post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
         }));
@@ -276,7 +266,7 @@ const Publisher = ({
         setIsLoadingSchedules(false);
       }
     }
-  }, [tabValue, setPendingAssets]);
+  }, [tabValue]); // Removed setPendingAssets from dependencies
 
   const handleViewDetails = async (scheduleId) => {
     try {
@@ -284,11 +274,8 @@ const Publisher = ({
 
       // Hydrate campaign_data if it exists
       if (scheduleDetails.campaign_data) {
-        const { finalState, newlyCreatedAssets } = await deserializeCampaignData(scheduleDetails.campaign_data);
-        scheduleDetails.campaign_data = finalState;
-        if (Object.keys(newlyCreatedAssets).length > 0) {
-          setPendingAssets(prev => ({ ...prev, ...newlyCreatedAssets }));
-        }
+        // Pass the setter directly
+        scheduleDetails.campaign_data = await deserializeCampaignData(scheduleDetails.campaign_data, setPendingAssets);
       }
 
       const parsedSchedule = {
