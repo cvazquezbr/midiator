@@ -17,8 +17,13 @@ const handler = async (req, res) => {
   }
 
   try {
+    // In a Vercel/Node.js environment, for file streams, the request object `req` itself
+    // is the stream. The `handleUpload` function from `@vercel/blob` is designed to
+    // handle this stream directly. Passing `req.body` is incorrect because the
+    // body-parser middleware doesn't run for `multipart/form-data` or other binary
+    // content types, leaving `req.body` empty and causing the function to fail.
     const jsonResponse = await handleUpload({
-      body: req.body, // The file data is in the body
+      body: req, // Pass the entire request stream
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const userId = req.user.uuid;
