@@ -24,10 +24,12 @@ import {
   Alert,
   Chip,
   Tooltip,
+  IconButton,
 } from '@mui/material';
-import { CheckCircle, HourglassEmpty, Error as ErrorIcon } from '@mui/icons-material';
+import { CheckCircle, HourglassEmpty, Error as ErrorIcon, Edit as EditIcon } from '@mui/icons-material';
 import { getTranslatableFields } from '../utils/campaignUtils'; // Import the new utility
 import { traverseState } from '../utils/stateTraversal';
+import RevisaoTextoModal from './RevisaoTextoModal'; // Import the new modal
 
 const LANGUAGES = [
     { code: 'en', name: 'Inglês' },
@@ -48,6 +50,8 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [clonedCampaign, setClonedCampaign] = useState(null);
   const [retryNoticeVisible, setRetryNoticeVisible] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedFieldForReview, setSelectedFieldForReview] = useState(null);
 
   const resetState = useCallback(() => {
     setActiveStep(0);
@@ -196,6 +200,21 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     setClonedCampaign(prev => ({ ...prev }));
   };
 
+  const openReviewModal = (index) => {
+    setSelectedFieldForReview({
+      index,
+      originalText: translatableFields[index].value,
+      translatedText: translatedFields[index] !== undefined ? translatedFields[index] : '',
+    });
+    setReviewModalOpen(true);
+  };
+
+  const handleSaveReview = (newText) => {
+    if (selectedFieldForReview) {
+      handleManualTextChange(selectedFieldForReview.index, newText);
+    }
+  };
+
   const handleClone = () => {
     // No need to deep clone again, as clonedCampaign is already a separate, processed object.
     const finalCampaign = { ...clonedCampaign };
@@ -212,7 +231,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Clone Campaign: {campaign?.name}</DialogTitle>
+      <DialogTitle>Traduzir Campanha: {campaign?.name}</DialogTitle>
       <DialogContent>
         <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
           {steps.map((label) => (
@@ -274,10 +293,16 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
                                     ? (Array.isArray(translatedFields[index]) ? translatedFields[index].join(', ') : translatedFields[index])
                                     : ''
                             }
-                            onChange={(e) => handleManualTextChange(index, e.target.value)}
                             sx={{ mt: 1 }}
-                            placeholder={status === 'translating' ? 'Traduzindo...' : ''}
-                            disabled={status === 'translating'}
+                            placeholder={status === 'translating' ? 'Traduzindo...' : 'Clique para editar'}
+                            disabled
+                            InputProps={{
+                                endAdornment: (
+                                  <IconButton onClick={() => openReviewModal(index)} size="small" disabled={status === 'translating'} aria-label="edit">
+                                    <EditIcon />
+                                  </IconButton>
+                                ),
+                              }}
                           />
                         </Box>
                       }
@@ -333,6 +358,15 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
           {activeStep === 1 && isTranslating ? 'Traduzindo...' : (activeStep === steps.length - 1 ? 'Clone' : 'Next')}
         </Button>
       </DialogActions>
+      {selectedFieldForReview && (
+        <RevisaoTextoModal
+          open={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          originalText={selectedFieldForReview.originalText}
+          translatedText={selectedFieldForReview.translatedText}
+          onSave={handleSaveReview}
+        />
+      )}
     </Dialog>
   );
 };
