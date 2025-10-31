@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Share as ShareIcon,
   ContentCopy as CloneIcon,
+  Translate as TranslateIcon,
 } from '@mui/icons-material';
 
 const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onShareCampaign, onCloneCampaign, isCoverFlowActive }) => {
@@ -101,7 +102,7 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onShareCampa
               },
             }}
           >
-            <CloneIcon fontSize="small" />
+            <TranslateIcon fontSize="small" />
           </IconButton>
           <IconButton
             aria-label="delete"
