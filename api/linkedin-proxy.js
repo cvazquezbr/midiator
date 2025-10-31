@@ -209,7 +209,7 @@ async function handleCreatePost(fetch, request, response) {
         console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
         // Make the function more flexible by handling both formats from the UI and the scheduler.
-        let { targetId, targetType, content, images, video, title, author } = payload;
+        let { targetId, targetType, content, images, video, title, author, multiImage } = payload;
         let authorUrn;
 
         if (author) {
@@ -247,16 +247,23 @@ async function handleCreatePost(fetch, request, response) {
                     title: title || 'Video Post'
                 }
             };
+        } else if (multiImage && multiImage.length > 0) {
+            // Case from the scheduler (already formatted)
+            postData.content = {
+                multiImage: {
+                    images: multiImage
+                }
+            };
         } else if (images && images.length > 0) {
             if (images.length === 1) {
-                // Single image post
+                // Single image post from UI
                 postData.content = {
                     media: {
                         id: images[0]
                     }
                 };
             } else {
-                // Multi-image post
+                // Multi-image post from UI
                 postData.content = {
                     multiImage: {
                         images: images.map(urn => ({ id: urn }))
