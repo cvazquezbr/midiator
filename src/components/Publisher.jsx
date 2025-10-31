@@ -205,8 +205,11 @@ const Publisher = ({
         const hydrationPromises = schedules.map(async (schedule) => {
           if (schedule.campaign_data) {
             try {
-              // Pass the setter directly to the deserialization function
-              const finalState = await deserializeCampaignData(schedule.campaign_data, setPendingAssets);
+              const { finalState, newlyCreatedAssets } = await deserializeCampaignData(schedule.campaign_data);
+              // Update the parent's state directly with the new assets to break the loop
+              if (newlyCreatedAssets && Object.keys(newlyCreatedAssets).length > 0) {
+                setPendingAssets(newlyCreatedAssets);
+              }
               return { ...schedule, campaign_data: finalState };
             } catch (e) {
               console.error(`Failed to hydrate schedule ${schedule.id}`, e);
@@ -239,8 +242,11 @@ const Publisher = ({
 
       // Hydrate campaign_data if it exists
       if (scheduleDetails.campaign_data) {
-        // Pass the setter directly
-        scheduleDetails.campaign_data = await deserializeCampaignData(scheduleDetails.campaign_data, setPendingAssets);
+        const { finalState, newlyCreatedAssets } = await deserializeCampaignData(scheduleDetails.campaign_data);
+        scheduleDetails.campaign_data = finalState;
+        if (newlyCreatedAssets && Object.keys(newlyCreatedAssets).length > 0) {
+            setPendingAssets(newlyCreatedAssets);
+        }
       }
 
       const parsedSchedule = {
