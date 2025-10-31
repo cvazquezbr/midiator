@@ -1,8 +1,27 @@
-import { put } from '@vercel/blob';
+import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
 
-// The Vercel/Node.js runtime doesn't automatically parse the body for file uploads,
-// so the request object `req` itself is a stream containing the file data.
+// Helper to parse body in a Vercel Node.js environment
+const getBody = async (req) => {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        // If the body is empty, resolve with null, otherwise parse it.
+        resolve(body ? JSON.parse(body) : null);
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on('error', (err) => {
+      reject(err);
+    });
+  });
+};
+
 const handler = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -12,25 +31,45 @@ const handler = async (req, res) => {
     return res.status(401).json({ error: 'Authentication is required.' });
   }
 
-  const filename = req.query.filename;
-  if (!filename) {
-    return res.status(400).json({ error: 'Filename is required.' });
-  }
-
   try {
-    const userId = req.user.uuid;
-    const blobPath = `${userId}/${filename}`;
+    // Manually parse the JSON body from the request stream
+    const body = await getBody(req);
 
-    // The `put` function from `@vercel/blob` can directly accept the request `req`
-    // stream and upload it. This is the correct server-side approach.
-    const blob = await put(blobPath, req, {
-      access: 'public',
-      // Optionally, you can add contentType if you can determine it.
-      // contentType: req.headers['content-type'],
+    if (!body) {
+      return res.status(400).json({ error: 'Request body is empty or invalid.' });
+    }
+
+    const jsonResponse = await handleUpload({
+      body, // Pass the parsed body
+      request: req, // Pass the original request
+      onBeforeGenerateToken: async (pathname /*, clientPayload */) => {
+        const userId = req.user.uuid;
+        const blobPath = `${userId}/${pathname}`;
+
+        return {
+          pathname: blobPath,
+          allowedContentTypes: [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'video/mp4',
+            'video/mpeg',
+            'audio/mpeg',
+            'audio/mp3',
+          ],
+          tokenPayload: JSON.stringify({
+            userId: userId,
+          }),
+          allowOverwrite: true,
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('[API /upload-client] Blob upload completed!', blob, tokenPayload);
+      },
     });
 
-    // Return the blob object, which is consistent with what the frontend expects.
-    return res.status(200).json(blob);
+    return res.status(200).json(jsonResponse);
   } catch (error) {
     console.error('[API /upload-client] Error in upload handler:', error);
     return res.status(400).json({ error: error.message });

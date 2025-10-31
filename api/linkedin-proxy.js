@@ -187,32 +187,12 @@ async function handleGetProfile(fetch, request, response) {
 }
 
 async function handleUploadImage(fetch, request, response) {
-  const { uploadUrl, imageBase64, imageType } = request.body;
-  if (!uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
+  const { accessToken, uploadUrl, imageBase64, imageType } = request.body;
+  if (!accessToken || !uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
   const imageBuffer = Buffer.from(imageBase64, 'base64');
   try {
-    // The pre-signed upload URL from LinkedIn requires a PUT request with the raw image data
-    // and the correct Content-Type, but crucially, **no Authorization header**.
-    // Including the bearer token here will cause the upload to fail in unexpected ways,
-    // such as the "first image repeated" bug.
-    const linkedinResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': imageType }, // No Authorization header
-        body: imageBuffer
-    });
-
-    if (!linkedinResponse.ok) {
-        const errorText = await linkedinResponse.text();
-        console.error(`LinkedIn Image Upload Error (${linkedinResponse.status}):`, errorText);
-        return response.status(linkedinResponse.status).json({
-            success: false,
-            message: `Failed to upload image to LinkedIn. Status: ${linkedinResponse.status}`,
-            details: errorText
-        });
-    }
-
-    // A successful upload returns a 200 OK with no body.
-    return response.status(200).json({ success: true });
+    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': imageType }, body: imageBuffer });
+    return response.status(linkedinResponse.status).json({ success: true });
   } catch (error) {
     console.error('Error during image upload:', error);
     return response.status(500).json({ error: 'Internal Server Error' });
@@ -229,7 +209,7 @@ async function handleCreatePost(fetch, request, response) {
         console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
         // Make the function more flexible by handling both formats from the UI and the scheduler.
-        let { targetId, targetType, content, images, video, title, author, multiImage } = payload;
+        let { targetId, targetType, content, images, video, title, author } = payload;
         let authorUrn;
 
         if (author) {
@@ -267,23 +247,16 @@ async function handleCreatePost(fetch, request, response) {
                     title: title || 'Video Post'
                 }
             };
-        } else if (multiImage && multiImage.length > 0) {
-            // Case from the scheduler (already formatted)
-            postData.content = {
-                multiImage: {
-                    images: multiImage
-                }
-            };
         } else if (images && images.length > 0) {
             if (images.length === 1) {
-                // Single image post from UI
+                // Single image post
                 postData.content = {
                     media: {
                         id: images[0]
                     }
                 };
             } else {
-                // Multi-image post from UI
+                // Multi-image post
                 postData.content = {
                     multiImage: {
                         images: images.map(urn => ({ id: urn }))
