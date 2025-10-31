@@ -62,7 +62,50 @@ import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, upload
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns, deserializeCampaignData } from '../utils/campaignState.js';
 import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
-import { upload } from '@vercel/blob/client';
+import { put } from '@vercel/blob/client';
+
+// Custom upload function to ensure credentials are included
+async function uploadWithAuth(filename, file, { handleUploadUrl }) {
+  const UPLOAD_URL = handleUploadUrl || '/api/upload-client';
+
+  // 1. Get a pre-signed URL from our API
+  const response = await fetch(`${UPLOAD_URL}?filename=${filename}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    // The key change: include credentials (cookies) in the request
+    credentials: 'include',
+    body: file,
+  });
+
+  if (response.status === 401) {
+    throw new Error('Authentication failed. Please log in again.');
+  }
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to get pre-signed URL: ${errorText}`);
+  }
+
+  const newBlob = await response.json();
+
+  // 2. Upload the file to the pre-signed URL
+  const uploadResponse = await fetch(newBlob.url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error('Upload failed.');
+  }
+
+  // Return the blob object, which now has the final URL
+  return newBlob;
+}
+
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -160,12 +203,12 @@ const Publisher = ({
     try {
       await Promise.all(
         uploadsToProcess.map(async (uploadData) => {
-          const newBlob = await upload(uploadData.filename, uploadData.blob, {
-            access: 'public',
+          // Use the new function that sends credentials
+          const newBlob = await uploadWithAuth(uploadData.filename, uploadData.blob, {
             handleUploadUrl: '/api/upload-client',
           });
           // Map the original blob: URL to the new permanent URL
-          urlMap[uploadData.url] = newBlob.url;
+          urlMap[uploadData.url] = newBlob.pathname ? `/api/download/${newBlob.pathname}` : newBlob.url;
         })
       );
       toast.success('Upload de imagens concluído!', { id: toastId });
