@@ -211,8 +211,6 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
         }
 
-        console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
-
         // Make the function more flexible by handling both formats from the UI and the scheduler.
         let { targetId, targetType, content, images, video, title, author } = payload;
         let authorUrn;
@@ -227,7 +225,6 @@ async function handleCreatePost(fetch, request, response) {
 
         // Validate that we have the necessary information to proceed.
         if (!authorUrn || !content) {
-             console.error('[DEBUG] Validation failed in handleCreatePost:', { authorUrn, contentExists: !!content });
              return response.status(400).json({ error: 'Missing author information or content for creating post.' });
         }
 
@@ -269,8 +266,6 @@ async function handleCreatePost(fetch, request, response) {
                 };
             }
         }
-
-        console.log('[DEBUG] Calling handleGenericPost with new Posts API payload:', JSON.stringify(postData, null, 2));
 
         return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
     } catch (error) {
