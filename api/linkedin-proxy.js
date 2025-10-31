@@ -191,8 +191,28 @@ async function handleUploadImage(fetch, request, response) {
   if (!uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
   const imageBuffer = Buffer.from(imageBase64, 'base64');
   try {
-    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
-    return response.status(linkedinResponse.status).json({ success: true });
+    // The pre-signed upload URL from LinkedIn requires a PUT request with the raw image data
+    // and the correct Content-Type, but crucially, **no Authorization header**.
+    // Including the bearer token here will cause the upload to fail in unexpected ways,
+    // such as the "first image repeated" bug.
+    const linkedinResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': imageType }, // No Authorization header
+        body: imageBuffer
+    });
+
+    if (!linkedinResponse.ok) {
+        const errorText = await linkedinResponse.text();
+        console.error(`LinkedIn Image Upload Error (${linkedinResponse.status}):`, errorText);
+        return response.status(linkedinResponse.status).json({
+            success: false,
+            message: `Failed to upload image to LinkedIn. Status: ${linkedinResponse.status}`,
+            details: errorText
+        });
+    }
+
+    // A successful upload returns a 200 OK with no body.
+    return response.status(200).json({ success: true });
   } catch (error) {
     console.error('Error during image upload:', error);
     return response.status(500).json({ error: 'Internal Server Error' });

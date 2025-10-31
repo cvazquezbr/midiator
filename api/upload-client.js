@@ -1,26 +1,5 @@
-import { handleUpload } from '@vercel/blob/client';
+import { handleUpload, vercelBlob } from '@vercel/blob';
 import { withAuth } from './middleware/auth.js';
-
-// Helper to parse body in a Vercel Node.js environment
-const getBody = async (req) => {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      try {
-        // If the body is empty, resolve with null, otherwise parse it.
-        resolve(body ? JSON.parse(body) : null);
-      } catch (e) {
-        reject(e);
-      }
-    });
-    req.on('error', (err) => {
-      reject(err);
-    });
-  });
-};
 
 const handler = async (req, res) => {
   if (req.method !== 'POST') {
@@ -31,19 +10,19 @@ const handler = async (req, res) => {
     return res.status(401).json({ error: 'Authentication is required.' });
   }
 
+  // The filename is passed as a query parameter
+  const filename = req.query.filename;
+  if (!filename) {
+    return res.status(400).json({ error: 'Filename is required.' });
+  }
+
   try {
-    // Manually parse the JSON body from the request stream
-    const body = await getBody(req);
-
-    if (!body) {
-      return res.status(400).json({ error: 'Request body is empty or invalid.' });
-    }
-
     const jsonResponse = await handleUpload({
-      body, // Pass the parsed body
-      request: req, // Pass the original request
-      onBeforeGenerateToken: async (pathname /*, clientPayload */) => {
+      body: req.body, // The file data is in the body
+      request: req,
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
         const userId = req.user.uuid;
+        // Prepend the user's ID to the blob path for security/organization
         const blobPath = `${userId}/${pathname}`;
 
         return {
