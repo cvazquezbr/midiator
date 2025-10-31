@@ -166,7 +166,7 @@ function HomePage() {
   const handleDialogSaveAndNavigate = async () => { setShowUnsavedDialog(false); setNavigationTarget(null); };
 
   const handleSetPendingAssets = useCallback((newAssets) => {
-    setCampaignState(prev => ({ ...prev, pendingAssets: newAssets(prev.pendingAssets) }));
+    setCampaignState(prev => ({ ...prev, pendingAssets: { ...prev.pendingAssets, ...newAssets } }));
   }, [setCampaignState]);
 
   const handleRequestNewAutor = () => { setStartAutoresInCreate(true); setCurrentView('autores'); };
