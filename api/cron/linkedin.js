@@ -98,17 +98,13 @@ export async function publishPost(fetch, post, accessToken) {
     }
 
     const videoUrn = post.post_content?.video;
-
-    // O payload deve ser consistente com o que o frontend envia para o proxy.
-    // O proxy é responsável por construir a requisição final (media vs multiImage).
     const payload = {
         author: authorUrn,
         content: postText,
-        images: imageUrns, // Sempre envia o array de URNs, o proxy lida com a lógica.
+        images: imageUrns,
         video: videoUrn,
-        title: post.post_content?.titulo || 'Post'
+        title: post.post_content?.titulo || 'Video Post'
     };
-
 
     return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',

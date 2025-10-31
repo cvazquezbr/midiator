@@ -62,42 +62,7 @@ import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, upload
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns, deserializeCampaignData } from '../utils/campaignState.js';
 import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
-
-// Custom upload function to ensure credentials are included.
-// The backend now handles the entire blob upload process after this call.
-async function uploadWithAuth(filename, file, { handleUploadUrl }) {
-  const UPLOAD_URL = handleUploadUrl || '/api/upload-client';
-
-  // This single request now handles the entire upload process.
-  // It's authenticated via cookies (`credentials: 'include'`).
-  // The server-side function (`/api/upload-client`) will stream the file
-  // from this request directly to Vercel Blob storage.
-  const response = await fetch(`${UPLOAD_URL}?filename=${filename}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-    },
-    credentials: 'include', // Crucial for sending the auth cookie
-    body: file,
-  });
-
-  if (response.status === 401) {
-    throw new Error('Authentication failed. Please log in again.');
-  }
-  if (!response.ok) {
-    const errorText = await response.text();
-    // Provide a more specific error if the function failed.
-    if (errorText.includes('FUNCTION_INVOCATION_FAILED')) {
-        console.error('Serverless function failed:', errorText);
-        throw new Error('Ocorreu um erro no servidor ao processar o upload. Verifique os logs da função.');
-    }
-    throw new Error(`Falha no upload: ${errorText}`);
-  }
-
-  // The response from our API now contains the final blob object.
-  return response.json();
-}
-
+import { upload } from '@vercel/blob/client';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -195,12 +160,12 @@ const Publisher = ({
     try {
       await Promise.all(
         uploadsToProcess.map(async (uploadData) => {
-          // Use the new function that sends credentials
-          const newBlob = await uploadWithAuth(uploadData.filename, uploadData.blob, {
+          const newBlob = await upload(uploadData.filename, uploadData.blob, {
+            access: 'public',
             handleUploadUrl: '/api/upload-client',
           });
           // Map the original blob: URL to the new permanent URL
-          urlMap[uploadData.url] = newBlob.pathname ? `/api/download/${newBlob.pathname}` : newBlob.url;
+          urlMap[uploadData.url] = newBlob.url;
         })
       );
       toast.success('Upload de imagens concluído!', { id: toastId });
@@ -266,7 +231,7 @@ const Publisher = ({
         setIsLoadingSchedules(false);
       }
     }
-  }, [tabValue]); // Removed setPendingAssets from dependencies
+  }, [tabValue, setPendingAssets]);
 
   const handleViewDetails = async (scheduleId) => {
     try {
@@ -333,7 +298,7 @@ const Publisher = ({
 
   useEffect(() => {
     fetchSchedules();
-  }, [tabValue, setPendingAssets]);
+  }, [fetchSchedules]);
 
   const [isPublishingWp, setIsPublishingWp] = useState(false);
   const [publishingStatusWp, setPublishingStatusWp] = useState('');
