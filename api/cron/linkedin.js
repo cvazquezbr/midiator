@@ -101,7 +101,7 @@ export async function publishPost(fetch, post, accessToken) {
     const payload = {
         author: authorUrn,
         content: postText,
-        images: imageUrns.map(urn => ({ id: urn })),
+        images: imageUrns,
         video: videoUrn,
         title: post.post_content?.titulo || 'Video Post'
     };
