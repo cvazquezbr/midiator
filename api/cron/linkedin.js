@@ -94,9 +94,6 @@ export async function publishPost(fetch, post, accessToken) {
             }
 
             imageUrns.push(assetUrn);
-
-            // Adiciona um atraso de 2 segundos para dar tempo ao LinkedIn de processar a imagem.
-            await delay(2000);
         }
     }
 
@@ -104,7 +101,7 @@ export async function publishPost(fetch, post, accessToken) {
     const payload = {
         author: authorUrn,
         content: postText,
-        images: imageUrns,
+        images: imageUrns.map(urn => ({ id: urn })),
         video: videoUrn,
         title: post.post_content?.titulo || 'Video Post'
     };

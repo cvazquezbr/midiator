@@ -157,7 +157,10 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
  * downloads the assets, and replaces the permanent URLs with local, temporary
  * blob: URLs. This "hydrates" the state for use in the UI.
  */
-export const deserializeCampaignData = async (loadedState) => {
+export const deserializeCampaignData = async (loadedState, onHydrationProgress) => {
+  // `onHydrationProgress` is an optional callback. If provided, it will be called
+  // with the newly created local assets. This allows the calling component (`Publisher.jsx`)
+  // to update its state without creating a `useEffect` dependency loop.
   console.log('[deserializeCampaignData] Starting refactored deserialization and asset download...');
   const finalState = JSON.parse(JSON.stringify(loadedState)); // Deep copy to modify
   const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
@@ -291,6 +294,13 @@ export const deserializeCampaignData = async (loadedState) => {
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
   console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);
+
+  // If a callback was provided, call it with the map of newly downloaded assets.
+  // This is the key to breaking the useEffect dependency loop in Publisher.jsx.
+  if (onHydrationProgress) {
+    onHydrationProgress(newlyCreatedAssets);
+  }
+
   return { finalState, newlyCreatedAssets };
 };
 
