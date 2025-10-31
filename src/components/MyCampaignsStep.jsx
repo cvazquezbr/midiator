@@ -15,7 +15,7 @@ import {
   Paper,
   Fab,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, Share as ShareIcon, ContentCopy as CloneIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, Share as ShareIcon, ContentCopy as CloneIcon, Translate as TranslateIcon } from '@mui/icons-material';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
 import CampaignCoverFlow from './CampaignCoverFlow';
@@ -179,7 +179,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew, onCloneComplete }) => {
                             <ShareIcon />
                           </IconButton>
                           <IconButton edge="end" aria-label="clone" onClick={(e) => { e.stopPropagation(); handleOpenCloneModal(campaign); }} disabled={cloning}>
-                            {cloning && selectedCampaign?.id === campaign.id ? <CircularProgress size={24} /> : <CloneIcon />}
+                            {cloning && selectedCampaign?.id === campaign.id ? <CircularProgress size={24} /> : <TranslateIcon />}
                           </IconButton>
                           <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
                             <DeleteIcon />
