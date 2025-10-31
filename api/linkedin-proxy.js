@@ -187,11 +187,16 @@ async function handleGetProfile(fetch, request, response) {
 }
 
 async function handleUploadImage(fetch, request, response) {
-  const { accessToken, uploadUrl, imageBase64, imageType } = request.body;
-  if (!accessToken || !uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
+  const { uploadUrl, imageBase64, imageType } = request.body;
+  if (!uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
   const imageBuffer = Buffer.from(imageBase64, 'base64');
   try {
-    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': imageType }, body: imageBuffer });
+    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
+    if (!linkedinResponse.ok) {
+        const errorText = await linkedinResponse.text();
+        console.error("LinkedIn Image Upload Error Body:", errorText);
+        return response.status(linkedinResponse.status).json({ message: `Failed to upload image. Status: ${linkedinResponse.status}`, details: errorText });
+    }
     return response.status(linkedinResponse.status).json({ success: true });
   } catch (error) {
     console.error('Error during image upload:', error);

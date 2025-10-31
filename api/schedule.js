@@ -1,6 +1,5 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
-import { markdownToLinkedinText } from './utils.js';
 
 // Helper function to create a schedule
 async function handleCreateSchedule(request, response) {
