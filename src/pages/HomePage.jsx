@@ -164,6 +164,11 @@ function HomePage() {
   const handleDialogClose = () => { setShowUnsavedDialog(false); setNavigationTarget(null); };
   const handleDialogDiscard = () => { setShowUnsavedDialog(false); if (navigationTarget) navigationTarget(); setNavigationTarget(null); };
   const handleDialogSaveAndNavigate = async () => { setShowUnsavedDialog(false); setNavigationTarget(null); };
+
+  const handleSetPendingAssets = useCallback((newAssets) => {
+    setCampaignState(prev => ({ ...prev, pendingAssets: newAssets(prev.pendingAssets) }));
+  }, [setCampaignState]);
+
   const handleRequestNewAutor = () => { setStartAutoresInCreate(true); setCurrentView('autores'); };
   const handleRequestNewPersona = () => { setStartPersonasInCreate(true); setCurrentView('personas'); };
   const handleCreationDone = (view) => { if (view === 'autores') setStartAutoresInCreate(false); else if (view === 'personas') setStartPersonasInCreate(false); setCurrentView('campaigns'); };
@@ -954,7 +959,7 @@ function HomePage() {
                   onUpdateScheduledPosts={(posts) => setCampaignState(prev => ({ ...prev, followupPosts: posts }))}
                   currentCampaign={currentCampaign}
                   pendingAssets={pendingAssets}
-                  setPendingAssets={(newAssets) => setCampaignState(prev => ({ ...prev, pendingAssets: newAssets }))}
+                  setPendingAssets={handleSetPendingAssets}
                 />
               )}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >
