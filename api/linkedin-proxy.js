@@ -174,9 +174,10 @@ async function handleCheckVideoStatus(fetch, request, response) {
 
 async function handleCheckImageStatus(fetch, request, response) {
     try {
-      const { accessToken, imageUrn } = request.body;
+      const { accessToken } = request.body;
+      const imageUrn = request.body.imageUrn || request.body.assetUrn; // accept both names
       if (!accessToken || !imageUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or imageUrn' });
+        return response.status(400).json({ error: 'Missing accessToken or imageUrn/assetUrn' });
       }
       const encoded = encodeURIComponent(imageUrn);
       const url = `https://api.linkedin.com/rest/images/${encoded}`;
