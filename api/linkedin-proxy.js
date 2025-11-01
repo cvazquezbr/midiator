@@ -384,24 +384,19 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
         }
 
-        // Make the function more flexible by handling both formats from the UI and the scheduler.
         let { targetId, targetType, content, images, video, title, author } = payload;
         let authorUrn;
 
         if (author) {
-            // Format sent by the scheduler, which already has the full URN.
             authorUrn = author;
         } else if (targetId && targetType) {
-            // Format sent by the user-facing UI.
             authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
         }
 
-        // Validate that we have the necessary information to proceed.
         if (!authorUrn || !content) {
              return response.status(400).json({ error: 'Missing author information or content for creating post.' });
         }
 
-        // Base structure for the new Posts API
         const postData = {
             author: authorUrn,
             commentary: escapeLinkedinText(content),
@@ -415,6 +410,7 @@ async function handleCreatePost(fetch, request, response) {
             isReshareDisabledByAuthor: false
         };
 
+        // --- MULTIIMAGE FIX PATCH ---
         if (video) {
             postData.content = {
                 media: {
@@ -423,33 +419,30 @@ async function handleCreatePost(fetch, request, response) {
                 }
             };
         } else if (images && images.length > 0) {
-            // Normalize the images array. It can come as an array of URN strings (from the cron job)
-            // or an array of objects with an 'id' property (from the direct UI post).
             const normalizedUrns = images.map(img => (typeof img === 'string' ? img : img.id)).filter(Boolean);
-
             if (normalizedUrns.length === 1) {
-                // Single image post
-                postData.content = {
-                    media: {
-                        id: normalizedUrns[0]
-                    }
-                };
-            } else if (normalizedUrns.length > 1) {
-                // Multi-image post
+                postData.content = { media: { id: normalizedUrns[0] } };
+                console.log('[Proxy Patch] Single image post payload constructed:', postData.content);
+            } else {
                 postData.content = {
                     multiImage: {
                         images: normalizedUrns.map(urn => ({ id: urn }))
                     }
                 };
+                console.log('[Proxy Patch] Multi-image payload constructed with URNs:', normalizedUrns);
             }
         }
+        // --- END PATCH ---
+
+        console.log('[Proxy Patch] Final postData before sending to LinkedIn:', JSON.stringify(postData, null, 2));
 
         return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
     } catch (error) {
-        console.error('[FATAL] Unhandled exception in handleCreatePost:', error);
+        console.error('[FATAL] Unhandled exception in handleCreatePost (multiImage fix):', error);
         return response.status(500).json({ error: 'An unexpected error occurred in handleCreatePost.' });
     }
 }
+
 
 async function handleGetProfiles(fetch, request, response) {
   const { accessToken, forceRefresh } = request.body;
