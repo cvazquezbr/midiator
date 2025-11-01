@@ -55,6 +55,8 @@ export async function publishPost(fetch, post, accessToken) {
             const imageBase64 = Buffer.from(imageBuffer).toString('base64');
             const imageType = imageResponse.headers.get('content-type');
 
+            console.log(`[Cron Job] Image Base64 size: ${imageBase64.length}`);
+
             const registerResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
                 headers: internalApiHeaders,
@@ -97,6 +99,10 @@ export async function publishPost(fetch, post, accessToken) {
             }
 
             imageUrns.push(assetUrn);
+
+            // Add a delay to prevent potential race conditions on LinkedIn's side when processing multiple images.
+            console.log('[Cron Job] Waiting for 3 seconds before processing the next image...');
+            await delay(3000);
         }
     }
 
