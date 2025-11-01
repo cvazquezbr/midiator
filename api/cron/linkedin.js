@@ -116,7 +116,7 @@ export async function publishPost(fetch, post, accessToken) {
                     body: JSON.stringify({
                         action: 'checkImageStatus',
                         accessToken,
-                        assetUrn
+                        imageUrn: assetUrn
                     })
                 });
 
