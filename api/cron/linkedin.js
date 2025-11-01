@@ -47,8 +47,9 @@ export async function publishPost(fetch, post, accessToken) {
     const imageUrns = [];
 
     if (images.length > 0) {
-        for (const imageUrl of images) {
-            // Add a cache-busting parameter to the URL to ensure a fresh fetch for each image
+        for (const [index, imageUrl] of images.entries()) {
+            console.log(`[Cron Job] Processing image ${index + 1}/${images.length}: ${imageUrl}`);
+
             const uniqueImageUrl = `${imageUrl}?t=${Date.now()}`;
             const imageResponse = await fetch(uniqueImageUrl);
             if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${uniqueImageUrl}`);
@@ -57,99 +58,35 @@ export async function publishPost(fetch, post, accessToken) {
             const imageBase64 = Buffer.from(imageBuffer).toString('base64');
             const imageType = imageResponse.headers.get('content-type');
 
-            console.log(`[Cron Job] Fetched image with Base64 size: ${imageBase64.length}`);
+            console.log(`[Cron Job] Fetched image with Base64 size: ${imageBase64.length}. Uploading to LinkedIn...`);
 
-            const registerResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+            const uploadCheckResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
                 headers: internalApiHeaders,
                 body: JSON.stringify({
-                    action: 'registerUpload',
+                    action: 'uploadAndCheckImage',
                     accessToken,
-                    payload: {
-                        initializeUploadRequest: {
-                            owner: authorUrn
-                        }
-                    }
+                    authorUrn,
+                    imageBase64,
+                    imageType
                 })
             });
 
             // If we get a 401, return the response immediately. The main scheduler loop
             // will catch this and attempt to refresh the token.
-            if (registerResponse.status === 401) return registerResponse;
-            if (!registerResponse.ok) {
-                const errorData = await registerResponse.json();
-                throw new Error(`Failed to register image upload: ${errorData.message || 'Unknown error'}`);
+            if (uploadCheckResponse.status === 401) return uploadCheckResponse;
+
+            if (!uploadCheckResponse.ok) {
+                const errorData = await uploadCheckResponse.json();
+                throw new Error(`Failed during uploadAndCheckImage for ${imageUrl}: ${errorData.message || 'Unknown error'}`);
             }
 
-            const { uploadUrl, image: assetUrn } = await registerResponse.json();
-
-            if (!uploadUrl || !assetUrn) {
-                throw new Error(`Failed to get uploadUrl or assetUrn from register response. Response: ${JSON.stringify(await registerResponse.json())}`);
+            const { assetUrn } = await uploadCheckResponse.json();
+            if (!assetUrn) {
+                throw new Error(`Proxy did not return an assetUrn for ${imageUrl}.`);
             }
 
-            const uploadResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
-                method: 'POST',
-                headers: internalApiHeaders,
-                body: JSON.stringify({ action: 'uploadImage', accessToken, uploadUrl, imageBase64, imageType })
-            });
-
-            // Same as above, return on 401 to allow for token refresh.
-            if (uploadResponse.status === 401) return uploadResponse;
-            if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json();
-                throw new Error(`Failed to upload image: ${errorData.message || 'Unknown error'}`);
-            }
-
-            const delays = [500, 1000, 2000, 3000, 5000];
-            let isAvailable = false;
-            let lastStatus = 'UNKNOWN';
-            const startTime = Date.now();
-
-            for (let i = 0; i < delays.length; i++) {
-                const waitTime = delays[i];
-                console.log(`[Polling] Waiting ${waitTime}ms before attempt ${i + 1}/5 for asset ${assetUrn}...`);
-                await delay(waitTime);
-
-                const statusResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
-                    method: 'POST',
-                    headers: internalApiHeaders,
-                    body: JSON.stringify({
-                        action: 'checkImageStatus',
-                        accessToken,
-                        imageUrn: assetUrn
-                    })
-                });
-
-                if (statusResponse.status === 401) return statusResponse;
-
-                if (statusResponse.status === 400 || statusResponse.status === 429 || statusResponse.status >= 500) {
-                    console.warn(`[Polling] Attempt ${i + 1}/5: Received HTTP ${statusResponse.status} for ${assetUrn}. Continuing to next attempt.`);
-                    lastStatus = `HTTP ${statusResponse.status}`;
-                    continue; // Treat as a temporary failure and retry
-                }
-
-                if (!statusResponse.ok) {
-                    // For other unexpected errors, fail fast
-                    const errorData = await statusResponse.json();
-                    throw new Error(`[Polling] Attempt ${i + 1}/5: Unexpected error checking image status for ${assetUrn}: ${errorData.message || `HTTP ${statusResponse.status}`}`);
-                }
-
-                const statusData = await statusResponse.json();
-                lastStatus = statusData.status || 'NO_STATUS_FIELD';
-                console.log(`[Polling] Attempt ${i + 1}/5: Status for ${assetUrn} is ${lastStatus}.`);
-
-                if (lastStatus === 'AVAILABLE') {
-                    isAvailable = true;
-                    const totalTime = (Date.now() - startTime) / 1000;
-                    console.log(`[Polling] Asset ${assetUrn} became available after ${totalTime.toFixed(2)}s.`);
-                    break;
-                }
-            }
-
-            if (!isAvailable) {
-                const totalTime = (Date.now() - startTime) / 1000;
-                throw new Error(`Image ${assetUrn} did not become available after ${totalTime.toFixed(2)}s. Last known status: ${lastStatus}.`);
-            }
+            console.log(`[Cron Job] Successfully received asset URN: ${assetUrn}`);
             imageUrns.push(assetUrn);
         }
     }
