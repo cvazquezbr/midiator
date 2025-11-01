@@ -100,7 +100,22 @@ export async function publishPost(fetch, post, accessToken) {
         title: post.post_content?.titulo || 'Video Post'
     };
 
-    return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+
+            // --- PATCHED: extra validation & logging to debug duplicate-image issue ---
+            console.log('[Cron Patch] Final image URNs collected:', imageUrns);
+            // Ensure number of URNs matches number of images requested
+            const distinctUrns = Array.from(new Set(imageUrns));
+            if (distinctUrns.length !== images.length) {
+                console.warn('[Cron Patch] number of distinct URNs does not match images.length', { imagesLength: images.length, distinctUrnsLength: distinctUrns.length });
+            }
+            // Defensive small pause to ensure LinkedIn has finalized processing (extra safety)
+            await delay(1200);
+            // Reassign payload images explicitly to avoid accidental mutation
+            payload.images = distinctUrns.slice(0, images.length);
+            console.log('[Cron Patch] Posting payload images (final):', payload.images);
+            // --- end patch ---
+
+return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
         headers: internalApiHeaders,
         body: JSON.stringify({ action: 'createPost', accessToken, payload }),

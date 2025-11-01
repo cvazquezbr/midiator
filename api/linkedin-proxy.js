@@ -268,35 +268,39 @@ async function handleUploadAndCheckImage(fetch, request, response) {
             return response.status(registerResponse.status).json({ message: 'Failed to register image upload', details: registerData });
         }
 
-        // Attempt to extract asset URN and upload URL using known LinkedIn response shapes
+        // More robustly extract asset URN and upload URL, accommodating various potential LinkedIn response shapes.
         let assetUrn = null;
         let uploadUrl = null;
-        if (registerData.value && registerData.value.asset) {
-            assetUrn = registerData.value.asset;
-        } else if (registerData.asset) {
-            assetUrn = registerData.asset;
-        }
-        // uploadMechanism path
-        try {
-            const mech = registerData.value && registerData.value.uploadMechanism;
-            if (mech && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl) {
-                uploadUrl = mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
-            }
-            // older/alternate shape
-            if (!uploadUrl && registerData.value && registerData.value.uploadUrl) {
-                uploadUrl = registerData.value.uploadUrl;
-            }
-        } catch (e) {
-            console.warn('[Proxy] Error extracting uploadUrl from register response:', e);
-        }
 
-        // Fallbacks
-        if (!assetUrn && registerData.value && registerData.value.assetUrn) assetUrn = registerData.value.assetUrn;
+        const value = registerData.value || {};
+
+        // Primary paths for asset URN
+        if (value.asset) assetUrn = value.asset;
+        else if (value.image) assetUrn = value.image; // As seen in some Image API responses
+        else if (value.urn) assetUrn = value.urn;
+        else if (registerData.asset) assetUrn = registerData.asset; // Root level fallback
+
+        // Primary paths for upload URL
+        if (value.uploadUrl) {
+            uploadUrl = value.uploadUrl;
+        } else {
+            try {
+                const mech = value.uploadMechanism;
+                if (mech && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl) {
+                    uploadUrl = mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+                }
+            } catch (e) {
+                console.warn('[Proxy] Error extracting uploadUrl from uploadMechanism:', e);
+            }
+        }
+        // Root level fallback
         if (!uploadUrl && registerData.uploadUrl) uploadUrl = registerData.uploadUrl;
+
 
         console.log('[Proxy] Obtained assetUrn:', assetUrn, 'uploadUrl present:', !!uploadUrl);
 
         if (!assetUrn) {
+            console.error('[Proxy] CRITICAL: Could not determine assetUrn from register response. Full response:', JSON.stringify(registerData, null, 2));
             return response.status(500).json({ message: 'Could not determine assetUrn from register response', details: registerData });
         }
         if (!uploadUrl) {
