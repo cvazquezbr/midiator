@@ -234,78 +234,124 @@ async function handleUploadAndCheckImage(fetch, request, response) {
     }
 
     try {
-        // Step 1: Register the upload
+        console.log('[Proxy] Starting uploadAndCheck for author:', authorUrn);
+
+        // Step 1: Register the upload (unique per call)
         const registerPayload = { initializeUploadRequest: { owner: authorUrn } };
         const registerResponse = await fetchWithRetry(
             fetch,
             'https://api.linkedin.com/rest/images?action=initializeUpload',
             {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'X-Restli-Protocol-Version': '2.0.0',
+                    'LinkedIn-Version': LINKEDIN_API_VERSION
+                },
                 body: JSON.stringify(registerPayload),
             }
         );
 
-        if (registerResponse.status === 401) return response.status(401).json({ message: 'Unauthorized during register upload' });
-        if (!registerResponse.ok) {
-            const errorData = await registerResponse.json();
-            return response.status(registerResponse.status).json({ message: 'Failed to register image upload', details: errorData });
+        const registerText = await registerResponse.text().catch(() => null);
+        let registerData = null;
+        try { registerData = registerText ? JSON.parse(registerText) : null; } catch (e) {
+            console.warn('[Proxy] Failed to parse registerResponse as JSON, raw:', registerText);
+        }
+        console.log('[Proxy] registerResponse status:', registerResponse.status, 'body:', registerData);
+
+        if (registerResponse.status === 401) {
+            console.error('[Proxy] Unauthorized during register upload.');
+            return response.status(401).json({ message: 'Unauthorized during register upload' });
+        }
+        if (!registerResponse.ok || !registerData) {
+            return response.status(registerResponse.status).json({ message: 'Failed to register image upload', details: registerData });
         }
 
-        const { value: { uploadUrl, image: assetUrn } } = await registerResponse.json();
-        if (!uploadUrl || !assetUrn) {
-            return response.status(500).json({ message: 'Missing uploadUrl or assetUrn in LinkedIn response.' });
+        // Attempt to extract asset URN and upload URL using known LinkedIn response shapes
+        let assetUrn = null;
+        let uploadUrl = null;
+        if (registerData.value && registerData.value.asset) {
+            assetUrn = registerData.value.asset;
+        } else if (registerData.asset) {
+            assetUrn = registerData.asset;
         }
-        console.log(`[Proxy] Registered image successfully. Asset URN: ${assetUrn}`);
+        // uploadMechanism path
+        try {
+            const mech = registerData.value && registerData.value.uploadMechanism;
+            if (mech && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl) {
+                uploadUrl = mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+            }
+            // older/alternate shape
+            if (!uploadUrl && registerData.value && registerData.value.uploadUrl) {
+                uploadUrl = registerData.value.uploadUrl;
+            }
+        } catch (e) {
+            console.warn('[Proxy] Error extracting uploadUrl from register response:', e);
+        }
 
-        // Step 2: Upload the image binary
+        // Fallbacks
+        if (!assetUrn && registerData.value && registerData.value.assetUrn) assetUrn = registerData.value.assetUrn;
+        if (!uploadUrl && registerData.uploadUrl) uploadUrl = registerData.uploadUrl;
+
+        console.log('[Proxy] Obtained assetUrn:', assetUrn, 'uploadUrl present:', !!uploadUrl);
+
+        if (!assetUrn) {
+            return response.status(500).json({ message: 'Could not determine assetUrn from register response', details: registerData });
+        }
+        if (!uploadUrl) {
+            console.warn('[Proxy] No uploadUrl returned by register; proceeding to return assetUrn for server-side upload handling.');
+            // If there is no uploadUrl, still return urn so caller may perform alternate steps.
+            return response.status(200).json({ assetUrn });
+        }
+
+        // Step 2: Upload binary to the returned uploadUrl
         const imageBuffer = Buffer.from(imageBase64, 'base64');
-        const uploadResponse = await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': imageType },
-            body: imageBuffer
-        });
+        console.log(`[Proxy] Uploading binary to uploadUrl for asset ${assetUrn}. Size: ${imageBuffer.length} bytes`);
 
-        if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text();
-            return response.status(uploadResponse.status).json({ message: 'Failed to upload image binary', details: errorText });
+        const uploadResp = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
+        const uploadText = await uploadResp.text().catch(() => null);
+        if (!uploadResp.ok) {
+            console.error('[Proxy] Upload failed for asset:', assetUrn, 'status:', uploadResp.status, 'body:', uploadText);
+            return response.status(uploadResp.status).json({ message: 'Failed to upload image binary', details: uploadText });
         }
-        console.log(`[Proxy] Uploaded image binary successfully for ${assetUrn}.`);
+        console.log('[Proxy] Upload binary response status for', assetUrn, uploadResp.status);
 
-
-        // Step 3: Poll for image status
-        const pollDelays = [1000, 2000, 3000, 5000, 10000]; // Adjusted delays for polling
-        let isAvailable = false;
-        let lastStatus = 'UNKNOWN';
+        // Step 3: Poll the asset status until AVAILABLE (or timeout)
         const startTime = Date.now();
+        const timeoutMs = 30 * 1000; // 30 seconds timeout
+        let isAvailable = false;
+        let lastStatus = null;
 
-        for (let i = 0; i < pollDelays.length; i++) {
-            await delay(pollDelays[i]);
-            console.log(`[Proxy Polling] Attempt ${i + 1}/${pollDelays.length} for asset ${assetUrn}...`);
+        while (Date.now() - startTime < timeoutMs) {
+            await delay(1000);
+            const statusUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
+            const statusResponse = await fetchWithRetry(fetch, statusUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${accessToken}`, 'LinkedIn-Version': LINKEDIN_API_VERSION } }, 5, 1000);
 
-            const statusCheckUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
-            const statusResponse = await fetch(statusCheckUrl, {
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION }
-            });
+            if (!statusResponse) {
+                console.warn('[Proxy Polling] No response when checking status for', assetUrn);
+                continue;
+            }
 
-            if (statusResponse.status === 401) return response.status(401).json({ message: 'Unauthorized during status check' });
-
-            if (statusResponse.status === 400 || statusResponse.status === 429 || statusResponse.status >= 500) {
-                 console.warn(`[Proxy Polling] Received HTTP ${statusResponse.status} for ${assetUrn}. Retrying...`);
-                 lastStatus = `HTTP ${statusResponse.status}`;
-                 continue;
+            if (statusResponse.status === 202) {
+                // still processing
+                console.log(`[Proxy Polling] Asset ${assetUrn} still processing (202).`);
+                lastStatus = 'PROCESSING';
+                continue;
             }
 
             if (!statusResponse.ok) {
-                const errorData = await statusResponse.json();
-                return response.status(statusResponse.status).json({ message: 'Unexpected error during image status check', details: errorData });
+                const errText = await statusResponse.text().catch(() => null);
+                console.warn('[Proxy Polling] Non-ok status when checking asset:', statusResponse.status, 'body:', errText);
+                lastStatus = `HTTP ${statusResponse.status}`;
+                continue;
             }
 
-            const statusData = await statusResponse.json();
-            lastStatus = statusData.status || 'NO_STATUS_FIELD';
-            console.log(`[Proxy Polling] Status for ${assetUrn} is ${lastStatus}.`);
+            const statusData = await statusResponse.json().catch(() => null);
+            lastStatus = statusData && statusData.status ? statusData.status : (statusData && statusData.value && statusData.value.status) ? statusData.value.status : 'UNKNOWN';
+            console.log('[Proxy Polling] Status for', assetUrn, 'is', lastStatus);
 
-            if (lastStatus === 'AVAILABLE') {
+            if (lastStatus === 'AVAILABLE' || lastStatus === 'READY') {
                 isAvailable = true;
                 break;
             }
@@ -313,6 +359,7 @@ async function handleUploadAndCheckImage(fetch, request, response) {
 
         if (!isAvailable) {
             const totalTime = (Date.now() - startTime) / 1000;
+            console.error('[Proxy] Asset did not become available in time for', assetUrn, 'lastStatus:', lastStatus, 'elapsed(s):', totalTime);
             return response.status(408).json({ message: `Image did not become available in time. Last status: ${lastStatus}` });
         }
 
