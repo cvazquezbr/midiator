@@ -101,10 +101,12 @@ export async function publishPost(fetch, post, accessToken) {
             }
 
             // Polling logic to check image status
-            const maxRetries = 30; // 30 retries * 2s delay = 60s max wait time
+            const maxRetries = 40; // 40 retries * 3s delay = 120s max wait time
             let isAvailable = false;
+            let lastStatus = 'UNKNOWN';
+
             for (let i = 0; i < maxRetries; i++) {
-                await delay(2000); // Wait 2 seconds
+                await delay(3000); // Wait 3 seconds
                 const statusResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                     method: 'POST',
                     headers: internalApiHeaders,
@@ -115,24 +117,27 @@ export async function publishPost(fetch, post, accessToken) {
                     })
                 });
 
-                if (statusResponse.status === 401) return statusResponse;
+                if (statusResponse.status === 401) return statusResponse; // Allow for token refresh
+
                 if (!statusResponse.ok) {
-                    console.warn(`Attempt ${i+1}: Failed to check image status for ${assetUrn}. Retrying...`);
+                    console.warn(`[Polling] Attempt ${i + 1}/${maxRetries}: Failed to check image status for ${assetUrn}. Retrying...`);
+                    lastStatus = `HTTP ${statusResponse.status}`;
                     continue;
                 }
 
                 const statusData = await statusResponse.json();
-                if (statusData.status === 'AVAILABLE') {
+                lastStatus = statusData.status || 'NO_STATUS_FIELD';
+                console.log(`[Polling] Attempt ${i + 1}/${maxRetries}: Status for ${assetUrn} is ${lastStatus}.`);
+
+                if (lastStatus === 'AVAILABLE') {
                     isAvailable = true;
-                    console.log(`Image ${assetUrn} is now AVAILABLE.`);
                     break;
                 }
             }
 
             if (!isAvailable) {
-                throw new Error(`Image ${assetUrn} did not become available in time.`);
+                throw new Error(`Image ${assetUrn} did not become available in time. Last known status: ${lastStatus}.`);
             }
-
             imageUrns.push(assetUrn);
         }
     }
