@@ -100,9 +100,45 @@ export async function publishPost(fetch, post, accessToken) {
 
             imageUrns.push(assetUrn);
 
-            // Add a delay to prevent potential race conditions on LinkedIn's side when processing multiple images.
-            console.log('[Cron Job] Waiting for 3 seconds before processing the next image...');
-            await delay(3000);
+            // Poll for image processing to complete before proceeding
+            const maxWaitMs = 60000; // 60 seconds timeout
+            const pollIntervalMs = 2500; // 2.5 seconds interval
+            let waitedMs = 0;
+            let isAvailable = false;
+
+            while (waitedMs < maxWaitMs) {
+                const statusResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+                    method: 'POST',
+                    headers: internalApiHeaders,
+                    body: JSON.stringify({ action: 'checkImageStatus', accessToken, imageUrn: assetUrn })
+                });
+
+                if (statusResponse.status === 401) return statusResponse; // Allow token refresh flow
+
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    const processingState = statusData?.status;
+                    console.log(`[Cron Job] Image status for ${assetUrn}: ${processingState}`);
+
+                    if (processingState === 'AVAILABLE') {
+                        isAvailable = true;
+                        break;
+                    }
+                    if (processingState === 'PROCESSING_FAILED') {
+                        throw new Error(`Image processing failed for asset ${assetUrn}.`);
+                    }
+                } else {
+                    console.warn(`[Cron Job] Failed to get image status for ${assetUrn}, will retry...`);
+                }
+
+                await delay(pollIntervalMs);
+                waitedMs += pollIntervalMs;
+            }
+
+            if (!isAvailable) {
+                // You can choose to either throw an error or log a warning and proceed
+                throw new Error(`Image ${assetUrn} did not become AVAILABLE within ${maxWaitMs / 1000} seconds.`);
+            }
         }
     }
 

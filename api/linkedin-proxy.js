@@ -172,6 +172,28 @@ async function handleCheckVideoStatus(fetch, request, response) {
     }
 }
 
+async function handleCheckImageStatus(fetch, request, response) {
+    try {
+      const { accessToken, imageUrn } = request.body;
+      if (!accessToken || !imageUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or imageUrn' });
+      }
+      const encoded = encodeURIComponent(imageUrn);
+      const url = `https://api.linkedin.com/rest/images/${encoded}`;
+      const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-RestLi-Protocol-Version': '2.0.0'
+      };
+      const liResp = await fetch(url, { method: 'GET', headers });
+      const data = await liResp.json();
+      return response.status(liResp.status).json(data);
+    } catch (err) {
+      console.error('Error in handleCheckImageStatus:', err);
+      return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
 async function handleGetProfile(fetch, request, response) {
     const { accessToken } = request.body;
     if (!accessToken) return response.status(400).json({ error: 'Missing accessToken for getProfile.' });
@@ -531,6 +553,7 @@ const protectedHandler = async (request, response) => {
     case 'uploadVideo': return handleUploadVideo(fetch, request, response);
     case 'finalizeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=finalizeUpload');
     case 'checkVideoStatus': return handleCheckVideoStatus(fetch, request, response);
+    case 'checkImageStatus': return handleCheckImageStatus(fetch, request, response);
     case 'getClientId': return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
     default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
   }
@@ -539,6 +562,7 @@ const protectedHandler = async (request, response) => {
 const SCHEDULER_ACTIONS = new Set([
   'refreshTokenInternal',
   'createPost',
+  'checkImageStatus',
   'registerUpload',
   'uploadImage',
   'initializeVideoUpload',
