@@ -100,6 +100,10 @@ export async function publishPost(fetch, post, accessToken) {
                 throw new Error(`Failed to upload image: ${errorData.message || 'Unknown error'}`);
             }
 
+            // Give LinkedIn a moment to recognize the asset before we start polling.
+            console.log(`[Cron Job] Waiting 5s before starting to poll for asset ${assetUrn}...`);
+            await delay(5000);
+
             // Polling logic to check image status
             const maxRetries = 40; // 40 retries * 3s delay = 120s max wait time
             let isAvailable = false;
