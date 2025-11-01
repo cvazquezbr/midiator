@@ -197,44 +197,45 @@ const Publisher = ({
   }, []);
 
   const fetchSchedules = React.useCallback(async () => {
-    if (tabValue === 2) {
-      setIsLoadingSchedules(true);
-      try {
-        const schedules = await getSchedulesForUser();
+    if (tabValue !== 2) return { schedules: [], assets: {} };
+    setIsLoadingSchedules(true);
+    try {
+      const schedules = await getSchedulesForUser();
+      const allNewlyCreatedAssets = {};
 
-        const hydrationPromises = schedules.map(async (schedule) => {
-          if (schedule.campaign_data) {
-            try {
-              const { finalState, newlyCreatedAssets } = await deserializeCampaignData(schedule.campaign_data);
-              // Update the parent's state directly with the new assets to break the loop
-              if (newlyCreatedAssets && Object.keys(newlyCreatedAssets).length > 0) {
-                setPendingAssets(newlyCreatedAssets);
-              }
-              return { ...schedule, campaign_data: finalState };
-            } catch (e) {
-              console.error(`Failed to hydrate schedule ${schedule.id}`, e);
-              return schedule; // Return original on failure
+      const hydrationPromises = schedules.map(async (schedule) => {
+        if (schedule.campaign_data) {
+          try {
+            // deserializeCampaignData now directly returns the assets
+            const { finalState, newlyCreatedAssets } = await deserializeCampaignData(schedule.campaign_data);
+            if (newlyCreatedAssets) {
+              Object.assign(allNewlyCreatedAssets, newlyCreatedAssets);
             }
+            return { ...schedule, campaign_data: finalState };
+          } catch (e) {
+            console.error(`Failed to hydrate schedule ${schedule.id}`, e);
+            return schedule;
           }
-          return schedule;
-        });
+        }
+        return schedule;
+      });
 
-        const hydratedSchedules = await Promise.all(hydrationPromises);
+      const hydratedSchedules = await Promise.all(hydrationPromises);
+      const parsedSchedules = hydratedSchedules.map(s => ({
+        ...s,
+        post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
+      }));
+      parsedSchedules.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        const parsedSchedules = hydratedSchedules.map(s => ({
-          ...s,
-          post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
-        }));
-        parsedSchedules.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setMySchedules(parsedSchedules);
-      } catch (error) {
-        console.error("Failed to fetch user schedules:", error);
-        toast.error(`Failed to fetch schedules: ${error.message}`);
-      } finally {
-        setIsLoadingSchedules(false);
-      }
+      return { schedules: parsedSchedules, assets: allNewlyCreatedAssets };
+    } catch (error) {
+      console.error("Failed to fetch user schedules:", error);
+      toast.error(`Failed to fetch schedules: ${error.message}`);
+      return { schedules: [], assets: {} };
+    } finally {
+      setIsLoadingSchedules(false);
     }
-  }, [tabValue, setPendingAssets]);
+  }, [tabValue]);
 
   const handleViewDetails = async (scheduleId) => {
     try {
@@ -303,8 +304,15 @@ const Publisher = ({
   };
 
   useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+    if (tabValue === 2) {
+      fetchSchedules().then(({ schedules, assets }) => {
+        setMySchedules(schedules);
+        if (assets && Object.keys(assets).length > 0) {
+          setPendingAssets(prevAssets => ({ ...prevAssets, ...assets }));
+        }
+      });
+    }
+  }, [tabValue, fetchSchedules, setPendingAssets]);
 
   const [isPublishingWp, setIsPublishingWp] = useState(false);
   const [publishingStatusWp, setPublishingStatusWp] = useState('');

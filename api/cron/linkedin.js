@@ -48,14 +48,16 @@ export async function publishPost(fetch, post, accessToken) {
 
     if (images.length > 0) {
         for (const imageUrl of images) {
-            const imageResponse = await fetch(imageUrl);
-            if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${imageUrl}`);
+            // Add a cache-busting parameter to the URL to ensure a fresh fetch for each image
+            const uniqueImageUrl = `${imageUrl}?t=${Date.now()}`;
+            const imageResponse = await fetch(uniqueImageUrl);
+            if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${uniqueImageUrl}`);
 
             const imageBuffer = await imageResponse.arrayBuffer();
             const imageBase64 = Buffer.from(imageBuffer).toString('base64');
             const imageType = imageResponse.headers.get('content-type');
 
-            console.log(`[Cron Job] Image Base64 size: ${imageBase64.length}`);
+            console.log(`[Cron Job] Fetched image with Base64 size: ${imageBase64.length}`);
 
             const registerResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
@@ -98,47 +100,40 @@ export async function publishPost(fetch, post, accessToken) {
                 throw new Error(`Failed to upload image: ${errorData.message || 'Unknown error'}`);
             }
 
-            imageUrns.push(assetUrn);
-
-            // Poll for image processing to complete before proceeding
-            const maxWaitMs = 60000; // 60 seconds timeout
-            const pollIntervalMs = 2500; // 2.5 seconds interval
-            let waitedMs = 0;
+            // Polling logic to check image status
+            const maxRetries = 30; // 30 retries * 2s delay = 60s max wait time
             let isAvailable = false;
-
-            while (waitedMs < maxWaitMs) {
+            for (let i = 0; i < maxRetries; i++) {
+                await delay(2000); // Wait 2 seconds
                 const statusResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                     method: 'POST',
                     headers: internalApiHeaders,
-                    body: JSON.stringify({ action: 'checkImageStatus', accessToken, imageUrn: assetUrn })
+                    body: JSON.stringify({
+                        action: 'checkImageStatus',
+                        accessToken,
+                        assetUrn
+                    })
                 });
 
-                if (statusResponse.status === 401) return statusResponse; // Allow token refresh flow
-
-                if (statusResponse.ok) {
-                    const statusData = await statusResponse.json();
-                    const processingState = statusData?.status;
-                    console.log(`[Cron Job] Image status for ${assetUrn}: ${processingState}`);
-
-                    if (processingState === 'AVAILABLE') {
-                        isAvailable = true;
-                        break;
-                    }
-                    if (processingState === 'PROCESSING_FAILED') {
-                        throw new Error(`Image processing failed for asset ${assetUrn}.`);
-                    }
-                } else {
-                    console.warn(`[Cron Job] Failed to get image status for ${assetUrn}, will retry...`);
+                if (statusResponse.status === 401) return statusResponse;
+                if (!statusResponse.ok) {
+                    console.warn(`Attempt ${i+1}: Failed to check image status for ${assetUrn}. Retrying...`);
+                    continue;
                 }
 
-                await delay(pollIntervalMs);
-                waitedMs += pollIntervalMs;
+                const statusData = await statusResponse.json();
+                if (statusData.status === 'AVAILABLE') {
+                    isAvailable = true;
+                    console.log(`Image ${assetUrn} is now AVAILABLE.`);
+                    break;
+                }
             }
 
             if (!isAvailable) {
-                // You can choose to either throw an error or log a warning and proceed
-                throw new Error(`Image ${assetUrn} did not become AVAILABLE within ${maxWaitMs / 1000} seconds.`);
+                throw new Error(`Image ${assetUrn} did not become available in time.`);
             }
+
+            imageUrns.push(assetUrn);
         }
     }
 
