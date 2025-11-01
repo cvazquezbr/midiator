@@ -100,17 +100,16 @@ export async function publishPost(fetch, post, accessToken) {
                 throw new Error(`Failed to upload image: ${errorData.message || 'Unknown error'}`);
             }
 
-            // Give LinkedIn a moment to recognize the asset before we start polling.
-            console.log(`[Cron Job] Waiting 5s before starting to poll for asset ${assetUrn}...`);
-            await delay(5000);
-
-            // Polling logic to check image status
-            const maxRetries = 40; // 40 retries * 3s delay = 120s max wait time
+            const delays = [500, 1000, 2000, 3000, 5000];
             let isAvailable = false;
             let lastStatus = 'UNKNOWN';
+            const startTime = Date.now();
 
-            for (let i = 0; i < maxRetries; i++) {
-                await delay(3000); // Wait 3 seconds
+            for (let i = 0; i < delays.length; i++) {
+                const waitTime = delays[i];
+                console.log(`[Polling] Waiting ${waitTime}ms before attempt ${i + 1}/5 for asset ${assetUrn}...`);
+                await delay(waitTime);
+
                 const statusResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                     method: 'POST',
                     headers: internalApiHeaders,
@@ -121,26 +120,35 @@ export async function publishPost(fetch, post, accessToken) {
                     })
                 });
 
-                if (statusResponse.status === 401) return statusResponse; // Allow for token refresh
+                if (statusResponse.status === 401) return statusResponse;
+
+                if (statusResponse.status === 400 || statusResponse.status === 429 || statusResponse.status >= 500) {
+                    console.warn(`[Polling] Attempt ${i + 1}/5: Received HTTP ${statusResponse.status} for ${assetUrn}. Continuing to next attempt.`);
+                    lastStatus = `HTTP ${statusResponse.status}`;
+                    continue; // Treat as a temporary failure and retry
+                }
 
                 if (!statusResponse.ok) {
-                    console.warn(`[Polling] Attempt ${i + 1}/${maxRetries}: Failed to check image status for ${assetUrn}. Retrying...`);
-                    lastStatus = `HTTP ${statusResponse.status}`;
-                    continue;
+                    // For other unexpected errors, fail fast
+                    const errorData = await statusResponse.json();
+                    throw new Error(`[Polling] Attempt ${i + 1}/5: Unexpected error checking image status for ${assetUrn}: ${errorData.message || `HTTP ${statusResponse.status}`}`);
                 }
 
                 const statusData = await statusResponse.json();
                 lastStatus = statusData.status || 'NO_STATUS_FIELD';
-                console.log(`[Polling] Attempt ${i + 1}/${maxRetries}: Status for ${assetUrn} is ${lastStatus}.`);
+                console.log(`[Polling] Attempt ${i + 1}/5: Status for ${assetUrn} is ${lastStatus}.`);
 
                 if (lastStatus === 'AVAILABLE') {
                     isAvailable = true;
+                    const totalTime = (Date.now() - startTime) / 1000;
+                    console.log(`[Polling] Asset ${assetUrn} became available after ${totalTime.toFixed(2)}s.`);
                     break;
                 }
             }
 
             if (!isAvailable) {
-                throw new Error(`Image ${assetUrn} did not become available in time. Last known status: ${lastStatus}.`);
+                const totalTime = (Date.now() - startTime) / 1000;
+                throw new Error(`Image ${assetUrn} did not become available after ${totalTime.toFixed(2)}s. Last known status: ${lastStatus}.`);
             }
             imageUrns.push(assetUrn);
         }
