@@ -69,6 +69,8 @@ export async function publishPost(fetch, post, accessToken) {
                 })
             });
 
+            // If we get a 401, return the response immediately. The main scheduler loop
+            // will catch this and attempt to refresh the token.
             if (registerResponse.status === 401) return registerResponse;
             if (!registerResponse.ok) {
                 const errorData = await registerResponse.json();
@@ -87,6 +89,7 @@ export async function publishPost(fetch, post, accessToken) {
                 body: JSON.stringify({ action: 'uploadImage', accessToken, uploadUrl, imageBase64, imageType })
             });
 
+            // Same as above, return on 401 to allow for token refresh.
             if (uploadResponse.status === 401) return uploadResponse;
             if (!uploadResponse.ok) {
                 const errorData = await uploadResponse.json();
