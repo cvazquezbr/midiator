@@ -65,7 +65,9 @@ export async function publishPost(fetch, post, accessToken) {
                     accessToken,
                     payload: {
                         initializeUploadRequest: {
-                            owner: authorUrn
+                            owner: authorUrn,
+                            // Add a unique identifier to each request to prevent API caching issues
+                            clientRequestId: `${Date.now()}-${images.indexOf(imageUrl)}`
                         }
                     }
                 })
@@ -99,10 +101,6 @@ export async function publishPost(fetch, post, accessToken) {
             }
 
             imageUrns.push(assetUrn);
-
-            // Add a delay to prevent potential race conditions on LinkedIn's side when processing multiple images.
-            console.log('[Cron Job] Waiting for 3 seconds before processing the next image...');
-            await delay(3000);
         }
     }
 
