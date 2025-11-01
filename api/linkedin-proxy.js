@@ -227,6 +227,105 @@ async function handleUploadImage(fetch, request, response) {
   }
 }
 
+async function handleUploadAndCheckImage(fetch, request, response) {
+    const { accessToken, authorUrn, imageBase64, imageType } = request.body;
+    if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
+        return response.status(400).json({ error: 'Missing required parameters for uploadAndCheckImage.' });
+    }
+
+    try {
+        // Step 1: Register the upload
+        const registerPayload = { initializeUploadRequest: { owner: authorUrn } };
+        const registerResponse = await fetchWithRetry(
+            fetch,
+            'https://api.linkedin.com/rest/images?action=initializeUpload',
+            {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
+                body: JSON.stringify(registerPayload),
+            }
+        );
+
+        if (registerResponse.status === 401) return response.status(401).json({ message: 'Unauthorized during register upload' });
+        if (!registerResponse.ok) {
+            const errorData = await registerResponse.json();
+            return response.status(registerResponse.status).json({ message: 'Failed to register image upload', details: errorData });
+        }
+
+        const { value: { uploadUrl, image: assetUrn } } = await registerResponse.json();
+        if (!uploadUrl || !assetUrn) {
+            return response.status(500).json({ message: 'Missing uploadUrl or assetUrn in LinkedIn response.' });
+        }
+        console.log(`[Proxy] Registered image successfully. Asset URN: ${assetUrn}`);
+
+        // Step 2: Upload the image binary
+        const imageBuffer = Buffer.from(imageBase64, 'base64');
+        const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': imageType },
+            body: imageBuffer
+        });
+
+        if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            return response.status(uploadResponse.status).json({ message: 'Failed to upload image binary', details: errorText });
+        }
+        console.log(`[Proxy] Uploaded image binary successfully for ${assetUrn}.`);
+
+
+        // Step 3: Poll for image status
+        const pollDelays = [1000, 2000, 3000, 5000, 10000]; // Adjusted delays for polling
+        let isAvailable = false;
+        let lastStatus = 'UNKNOWN';
+        const startTime = Date.now();
+
+        for (let i = 0; i < pollDelays.length; i++) {
+            await delay(pollDelays[i]);
+            console.log(`[Proxy Polling] Attempt ${i + 1}/${pollDelays.length} for asset ${assetUrn}...`);
+
+            const statusCheckUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
+            const statusResponse = await fetch(statusCheckUrl, {
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION }
+            });
+
+            if (statusResponse.status === 401) return response.status(401).json({ message: 'Unauthorized during status check' });
+
+            if (statusResponse.status === 400 || statusResponse.status === 429 || statusResponse.status >= 500) {
+                 console.warn(`[Proxy Polling] Received HTTP ${statusResponse.status} for ${assetUrn}. Retrying...`);
+                 lastStatus = `HTTP ${statusResponse.status}`;
+                 continue;
+            }
+
+            if (!statusResponse.ok) {
+                const errorData = await statusResponse.json();
+                return response.status(statusResponse.status).json({ message: 'Unexpected error during image status check', details: errorData });
+            }
+
+            const statusData = await statusResponse.json();
+            lastStatus = statusData.status || 'NO_STATUS_FIELD';
+            console.log(`[Proxy Polling] Status for ${assetUrn} is ${lastStatus}.`);
+
+            if (lastStatus === 'AVAILABLE') {
+                isAvailable = true;
+                break;
+            }
+        }
+
+        if (!isAvailable) {
+            const totalTime = (Date.now() - startTime) / 1000;
+            return response.status(408).json({ message: `Image did not become available in time. Last status: ${lastStatus}` });
+        }
+
+        console.log(`[Proxy] Asset ${assetUrn} is available. Total time: ${(Date.now() - startTime) / 1000}s.`);
+        return response.status(200).json({ assetUrn });
+
+    } catch (error) {
+        console.error('[FATAL] Error in handleUploadAndCheckImage:', error);
+        return response.status(500).json({ error: 'Internal Server Error in handleUploadAndCheckImage' });
+    }
+}
+
+
 async function handleCreatePost(fetch, request, response) {
     try {
         const { accessToken, payload } = request.body;
@@ -546,6 +645,7 @@ const protectedHandler = async (request, response) => {
     case 'getProfile': return handleGetProfile(fetch, request, response);
     case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/images?action=initializeUpload');
     case 'uploadImage': return handleUploadImage(fetch, request, response);
+    case 'uploadAndCheckImage': return handleUploadAndCheckImage(fetch, request, response);
     case 'createPost': return handleCreatePost(fetch, request, response);
     case 'getProfiles': return handleGetProfiles(fetch, request, response);
     case 'getShareStatistics': return handleGetShareStatistics(fetch, request, response);
@@ -566,6 +666,7 @@ const SCHEDULER_ACTIONS = new Set([
   'checkImageStatus',
   'registerUpload',
   'uploadImage',
+  'uploadAndCheckImage',
   'initializeVideoUpload',
   'uploadVideo',
   'finalizeVideoUpload',
