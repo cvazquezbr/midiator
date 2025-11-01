@@ -250,18 +250,22 @@ async function handleCreatePost(fetch, request, response) {
                 }
             };
         } else if (images && images.length > 0) {
-            if (images.length === 1) {
+            // Normalize the images array. It can come as an array of URN strings (from the cron job)
+            // or an array of objects with an 'id' property (from the direct UI post).
+            const normalizedUrns = images.map(img => (typeof img === 'string' ? img : img.id)).filter(Boolean);
+
+            if (normalizedUrns.length === 1) {
                 // Single image post
                 postData.content = {
                     media: {
-                        id: images[0]
+                        id: normalizedUrns[0]
                     }
                 };
-            } else {
+            } else if (normalizedUrns.length > 1) {
                 // Multi-image post
                 postData.content = {
                     multiImage: {
-                        images: images.map(urn => ({ id: urn }))
+                        images: normalizedUrns.map(urn => ({ id: urn }))
                     }
                 };
             }
