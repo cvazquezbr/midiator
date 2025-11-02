@@ -35,13 +35,14 @@ describe('Scheduler Success Test', () => {
         const testPost = {
             id: 101,
             user_id: 1,
-            linkedin_access_token: 'test_token', // This now comes from the JOINed users table
+            linkedin_access_token: 'test_token',
             payload: {
                 content: 'Test Content',
             },
             author: null,
             target_id: '1',
-            target_type: 'person'
+            target_type: 'person',
+            scheduled_at: new Date().toISOString(),
         };
 
         // Mock database responses
