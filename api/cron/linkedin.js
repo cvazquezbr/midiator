@@ -58,3 +58,8 @@ export default async function handler() {
     console.error('[Cron Fixed] Erro fatal no cron LinkedIn:', error);
   }
 }
+
+export async function handleRunScheduler() {
+  return handler();
+}
+
