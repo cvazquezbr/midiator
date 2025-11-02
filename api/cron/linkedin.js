@@ -191,7 +191,7 @@ export async function handleRunScheduler(response) {
   try {
     // Query pending scheduled posts (schema public)
     const { rows } = await query(
-      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.post_content AS payload, ls.scheduled_at
+      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.post_content AS payload, ls.scheduled_at, ls.author_urn
        FROM linkedin_schedules ls
        JOIN users u ON ls.user_id = u.id
        WHERE ls.status = 'scheduled' AND u.linkedin_access_token IS NOT NULL
@@ -226,7 +226,7 @@ export async function handleRunScheduler(response) {
       }
 
       // Build author URN
-      const authorUrn = buildAuthorUrn(Object.assign({}, row, payload));
+      const authorUrn = row.author_urn;
       if (!authorUrn) {
         console.error(`[Cron LinkedIn] Could not determine author URN for post ${postId}.`);
         await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn', postId]);
@@ -234,7 +234,7 @@ export async function handleRunScheduler(response) {
       }
 
       // Prepare commentary/text
-      const commentaryRaw = payload.content || payload.commentary || payload.text || '';
+      const commentaryRaw = payload.fullText || payload.content || payload.commentary || payload.text || '';
       const commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
 
       // Collect uploaded asset URNs for this post
