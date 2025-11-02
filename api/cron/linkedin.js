@@ -192,7 +192,7 @@ export async function handleRunScheduler() {
     // Query pending scheduled posts (schema public)
     const { rows } = await query(
       `SELECT id, user_id, linkedin_access_token, payload, scheduled_for, author, target_id, target_type
-       FROM scheduled_posts
+       FROM public.scheduled_posts
        WHERE status = 'pending'
        ORDER BY scheduled_for ASC
        LIMIT 50`
@@ -220,7 +220,7 @@ export async function handleRunScheduler() {
       const accessToken = row.linkedin_access_token || payload.accessToken || null;
       if (!accessToken) {
         console.error(`[Cron LinkedIn] No access token for post ${postId}. Marking failed.`);
-        await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing access token', postId]);
+        await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing access token', postId]);
         continue;
       }
 
@@ -228,7 +228,7 @@ export async function handleRunScheduler() {
       const authorUrn = buildAuthorUrn(Object.assign({}, row, payload));
       if (!authorUrn) {
         console.error(`[Cron LinkedIn] Could not determine author URN for post ${postId}.`);
-        await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn', postId]);
+        await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn', postId]);
         continue;
       }
 
@@ -366,15 +366,15 @@ export async function handleRunScheduler() {
 
         if (createResp.ok) {
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. Response:`, createData);
-          await query('UPDATE scheduled_posts SET status = $1, posted_at = NOW() WHERE id = $2', ['sent', postId]);
+          await query('UPDATE public.scheduled_posts SET status = $1, posted_at = NOW() WHERE id = $2', ['sent', postId]);
         } else {
           console.error(`[Cron LinkedIn CreatePost] Failed to create post ${postId}:`, createResp.status, createData);
-          await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);
+          await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);
         }
       } catch (err) {
         console.error(`[Cron LinkedIn] Error processing post ${postId}:`, err);
         try {
-          await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', err.message || String(err), postId]);
+          await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', err.message || String(err), postId]);
         } catch (qerr) {
           console.error('[Cron LinkedIn] Failed to update DB for post failure:', qerr);
         }
