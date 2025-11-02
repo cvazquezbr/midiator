@@ -355,7 +355,6 @@ export async function handleRunScheduler(response) {
             'x-internal-secret': INTERNAL_API_SECRET
           },
           body: JSON.stringify({
-            action: 'createPost',
             accessToken,
             payload: postPayload
           })

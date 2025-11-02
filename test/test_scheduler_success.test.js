@@ -73,7 +73,7 @@ describe('Scheduler Success Test', () => {
         expect(fetch).toHaveBeenCalled();
         const fetchCall = fetch.mock.calls[0];
         const fetchBody = JSON.parse(fetchCall[1].body);
-        expect(fetchBody.action).toBe('createPost');
+        expect(fetchBody.accessToken).toBe('test_token');
         expect(fetchBody.payload.commentary).toBe('Test Content');
 
 
