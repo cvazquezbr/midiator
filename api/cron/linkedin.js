@@ -1,6 +1,9 @@
 import { query } from '../db.js';
 import { markdownToLinkedinText } from '../utils.js';
 
+const DEBUG = !!process.env.DEBUG;
+function dlog(...args){ if (DEBUG) console.log(...args); }
+
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Helper function to publish a single post to LinkedIn.
@@ -16,11 +19,11 @@ export async function publishPost(fetch, post, accessToken) {
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
-    // O texto final já vem formatado do frontend, garantindo consistência.
+    // O texto final jÃ¡ vem formatado do frontend, garantindo consistÃªncia.
     let postText = postContent.fullText;
 
     if (!postText) {
-        // Fallback para o caso de agendamentos antigos que não têm o fullText.
+        // Fallback para o caso de agendamentos antigos que nÃ£o tÃªm o fullText.
         console.warn(`Post ${post.id} is using legacy content assembly. Consider re-scheduling.`);
         postText = [
             postContent.titulo,
@@ -60,23 +63,85 @@ export async function publishPost(fetch, post, accessToken) {
 
             console.log(`[Cron Job] Fetched image with Base64 size: ${imageBase64.length}. Uploading to LinkedIn...`);
 
-            const uploadCheckResponse = await /* --- CRON MINIMAL PATCH: ensure proxy receives { action:'createPost', body:{ accessToken, payload } } --- */
+            const uploadCheckResponse = await // --- PATCH (Cron compatibility & multi-image normalization) ---
+// This block is inserted immediately before the call to the linkedin proxy to ensure
+// the proxy receives: { action: 'createPost', body: { accessToken, payload } }
+// and that multi-image content is normalized.
+(function __cron_payload_normalizer__() {
+  try {
+    // If payload is not defined, nothing to do
+    if (typeof payload === 'undefined' || payload === null) return;
+    // prepare a safe copy
+    const _payloadForProxy = Object.assign({}, payload);
+    if (!_payloadForProxy.commentary && typeof _payloadForProxy.content === 'string') {
+      _payloadForProxy.commentary = String(_payloadForProxy.content);
+    }
+    if (_payloadForProxy.commentary && typeof _payloadForProxy.commentary !== 'string') {
+      _payloadForProxy.commentary = String(_payloadForProxy.commentary);
+    }
+    const _normalizedImages = Array.isArray(_payloadForProxy.images) ? _payloadForProxy.images.map(i => (typeof i === 'string' ? i : i.id)).filter(Boolean) : [];
+    if (_normalizedImages.length > 1) {
+      _payloadForProxy.content = Object.assign({}, _payloadForProxy.content || {});
+      _payloadForProxy.content.multiImage = { images: _normalizedImages.map(u => ({ id: u, altText: ' ' })) };
+      _payloadForProxy.content.contentFormat = 'MULTI_IMAGE';
+      _payloadForProxy.images = _normalizedImages;
+    }
+    // expose normalized payload to the callsite via a well-known variable name
+    globalThis.__payloadForLinkedinProxy = _payloadForProxy;
+  } catch (e) {
+    console.warn('[Patch] payload normalizer error:', e);
+  }
+})();
+// --- end patch ---
+
+
+/* --- CRON-PATCH: defensive payload normalization before calling proxy --- */
 try {
-  const _payloadForProxy = Object.assign({}, payload);
-  if (!_payloadForProxy.commentary && typeof _payloadForProxy.content === 'string') {
-    _payloadForProxy.commentary = String(_payloadForProxy.content);
-  }
-  if (_payloadForProxy.commentary && typeof _payloadForProxy.commentary !== 'string') {
-    _payloadForProxy.commentary = String(_payloadForProxy.commentary);
-  }
-  const _normalizedImages = Array.isArray(_payloadForProxy.images) ? _payloadForProxy.images.map(i => (typeof i==='string'?i:i.id)).filter(Boolean) : [];
-  if (_normalizedImages.length > 1) {
-    _payloadForProxy.content = Object.assign({}, _payloadForProxy.content || {});
-    _payloadForProxy.content.multiImage = { images: _normalizedImages.map(u => ({ id: u, altText: ' ' })) };
-    _payloadForProxy.content.contentFormat = 'MULTI_IMAGE';
-    _payloadForProxy.images = _normalizedImages;
+  const _payloadForProxy = (typeof payload === 'object' && payload) ? Object.assign({}, payload) : payload;
+  if (_payloadForProxy) {
+    if (!_payloadForProxy.commentary && typeof _payloadForProxy.content === 'string') {
+      _payloadForProxy.commentary = String(_payloadForProxy.content);
+    }
+    if (_payloadForProxy.commentary && typeof _payloadForProxy.commentary !== 'string') {
+      _payloadForProxy.commentary = String(_payloadForProxy.commentary);
+    }
+    const _normalizedImages = Array.isArray(_payloadForProxy.images) ? _payloadForProxy.images.map(i => (typeof i === 'string' ? i : i.id)).filter(Boolean) : [];
+    if (_normalizedImages.length > 1) {
+      _payloadForProxy.content = Object.assign({}, _payloadForProxy.content || {});
+      _payloadForProxy.content.multiImage = { images: _normalizedImages.map(u => ({ id: u, altText: ' ' })) };
+      _payloadForProxy.content.contentFormat = 'MULTI_IMAGE';
+      _payloadForProxy.images = _normalizedImages;
+    }
   }
 } catch(e){ console.warn('[Cron Patch] defensive wrapper failed:', e); }
+/* --- end CRON-PATCH --- */
+
+/* --- PATCH: ensure proxy call payload is wrapped and multi-image ready ---
+   This wrapper prepares _payloadForProxy so the proxy always receives:
+   { action: 'createPost', body: { accessToken, payload } }
+   and ensures commentary is a string and multiImage is normalized.
+   It will only run if variable 'payload' is in scope.
+*/
+try {
+  const _payloadForProxy = (typeof payload !== 'undefined') ? Object.assign({}, payload) : undefined;
+  if (_payloadForProxy) {
+    if (!_payloadForProxy.commentary && typeof _payloadForProxy.content === 'string') {
+      _payloadForProxy.commentary = String(_payloadForProxy.content);
+    }
+    if (_payloadForProxy.commentary && typeof _payloadForProxy.commentary !== 'string') {
+      _payloadForProxy.commentary = String(_payloadForProxy.commentary);
+    }
+    const _normalizedImages = Array.isArray(_payloadForProxy.images) ? _payloadForProxy.images.map(i => (typeof i === 'string' ? i : i.id)).filter(Boolean) : [];
+    if (_normalizedImages.length > 1) {
+      _payloadForProxy.content = Object.assign({}, _payloadForProxy.content || {});
+      _payloadForProxy.content.multiImage = { images: _normalizedImages.map(u => ({ id: u, altText: ' ' })) };
+      _payloadForProxy.content.contentFormat = 'MULTI_IMAGE';
+      _payloadForProxy.images = _normalizedImages;
+    }
+  }
+} catch (e) {
+  console.warn('[Cron Patch] defensive wrapper failed:', e);
+}
 /* --- end patch --- */
 fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
@@ -133,10 +198,31 @@ fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
             console.log('[Cron Patch] Posting payload images (final):', payload.images);
             // --- end patch ---
 
+// --- PATCH APPLIED: ensure multiImage uses altText and contentFormat ---
+try {
+  console.log('[Cron Fix] Preparing final payload images:', imageUrns);
+  if (Array.isArray(imageUrns) && imageUrns.length > 1) {
+    const distinctUrns = Array.from(new Set(imageUrns));
+    // Build multiImage with altText and contentFormat
+    payload.content = {
+      multiImage: {
+        images: distinctUrns.map(u => ({ id: u, altText: ' ' }))
+      },
+      contentFormat: 'MULTI_IMAGE'
+    };
+    console.log('[Cron Fix] Forced multiImage with altText and contentFormat. Images:', payload.content.multiImage.images);
+  } else if (Array.isArray(imageUrns) && imageUrns.length === 1) {
+    payload.content = { media: { id: imageUrns[0] } };
+    console.log('[Cron Fix] Single image payload assigned:', payload.content);
+  }
+} catch (e) {
+  console.error('[Cron Fix] Error building multiImage payload:', e);
+}
+// --- END PATCH ---
 return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
         headers: internalApiHeaders,
-        body: JSON.stringify({ action: 'createPost', body: { accessToken, payload: _payloadForProxy || payload } }),
+        body: JSON.stringify({ action: 'createPost', body: { accessToken, payload: (typeof __payloadForLinkedinProxy !== 'undefined' ? __payloadForLinkedinProxy : payload) } }),
     });
 }
 
@@ -260,4 +346,4 @@ export default async function handler(request, response) {
   }
 
   return handleRunScheduler(request, response);
-}
+            }
