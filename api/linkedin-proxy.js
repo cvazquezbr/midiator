@@ -1,6 +1,7 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { kv } from './kv.js';
+import fetch from 'node-fetch';
 
 const LINKEDIN_API_VERSION = '202411';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -16,9 +17,9 @@ function escapeLinkedinText(text) {
 }
 
 // LinkedIn create post handler with full commentary and multi-image support
-async function handleCreatePost(fetch, request, response) {
+async function handleCreatePost(request, response) {
   try {
-    const { accessToken, payload } = request.body;
+    const { action, accessToken, payload } = request.body;
     if (!accessToken || !payload) {
       return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
     }
