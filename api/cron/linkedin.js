@@ -190,13 +190,17 @@ export async function handleRunScheduler(response) {
 
   try {
     // Query pending scheduled posts (schema public)
+    const now = new Date();
     const { rows } = await query(
-      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.post_content AS payload, ls.scheduled_at, ls.author_urn
-       FROM linkedin_schedules ls
-       JOIN users u ON ls.user_id = u.id
-       WHERE ls.status = 'scheduled' AND u.linkedin_access_token IS NOT NULL
-       ORDER BY ls.scheduled_at ASC
-       LIMIT 50`
+      `SELECT ls.*, c.campaign_data, u.linkedin_access_token
+             FROM linkedin_schedules ls
+             JOIN users u ON ls.user_id = u.id
+             LEFT JOIN campaigns c ON ls.campaign_id = c.id
+             WHERE ls.scheduled_at <= ($1 AT TIME ZONE 'UTC')
+               AND ls.status = 'scheduled'
+               AND u.linkedin_access_token IS NOT NULL
+             ORDER BY ls.parent_id ASC NULLS FIRST, ls.scheduled_at ASC`,
+      [now]
     );
 
     if (!rows || rows.length === 0) {
@@ -210,12 +214,24 @@ export async function handleRunScheduler(response) {
       const postId = row.id;
       console.log(`[Cron LinkedIn] Processing post ${postId}...`);
 
-      // Parse payload (may be stored as JSON string or JSONB)
-      let payload = row.payload;
-      if (typeof payload === 'string') {
-        try { payload = JSON.parse(payload); } catch (e) { console.warn('[Cron LinkedIn] payload parse error', e); }
+      // Unify data extraction from either post_content or campaign_data
+      let postData = {};
+      if (row.post_content) {
+        postData = typeof row.post_content === 'string' ? JSON.parse(row.post_content) : row.post_content;
+      } else if (row.campaign_data) {
+        const campaignData = typeof row.campaign_data === 'string' ? JSON.parse(row.campaign_data) : row.campaign_data;
+        // Adapt campaign_data structure to a common postData structure
+        postData = {
+          authorUrn: campaignData.authorUrn, // Assuming authorUrn is stored here
+          content: {
+            fullText: campaignData.conteudo, // Or relevant field
+            // ... other fields if necessary
+          },
+          // ...
+        };
       }
-      if (!payload) payload = {};
+
+      const payload = postData; // Use the unified 'payload' variable name
 
       // Determine access token (use linkedin_access_token column or payload.accessToken)
       const accessToken = row.linkedin_access_token || payload.accessToken || null;
@@ -225,16 +241,16 @@ export async function handleRunScheduler(response) {
         continue;
       }
 
-      // Build author URN
-      const authorUrn = row.author_urn;
+      // Extract authorUrn from the JSON payload (post_content)
+      const authorUrn = payload.authorUrn;
       if (!authorUrn) {
-        console.error(`[Cron LinkedIn] Could not determine author URN for post ${postId}.`);
-        await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn', postId]);
+        console.error(`[Cron LinkedIn] Could not determine author URN from post_content for post ${postId}.`);
+        await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn from payload', postId]);
         continue;
       }
 
-      // Prepare commentary/text
-      const commentaryRaw = payload.fullText || payload.content || payload.commentary || payload.text || '';
+      // Prepare commentary/text from the correct nested structure
+      const commentaryRaw = (payload.content && payload.content.fullText) || payload.fullText || payload.content || payload.commentary || '';
       const commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
 
       // Collect uploaded asset URNs for this post
