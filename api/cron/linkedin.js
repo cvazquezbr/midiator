@@ -115,6 +115,27 @@ export async function publishPost(fetch, post, accessToken) {
             console.log('[Cron Patch] Posting payload images (final):', payload.images);
             // --- end patch ---
 
+// --- PATCH APPLIED: ensure multiImage uses altText and contentFormat ---
+try {
+  console.log('[Cron Fix] Preparing final payload images:', imageUrns);
+  if (Array.isArray(imageUrns) && imageUrns.length > 1) {
+    const distinctUrns = Array.from(new Set(imageUrns));
+    // Build multiImage with altText and contentFormat
+    payload.content = {
+      multiImage: {
+        images: distinctUrns.map(u => ({ id: u, altText: ' ' }))
+      },
+      contentFormat: 'MULTI_IMAGE'
+    };
+    console.log('[Cron Fix] Forced multiImage with altText and contentFormat. Images:', payload.content.multiImage.images);
+  } else if (Array.isArray(imageUrns) && imageUrns.length === 1) {
+    payload.content = { media: { id: imageUrns[0] } };
+    console.log('[Cron Fix] Single image payload assigned:', payload.content);
+  }
+} catch (e) {
+  console.error('[Cron Fix] Error building multiImage payload:', e);
+}
+// --- END PATCH ---
 return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
         headers: internalApiHeaders,
