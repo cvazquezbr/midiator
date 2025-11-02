@@ -191,11 +191,11 @@ export async function handleRunScheduler() {
   try {
     // Query pending scheduled posts (schema public)
     const { rows } = await query(
-      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.payload, ls.scheduled_for, ls.author, ls.target_id, ls.target_type
+      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.post_content AS payload, ls.scheduled_at, ls.author, ls.target_id, ls.target_type
        FROM linkedin_schedules ls
        JOIN users u ON ls.user_id = u.id
        WHERE ls.status = 'pending' AND u.linkedin_access_token IS NOT NULL
-       ORDER BY ls.scheduled_for ASC
+       ORDER BY ls.scheduled_at ASC
        LIMIT 50`
     );
 
@@ -367,7 +367,7 @@ export async function handleRunScheduler() {
 
         if (createResp.ok) {
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. Response:`, createData);
-          await query('UPDATE linkedin_schedules SET status = $1, posted_at = NOW() WHERE id = $2', ['sent', postId]);
+          await query('UPDATE linkedin_schedules SET status = $1 WHERE id = $2', ['sent', postId]);
         } else {
           console.error(`[Cron LinkedIn CreatePost] Failed to create post ${postId}:`, createResp.status, createData);
           await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);
