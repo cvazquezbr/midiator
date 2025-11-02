@@ -366,8 +366,12 @@ export async function handleRunScheduler() {
         try { createData = createText ? JSON.parse(createText) : {}; } catch (e) { createData = { raw: createText }; }
 
         if (createResp.ok) {
-          console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. Response:`, createData);
-          await query('UPDATE linkedin_schedules SET status = $1 WHERE id = $2', ['sent', postId]);
+          const postIdFromApi = createData.id;
+          console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post ID: ${postIdFromApi}`);
+          await query(
+            'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2 WHERE id = $3',
+            ['sent', postIdFromApi, postId]
+          );
         } else {
           console.error(`[Cron LinkedIn CreatePost] Failed to create post ${postId}:`, createResp.status, createData);
           await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);

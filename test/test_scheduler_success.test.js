@@ -71,11 +71,12 @@ describe('Scheduler Success Test', () => {
         expect(fetchBody.payload.commentary).toBe('Test Content');
 
 
-        // Verify that the status was updated to 'sent'
+        // Verify that the status and linkedin_post_id were updated
         const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
         expect(updateQueryCall).toBeDefined();
-        expect(updateQueryCall[0]).toContain("SET status = $1");
-        expect(updateQueryCall[1][0]).toBe('sent');
-        expect(updateQueryCall[1][1]).toBe(testPost.id);
+        expect(updateQueryCall[0]).toContain("SET status = $1, linkedin_post_id = $2");
+        expect(updateQueryCall[1][0]).toBe('sent'); // status
+        expect(updateQueryCall[1][1]).toBe('urn:li:share:12345'); // linkedin_post_id
+        expect(updateQueryCall[1][2]).toBe(testPost.id); // id
     });
 });
