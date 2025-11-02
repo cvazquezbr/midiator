@@ -16,12 +16,11 @@ export async function publishPost(fetch, post, accessToken) {
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
-    // O texto final já vem formatado do frontend, garantindo consistência.
+    // Build the final text for the post. Use fullText when available.
     let postText = postContent.fullText;
 
     if (!postText) {
-        // Fallback para o caso de agendamentos antigos que não têm o fullText.
-        console.warn(`Post ${post.id} is using legacy content assembly. Consider re-scheduling.`);
+        console.warn(`[LinkedIn Cron] Post ${post.id} using legacy content assembly.`);
         postText = [
             postContent.titulo,
             postContent.conteudo,
@@ -38,105 +37,117 @@ export async function publishPost(fetch, post, accessToken) {
             [post.parent_id]
         );
         if (parentRows.length > 0 && parentRows[0].linkedin_post_url) {
-            // Adiciona o link do post original ao final do texto.
             postText += `\n\nPost original: ${parentRows[0].linkedin_post_url}`;
         }
     }
 
-    const images = post.post_content?.images || [];
+    // Normalize images array (can be urls to blob storage)
+    const images = Array.isArray(post.post_content?.images) ? post.post_content.images : [];
     const imageUrns = [];
 
     if (images.length > 0) {
         for (const [index, imageUrl] of images.entries()) {
-            console.log(`[Cron Job] Processing image ${index + 1}/${images.length}: ${imageUrl}`);
+            try {
+                console.log(`[LinkedIn Cron] Processing image ${index + 1}/${images.length}: ${imageUrl}`);
 
-            const uniqueImageUrl = `${imageUrl}?t=${Date.now()}`;
-            const imageResponse = await fetch(uniqueImageUrl);
-            if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${uniqueImageUrl}`);
+                const uniqueImageUrl = `${imageUrl}?t=${Date.now()}`;
+                const imageResponse = await fetch(uniqueImageUrl);
+                if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${uniqueImageUrl}`);
 
-            const imageBuffer = await imageResponse.arrayBuffer();
-            const imageBase64 = Buffer.from(imageBuffer).toString('base64');
-            const imageType = imageResponse.headers.get('content-type');
+                const imageBuffer = await imageResponse.arrayBuffer();
+                const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+                const imageType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
-            console.log(`[Cron Job] Fetched image with Base64 size: ${imageBase64.length}. Uploading to LinkedIn...`);
+                console.log(`[LinkedIn Cron] Fetched image, base64 size: ${imageBase64.length}. Uploading to proxy...`);
 
-            const uploadCheckResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
-                method: 'POST',
-                headers: internalApiHeaders,
-                body: JSON.stringify({
-                    action: 'uploadAndCheckImage',
-                    accessToken,
-                    authorUrn,
-                    imageBase64,
-                    imageType
-                })
-            });
+                const uploadCheckResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+                    method: 'POST',
+                    headers: internalApiHeaders,
+                    body: JSON.stringify({
+                        action: 'uploadAndCheckImage',
+                        accessToken,
+                        authorUrn,
+                        imageBase64,
+                        imageType
+                    })
+                });
 
-            // If we get a 401, return the response immediately. The main scheduler loop
-            // will catch this and attempt to refresh the token.
-            if (uploadCheckResponse.status === 401) return uploadCheckResponse;
+                if (uploadCheckResponse.status === 401) {
+                    console.warn('[LinkedIn Cron] Received 401 from proxy during image upload; forwarding to caller for token refresh.');
+                    return uploadCheckResponse;
+                }
 
-            if (!uploadCheckResponse.ok) {
-                const errorData = await uploadCheckResponse.json();
-                throw new Error(`Failed during uploadAndCheckImage for ${imageUrl}: ${errorData.message || 'Unknown error'}`);
+                if (!uploadCheckResponse.ok) {
+                    const errorData = await uploadCheckResponse.json().catch(() => null);
+                    throw new Error(`Failed during uploadAndCheckImage for ${imageUrl}: ${errorData?.message || 'Unknown error'}`);
+                }
+
+                const uploadJson = await uploadCheckResponse.json().catch(() => null);
+                const assetUrn = uploadJson?.assetUrn || uploadJson?.asset || uploadJson?.value?.asset;
+                if (!assetUrn) {
+                    throw new Error(`Proxy did not return an assetUrn for ${imageUrl}. Response: ${JSON.stringify(uploadJson)}`);
+                }
+
+                console.log(`[LinkedIn Cron] Successfully received asset URN: ${assetUrn}`);
+                imageUrns.push(assetUrn);
+
+            } catch (err) {
+                console.error(`[LinkedIn Cron] Error uploading image ${imageUrl}:`, err.message || err);
+                throw err;
             }
-
-            const { assetUrn } = await uploadCheckResponse.json();
-            if (!assetUrn) {
-                throw new Error(`Proxy did not return an assetUrn for ${imageUrl}.`);
-            }
-
-            console.log(`[Cron Job] Successfully received asset URN: ${assetUrn}`);
-            imageUrns.push(assetUrn);
         }
     }
 
     const videoUrn = post.post_content?.video;
+    // Build the payload. Use 'commentary' for text (so proxy can escape it), and 'content' only for media.
     const payload = {
         author: authorUrn,
-        content: postText,
-        images: imageUrns,
+        commentary: postText,
+        images: [], // will be filled with URNs (kept for backwards compatibility)
         video: videoUrn,
         title: post.post_content?.titulo || 'Video Post'
     };
 
-
-            // --- PATCHED: extra validation & logging to debug duplicate-image issue ---
-            console.log('[Cron Patch] Final image URNs collected:', imageUrns);
-            // Ensure number of URNs matches number of images requested
-            const distinctUrns = Array.from(new Set(imageUrns));
-            if (distinctUrns.length !== images.length) {
-                console.warn('[Cron Patch] number of distinct URNs does not match images.length', { imagesLength: images.length, distinctUrnsLength: distinctUrns.length });
-            }
-            // Defensive small pause to ensure LinkedIn has finalized processing (extra safety)
-            await delay(1200);
-            // Reassign payload images explicitly to avoid accidental mutation
-            payload.images = distinctUrns.slice(0, images.length);
-            console.log('[Cron Patch] Posting payload images (final):', payload.images);
-            // --- end patch ---
-
-// --- PATCH APPLIED: ensure multiImage uses altText and contentFormat ---
-try {
-  console.log('[Cron Fix] Preparing final payload images:', imageUrns);
-  if (Array.isArray(imageUrns) && imageUrns.length > 1) {
+    // --- Validation & dedupe ---
+    console.log('[LinkedIn Cron] Final image URNs collected (raw):', imageUrns);
     const distinctUrns = Array.from(new Set(imageUrns));
-    // Build multiImage with altText and contentFormat
-    payload.content = {
-      multiImage: {
-        images: distinctUrns.map(u => ({ id: u, altText: ' ' }))
-      },
-      contentFormat: 'MULTI_IMAGE'
-    };
-    console.log('[Cron Fix] Forced multiImage with altText and contentFormat. Images:', payload.content.multiImage.images);
-  } else if (Array.isArray(imageUrns) && imageUrns.length === 1) {
-    payload.content = { media: { id: imageUrns[0] } };
-    console.log('[Cron Fix] Single image payload assigned:', payload.content);
-  }
-} catch (e) {
-  console.error('[Cron Fix] Error building multiImage payload:', e);
-}
-// --- END PATCH ---
-return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+    if (distinctUrns.length !== images.length) {
+        console.warn('[LinkedIn Cron] distinct URNs length differs from original images length', { imagesLength: images.length, distinctUrnsLength: distinctUrns.length });
+    }
+    // Defensive pause to give LinkedIn time to register assets in some tenants
+    if (distinctUrns.length > 0) await delay(1200);
+
+    // Keep an images array for backward compatibility, but build proper content for multi-image posts
+    payload.images = distinctUrns.slice(0, images.length);
+
+    try {
+        if (distinctUrns.length > 1) {
+            payload.content = {
+                multiImage: {
+                    images: distinctUrns.slice(0, images.length).map(u => ({ id: u, altText: ' ' }))
+                },
+                contentFormat: 'MULTI_IMAGE'
+            };
+            console.log('[LinkedIn Cron] Built content.multiImage with altText and contentFormat:', payload.content);
+        } else if (distinctUrns.length === 1) {
+            payload.content = { media: { id: distinctUrns[0] } };
+            console.log('[LinkedIn Cron] Built single image content.media:', payload.content);
+        } else if (videoUrn) {
+            payload.content = { media: { id: videoUrn, title: payload.title } };
+            console.log('[LinkedIn Cron] Built video content.media:', payload.content);
+        } else {
+            // No media: leave payload.content undefined (text-only post)
+            console.log('[LinkedIn Cron] No media detected — text-only post.');
+        }
+    } catch (e) {
+        console.error('[LinkedIn Cron] Error building payload.content:', e);
+    }
+
+    // Final debug log showing exact payload that will be sent to proxy
+    console.log('[LinkedIn Cron] Final payload to proxy:', JSON.stringify(payload, null, 2));
+
+    // Send to proxy to create the post
+    return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
         headers: internalApiHeaders,
         body: JSON.stringify({ action: 'createPost', accessToken, payload }),
@@ -202,20 +213,18 @@ export async function handleRunScheduler(request, response) {
                         // Second attempt to publish with the new token
                         proxyResponse = await publishPost(fetch, post, accessToken);
                     } else {
-                        // If refresh fails, we can't proceed with this post.
-                        const errorData = await refreshResponse.json();
-                        throw new Error(`Failed to refresh token: ${errorData.message || `Status ${refreshResponse.status}`}`);
+                        const errorData = await refreshResponse.json().catch(() => null);
+                        throw new Error(`Failed to refresh token: ${errorData?.message || `Status ${refreshResponse.status}`}`);
                     }
                 }
 
-                // Check the result of the final publish attempt
                 if (!proxyResponse.ok) {
-                    const errorData = await proxyResponse.json();
+                    const errorData = await proxyResponse.json().catch(() => null);
                     console.error('[Scheduler] Full error data from proxy:', errorData);
                     throw new Error(`LinkedIn API Error after potential refresh: ${JSON.stringify(errorData)}`);
                 }
 
-                const result = await proxyResponse.json();
+                const result = await proxyResponse.json().catch(() => null);
                 const linkedinPostUrl = `https://www.linkedin.com/feed/update/${result.id}/`;
 
                 await query(
@@ -257,7 +266,6 @@ export default async function handler(request, response) {
 
   const authHeader = request.headers.authorization;
   if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    // Log the received header for debugging, but be careful not to log secrets in production
     console.warn('Unauthorized cron request. Mismatched or missing secret.');
     return response.status(401).json({ error: 'Unauthorized' });
   }
