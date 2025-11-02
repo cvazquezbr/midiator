@@ -250,7 +250,7 @@ export async function handleRunScheduler(response) {
       }
 
       // Prepare commentary/text from the correct nested structure
-      const commentaryRaw = (payload.content && payload.content.fullText) || payload.fullText || payload.content || payload.commentary || '';
+      const commentaryRaw = (payload.content && (payload.content.fullText || payload.content.conteudo)) || payload.fullText || payload.content || payload.commentary || '';
       const commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
 
       // Collect uploaded asset URNs for this post

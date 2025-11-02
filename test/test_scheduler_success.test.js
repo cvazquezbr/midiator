@@ -89,4 +89,45 @@ describe('Scheduler Success Test', () => {
         expect(updateQueryCall[1][2]).toBe('https://www.linkedin.com/feed/update/urn:li:share:12345/'); // linkedin_post_url
         expect(updateQueryCall[1][3]).toBe(testPost.id); // id
     });
+
+    it('should correctly publish a follow-up post with "conteudo"', async () => {
+        const followUpPost = {
+            id: 102,
+            user_id: 2,
+            linkedin_access_token: 'test_token_2',
+            post_content: {
+                authorUrn: 'urn:li:organization:test-org',
+                content: {
+                    conteudo: 'This is a follow-up content.',
+                }
+            },
+            campaign_data: null,
+            scheduled_at: new Date().toISOString(),
+            status: 'scheduled',
+        };
+
+        query.mockResolvedValueOnce({ rows: [followUpPost] });
+        query.mockResolvedValueOnce({ rows: [] });
+
+        fetch.mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve(JSON.stringify({ id: 'urn:li:share:67890' })),
+            json: () => Promise.resolve({ id: 'urn:li:share:67890' }),
+        });
+
+        const mockResponse = {
+            status: vi.fn().mockReturnThis(),
+            json: vi.fn().mockReturnThis(),
+        };
+
+        await handleRunScheduler(mockResponse);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+
+        const fetchCall = fetch.mock.calls[0];
+        const fetchBody = JSON.parse(fetchCall[1].body);
+
+        expect(fetchBody.payload.author).toBe(followUpPost.post_content.authorUrn);
+        expect(fetchBody.payload.commentary).toBe(followUpPost.post_content.content.conteudo);
+    });
 });
