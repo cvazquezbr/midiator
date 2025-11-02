@@ -1,147 +1,121 @@
+// api/cron/linkedin.js
 import { query } from '../db.js';
-import { kv } from '../kv.js';
 import fetch from 'node-fetch';
 
-// Debug helper (mantido)
-const DEBUG = !!process.env.DEBUG;
-function dlog(...args) {
-  if (DEBUG) console.log(...args);
-}
+const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/**
- * Garante que commentary seja texto e que multi-image seja montado corretamente
- */
-function escapeLinkedinText(text) {
-  if (text === null || text === undefined) return '';
-  if (typeof text !== 'string') {
-    try {
-      text = String(text);
-    } catch (e) {
-      return '';
-    }
-  }
-  return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
-}
-
-/**
- * Delay simples (ms)
- */
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Função principal executada pelo scheduler (cron)
- */
 export async function handleRunScheduler() {
-  console.log('[Cron Fixed] Iniciando execução do LinkedIn Scheduler...');
+  console.log('[Cron Fixed] Iniciando execução do scheduler LinkedIn...');
 
   try {
-    const { rows } = await query(`
-      SELECT id, user_id, access_token, payload, scheduled_for
-      FROM scheduled_posts
-      WHERE scheduled_for <= NOW() AND status = 'pending'
-    `);
+    // Buscar posts pendentes
+    const { rows: pendingPosts } = await query(
+      `SELECT * FROM public.scheduled_posts 
+       WHERE status = 'pending' 
+       ORDER BY scheduled_for ASC 
+       LIMIT 20`
+    );
 
-    if (rows.length === 0) {
-      console.log('[Cron Fixed] Nenhum post agendado encontrado.');
-      return;
+    if (pendingPosts.length === 0) {
+      console.log('[Cron Fixed] Nenhum post pendente.');
+      return { success: true, message: 'Nenhum post pendente.' };
     }
 
-    for (const row of rows) {
-      const { id, user_id, access_token, payload } = row;
-      console.log(`[Cron Fixed] Processando post ID ${id} (user: ${user_id})`);
+    console.log(`[Cron Fixed] ${pendingPosts.length} posts pendentes encontrados.`);
 
-      let parsedPayload;
+    for (const post of pendingPosts) {
+      const {
+        id,
+        linkedin_access_token: accessToken,
+        content,
+        images,
+        video,
+        title,
+        target_id: targetId,
+        target_type: targetType,
+        author
+      } = post;
+
       try {
-        parsedPayload = typeof payload === 'string' ? JSON.parse(payload) : payload;
-      } catch (err) {
-        console.error('[Cron Fixed] Erro ao parsear payload JSON:', err);
-        await query('UPDATE scheduled_posts SET status = $1 WHERE id = $2', ['failed', id]);
-        continue;
-      }
+        console.log(`[Cron Fixed] Preparando post ${id}...`);
 
-      // --- PATCH: normalização do payload ---
-      try {
-        const _payloadForProxy = { ...parsedPayload };
-
-        if (!_payloadForProxy.commentary && typeof _payloadForProxy.content === 'string') {
-          _payloadForProxy.commentary = String(_payloadForProxy.content);
+        let authorUrn;
+        if (author) {
+          authorUrn = author;
+        } else if (targetId && targetType) {
+          authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
         }
 
-        if (_payloadForProxy.commentary && typeof _payloadForProxy.commentary !== 'string') {
-          _payloadForProxy.commentary = String(_payloadForProxy.commentary);
-        }
+        const payload = {
+          author: authorUrn,
+          commentary: content || '',
+          visibility: 'PUBLIC',
+          distribution: {
+            feedDistribution: 'MAIN_FEED',
+            targetEntities: [],
+            thirdPartyDistributionChannels: []
+          },
+          lifecycleState: 'PUBLISHED',
+          isReshareDisabledByAuthor: false
+        };
 
-        const _normalizedImages = Array.isArray(_payloadForProxy.images)
-          ? _payloadForProxy.images
-              .map((i) => (typeof i === 'string' ? i : i.id))
-              .filter(Boolean)
-          : [];
-
-        if (_normalizedImages.length > 1) {
-          _payloadForProxy.content = {
-            multiImage: {
-              images: _normalizedImages.map((u) => ({ id: u, altText: ' ' })),
-            },
-            contentFormat: 'MULTI_IMAGE',
+        // Montagem de conteúdo (multi-image e vídeo)
+        if (video) {
+          payload.content = {
+            media: { id: video, title: title || 'Video Post' }
           };
-          _payloadForProxy.images = _normalizedImages;
+        } else if (images && images.length > 0) {
+          const normalizedUrns = images
+            .map(img => (typeof img === 'string' ? img : img.id))
+            .filter(Boolean);
+          if (normalizedUrns.length === 1) {
+            payload.content = { media: { id: normalizedUrns[0] } };
+          } else {
+            payload.content = {
+              multiImage: { images: normalizedUrns.map(urn => ({ id: urn })) }
+            };
+          }
         }
 
-        parsedPayload = _payloadForProxy;
-      } catch (e) {
-        console.warn('[Cron Patch] Erro ao normalizar payload:', e);
-      }
-      // --- FIM PATCH ---
+        console.log('[Cron Patch] Enviando payload para proxy (flat):', JSON.stringify({ accessToken, payload }, null, 2));
 
-      try {
-        // Log explícito e sempre visível
-        console.log(
-          '[Cron Patch] Enviando payload para proxy (flat):',
-          JSON.stringify({ accessToken: access_token, payload: parsedPayload }, null, 2)
-        );
-
-        const proxyApiBaseUrl = process.env.INTERNAL_API_BASE_URL || process.env.API_BASE_URL || '';
-
-        const response = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+        const res = await fetch(`${process.env.API_BASE_URL}/api/linkedin-proxy`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'createPost',
-            accessToken: access_token,
-            payload: parsedPayload,
-          }),
+            accessToken,
+            payload
+          })
         });
 
-        const text = await response.text();
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = { raw: text };
-        }
+        const text = await res.text();
+        console.log(`[Cron Fixed] Resposta do proxy para post ${id}:`, text);
 
-        if (response.ok) {
-          console.log(`[Cron Fixed] Post ID ${id} publicado com sucesso.`);
-          await query('UPDATE scheduled_posts SET status = $1 WHERE id = $2', ['sent', id]);
+        if (res.ok) {
+          await query('UPDATE public.scheduled_posts SET status = $1, posted_at = NOW() WHERE id = $2', ['sent', id]);
+          console.log(`[Cron Fixed] Post ${id} publicado com sucesso.`);
         } else {
-          console.error(`[Cron Fixed] Erro do LinkedIn API (${response.status}):`, data);
-          await query('UPDATE scheduled_posts SET status = $1 WHERE id = $2', ['failed', id]);
+          await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', text, id]);
+          console.error(`[Cron Fixed] Falha ao publicar post ${id}:`, text);
         }
-      } catch (error) {
-        console.error('[Cron Fixed] Erro fatal durante envio ao proxy:', error);
-        await query('UPDATE scheduled_posts SET status = $1 WHERE id = $2', ['failed', id]);
+
+        await delay(2000); // 2 segundos entre cada post
+      } catch (err) {
+        console.error(`[Cron Fixed] Erro fatal ao processar post ${post.id}:`, err);
+        await query(
+          'UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3',
+          ['failed', err.message || 'Erro desconhecido', post.id]
+        );
       }
-
-      await delay(2000); // pausa entre posts
     }
-  } catch (error) {
-    console.error('[Cron Fixed] Erro fatal no cron LinkedIn:', error);
-  }
 
-  console.log('[Cron Fixed] Execução do scheduler concluída.');
+    console.log('[Cron Fixed] Execução do scheduler concluída.');
+    return { success: true };
+  } catch (err) {
+    console.error('[Cron Fixed] Erro fatal no cron LinkedIn:', err);
+    return { success: false, error: err.message };
+  }
 }
 
-/**
- * Export default para compatibilidade
- */
 export default handleRunScheduler;
