@@ -32,35 +32,49 @@ describe('Scheduler Success Test', () => {
     });
 
     it('should publish a scheduled post successfully', async () => {
-        const testUser = { id: 1, linkedin_access_token: 'test_token' };
-        const testSchedule = {
+        const testPost = {
             id: 101,
-            user_id: testUser.id,
-            post_content: { titulo: 'Test Post', conteudo: 'Test Content', cta: '#test', hashtags: [] },
-            linkedin_access_token: testUser.linkedin_access_token,
+            user_id: 1,
+            linkedin_access_token: 'test_token',
+            payload: {
+                content: 'Test Content',
+            },
+            author: null,
+            target_id: '1',
+            target_type: 'person'
         };
 
         // Mock database responses
-        query.mockResolvedValue({ rows: [testSchedule] });
+        // 1. For the SELECT query
+        query.mockResolvedValueOnce({ rows: [testPost] });
+        // 2. For the UPDATE query
+        query.mockResolvedValueOnce({ rows: [] });
+
 
         // Mock fetch response for createPost
         fetch.mockResolvedValue({
             ok: true,
+            text: () => Promise.resolve(JSON.stringify({ id: 'urn:li:share:12345' })),
             json: () => Promise.resolve({ id: 'urn:li:share:12345' }),
         });
 
-        const req = createMockRequest();
-        const res = createMockResponse();
+        const result = await handleRunScheduler();
 
-        await handleRunScheduler(req, res);
+        expect(result.ok).toBe(true);
 
+        // Verify that the proxy was called to create the post
         expect(fetch).toHaveBeenCalled();
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({ message: expect.stringContaining('Published: 1') });
+        const fetchCall = fetch.mock.calls[0];
+        const fetchBody = JSON.parse(fetchCall[1].body);
+        expect(fetchBody.action).toBe('createPost');
+        expect(fetchBody.payload.commentary).toBe('Test Content');
 
-        // Verify that the status was updated to 'published'
-        const updateQuery = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
-        expect(updateQuery).toBeDefined();
-        expect(updateQuery[0]).toContain("status = 'published'");
+
+        // Verify that the status was updated to 'sent'
+        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE public.scheduled_posts'));
+        expect(updateQueryCall).toBeDefined();
+        expect(updateQueryCall[0]).toContain("SET status = $1");
+        expect(updateQueryCall[1][0]).toBe('sent');
+        expect(updateQueryCall[1][1]).toBe(testPost.id);
     });
 });
