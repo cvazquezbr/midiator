@@ -185,7 +185,7 @@ function escapeLinkedinText(text) {
   return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
 }
 
-export async function handleRunScheduler() {
+export async function handleRunScheduler(response) {
   console.log('[Cron LinkedIn] Starting scheduler run...');
 
   try {
@@ -201,7 +201,7 @@ export async function handleRunScheduler() {
 
     if (!rows || rows.length === 0) {
       console.log('[Cron LinkedIn] No pending posts.');
-      return { ok: true, message: 'no posts' };
+      return response.status(200).json({ message: 'No pending posts.' });
     }
 
     console.log(`[Cron LinkedIn] ${rows.length} pending posts found.`);
@@ -391,15 +391,15 @@ export async function handleRunScheduler() {
     } // end for rows
 
     console.log('[Cron LinkedIn] Scheduler run completed.');
-    return { ok: true };
+    return response.status(200).json({ message: 'Scheduler run completed.' });
   } catch (err) {
     console.error('[Cron LinkedIn] Fatal error in scheduler run:', err);
-    return { ok: false, error: err.message || String(err) };
+    return response.status(500).json({ error: err.message || String(err) });
   }
 }
 
-export default async function handler() {
-  return await handleRunScheduler();
+export default async function handler(request, response) {
+  return handleRunScheduler(response);
 }
 
 

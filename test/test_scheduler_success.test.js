@@ -59,9 +59,15 @@ describe('Scheduler Success Test', () => {
             json: () => Promise.resolve({ id: 'urn:li:share:12345' }),
         });
 
-        const result = await handleRunScheduler();
+        // Mock the response object
+        const mockResponse = {
+            status: vi.fn().mockReturnThis(),
+            json: vi.fn().mockReturnThis(),
+        };
 
-        expect(result.ok).toBe(true);
+        await handleRunScheduler(mockResponse);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
 
         // Verify that the proxy was called to create the post
         expect(fetch).toHaveBeenCalled();
