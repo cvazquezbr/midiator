@@ -36,10 +36,9 @@ describe('Scheduler Success Test', () => {
             id: 101,
             user_id: 1,
             linkedin_access_token: 'test_token',
+            author_urn: 'urn:li:person:test-user',
             payload: {
-                content: 'Test Content',
-                targetId: '1',
-                targetType: 'person',
+                fullText: 'This is the scheduled content.',
             },
             scheduled_at: new Date().toISOString(),
             status: 'scheduled',
@@ -74,7 +73,8 @@ describe('Scheduler Success Test', () => {
         const fetchCall = fetch.mock.calls[0];
         const fetchBody = JSON.parse(fetchCall[1].body);
         expect(fetchBody.action).toBe('createPost');
-        expect(fetchBody.payload.commentary).toBe('Test Content');
+        expect(fetchBody.payload.author).toBe(testPost.author_urn);
+        expect(fetchBody.payload.commentary).toBe(testPost.payload.fullText);
 
 
         // Verify that the status, post_id, and post_url were updated
