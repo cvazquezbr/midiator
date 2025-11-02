@@ -366,15 +366,15 @@ export async function handleRunScheduler() {
 
         if (createResp.ok) {
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. Response:`, createData);
-          await query('UPDATE public.scheduled_posts SET status = $1, posted_at = NOW() WHERE id = $2', ['sent', postId]);
+          await query('UPDATE scheduled_posts SET status = $1, posted_at = NOW() WHERE id = $2', ['sent', postId]);
         } else {
           console.error(`[Cron LinkedIn CreatePost] Failed to create post ${postId}:`, createResp.status, createData);
-          await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);
+          await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);
         }
       } catch (err) {
         console.error(`[Cron LinkedIn] Error processing post ${postId}:`, err);
         try {
-          await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', err.message || String(err), postId]);
+          await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', err.message || String(err), postId]);
         } catch (qerr) {
           console.error('[Cron LinkedIn] Failed to update DB for post failure:', qerr);
         }
