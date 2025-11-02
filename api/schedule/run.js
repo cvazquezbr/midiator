@@ -5,8 +5,8 @@ import { handleRunScheduler } from '../cron/linkedin.js';
 const schedulerRunnerHandler = async (request, response) => {
   console.log('[Run] Iniciando execução manual do cron LinkedIn...');
   try {
-    await handleRunScheduler();
-    return response.status(200).json({ message: 'Execução do cron concluída com sucesso.' });
+    // Pass the response object to the scheduler so it can send a response
+    return await handleRunScheduler(response);
   } catch (error) {
     console.error('[Run] Erro ao executar o cron LinkedIn:', error);
     return response.status(500).json({ error: 'Falha ao executar o cron.', details: error.message });
