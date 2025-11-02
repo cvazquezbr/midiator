@@ -249,8 +249,8 @@ export async function handleRunScheduler(response) {
         continue;
       }
 
-      // Prepare commentary/text from the correct nested structure
-      const commentaryRaw = (payload.content && (payload.content.fullText || payload.content.conteudo)) || payload.fullText || payload.content || payload.commentary || '';
+      // Prepare commentary/text, checking for main post structure (fullText) and follow-up structure (conteudo).
+      const commentaryRaw = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || payload.content || payload.commentary || '';
       const commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
 
       // Collect uploaded asset URNs for this post
