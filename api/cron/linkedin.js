@@ -160,15 +160,15 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
 }
 
 // Build author URN from target_type/target_id or author field
-function buildAuthorUrn(row) {
-  if (row.author) return row.author;
-  const targetId = row.target_id || row.targetId || row.targetId;
-  const targetType = row.target_type || row.targetType;
+function buildAuthorUrn(data) {
+  if (data.author) return data.author; // author can be in the payload
+  const targetId = data.targetId; // targetId is in the payload
+  const targetType = data.targetType; // targetType is in the payload
   if (targetId && targetType) {
     return `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
   }
-  // fallback to user_id-based person urn if available
-  if (row.user_id) return `urn:li:person:${row.user_id}`;
+  // fallback to user_id-based person urn if available from the db row
+  if (data.user_id) return `urn:li:person:${data.user_id}`;
   return null;
 }
 
@@ -191,10 +191,10 @@ export async function handleRunScheduler() {
   try {
     // Query pending scheduled posts (schema public)
     const { rows } = await query(
-      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.post_content AS payload, ls.scheduled_at, ls.author, ls.target_id, ls.target_type
+      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.post_content AS payload, ls.scheduled_at
        FROM linkedin_schedules ls
        JOIN users u ON ls.user_id = u.id
-       WHERE ls.status = 'pending' AND u.linkedin_access_token IS NOT NULL
+       WHERE ls.status = 'scheduled' AND u.linkedin_access_token IS NOT NULL
        ORDER BY ls.scheduled_at ASC
        LIMIT 50`
     );
@@ -367,10 +367,11 @@ export async function handleRunScheduler() {
 
         if (createResp.ok) {
           const postIdFromApi = createData.id;
-          console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post ID: ${postIdFromApi}`);
+          const postUrl = `https://www.linkedin.com/feed/update/${postIdFromApi}/`;
+          console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post URL: ${postUrl}`);
           await query(
-            'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2 WHERE id = $3',
-            ['sent', postIdFromApi, postId]
+            'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3 WHERE id = $4',
+            ['sent', postIdFromApi, postUrl, postId]
           );
         } else {
           console.error(`[Cron LinkedIn CreatePost] Failed to create post ${postId}:`, createResp.status, createData);

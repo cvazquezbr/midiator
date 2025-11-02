@@ -38,11 +38,11 @@ describe('Scheduler Success Test', () => {
             linkedin_access_token: 'test_token',
             payload: {
                 content: 'Test Content',
+                targetId: '1',
+                targetType: 'person',
             },
-            author: null,
-            target_id: '1',
-            target_type: 'person',
             scheduled_at: new Date().toISOString(),
+            status: 'scheduled',
         };
 
         // Mock database responses
@@ -71,12 +71,13 @@ describe('Scheduler Success Test', () => {
         expect(fetchBody.payload.commentary).toBe('Test Content');
 
 
-        // Verify that the status and linkedin_post_id were updated
+        // Verify that the status, post_id, and post_url were updated
         const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
         expect(updateQueryCall).toBeDefined();
-        expect(updateQueryCall[0]).toContain("SET status = $1, linkedin_post_id = $2");
+        expect(updateQueryCall[0]).toContain("SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3");
         expect(updateQueryCall[1][0]).toBe('sent'); // status
         expect(updateQueryCall[1][1]).toBe('urn:li:share:12345'); // linkedin_post_id
-        expect(updateQueryCall[1][2]).toBe(testPost.id); // id
+        expect(updateQueryCall[1][2]).toBe('https://www.linkedin.com/feed/update/urn:li:share:12345/'); // linkedin_post_url
+        expect(updateQueryCall[1][3]).toBe(testPost.id); // id
     });
 });
