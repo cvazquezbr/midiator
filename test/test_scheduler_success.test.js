@@ -71,7 +71,7 @@ describe('Scheduler Success Test', () => {
 
 
         // Verify that the status was updated to 'sent'
-        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE public.scheduled_posts'));
+        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
         expect(updateQueryCall).toBeDefined();
         expect(updateQueryCall[0]).toContain("SET status = $1");
         expect(updateQueryCall[1][0]).toBe('sent');
