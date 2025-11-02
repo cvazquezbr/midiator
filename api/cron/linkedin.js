@@ -393,3 +393,7 @@ export async function handleRunScheduler() {
 }
 
 export default handleRunScheduler;
+export default async function handler() {
+  return await handleRunScheduler();
+}
+
