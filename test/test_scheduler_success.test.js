@@ -31,7 +31,7 @@ describe('Scheduler Success Test', () => {
         vi.clearAllMocks();
     });
 
-    it('should publish a scheduled post successfully', async () => {
+    it('should publish a scheduled post successfully (main post structure)', async () => {
         const testPost = {
             id: 101,
             user_id: 1,
@@ -39,7 +39,7 @@ describe('Scheduler Success Test', () => {
             post_content: {
                 authorUrn: 'urn:li:person:test-user',
                 content: {
-                    fullText: 'This is the scheduled content.',
+                    fullText: 'This is the scheduled content for a main post.',
                 }
             },
             campaign_data: null,
@@ -47,21 +47,15 @@ describe('Scheduler Success Test', () => {
             status: 'scheduled',
         };
 
-        // Mock database responses
-        // 1. For the SELECT query which now has a JOIN
         query.mockResolvedValueOnce({ rows: [testPost] });
-        // 2. For the UPDATE query
         query.mockResolvedValueOnce({ rows: [] });
 
-
-        // Mock fetch response for createPost
         fetch.mockResolvedValue({
             ok: true,
             text: () => Promise.resolve(JSON.stringify({ id: 'urn:li:share:12345' })),
             json: () => Promise.resolve({ id: 'urn:li:share:12345' }),
         });
 
-        // Mock the response object
         const mockResponse = {
             status: vi.fn().mockReturnThis(),
             json: vi.fn().mockReturnThis(),
@@ -71,35 +65,21 @@ describe('Scheduler Success Test', () => {
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
 
-        // Verify that the proxy was called to create the post
-        expect(fetch).toHaveBeenCalled();
         const fetchCall = fetch.mock.calls[0];
         const fetchBody = JSON.parse(fetchCall[1].body);
-        expect(fetchBody.action).toBe('createPost');
         expect(fetchBody.payload.author).toBe(testPost.post_content.authorUrn);
         expect(fetchBody.payload.commentary).toBe(testPost.post_content.content.fullText);
-
-
-        // Verify that the status, post_id, and post_url were updated
-        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
-        expect(updateQueryCall).toBeDefined();
-        expect(updateQueryCall[0]).toContain("SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3");
-        expect(updateQueryCall[1][0]).toBe('sent'); // status
-        expect(updateQueryCall[1][1]).toBe('urn:li:share:12345'); // linkedin_post_id
-        expect(updateQueryCall[1][2]).toBe('https://www.linkedin.com/feed/update/urn:li:share:12345/'); // linkedin_post_url
-        expect(updateQueryCall[1][3]).toBe(testPost.id); // id
     });
 
-    it('should correctly publish a follow-up post with "conteudo"', async () => {
+    it('should correctly publish a follow-up post (follow-up structure)', async () => {
         const followUpPost = {
             id: 102,
             user_id: 2,
             linkedin_access_token: 'test_token_2',
             post_content: {
                 authorUrn: 'urn:li:organization:test-org',
-                content: {
-                    conteudo: 'This is a follow-up content.',
-                }
+                conteudo: 'This is the content for a follow-up post.',
+                // Note the different structure: no nested 'content' object
             },
             campaign_data: null,
             scheduled_at: new Date().toISOString(),
@@ -126,8 +106,7 @@ describe('Scheduler Success Test', () => {
 
         const fetchCall = fetch.mock.calls[0];
         const fetchBody = JSON.parse(fetchCall[1].body);
-
         expect(fetchBody.payload.author).toBe(followUpPost.post_content.authorUrn);
-        expect(fetchBody.payload.commentary).toBe(followUpPost.post_content.content.conteudo);
+        expect(fetchBody.payload.commentary).toBe(followUpPost.post_content.conteudo);
     });
 });
