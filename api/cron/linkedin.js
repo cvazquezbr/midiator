@@ -3,7 +3,7 @@ import { query } from '../db.js';
 import fetch from 'node-fetch';
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
-const PROXY_BASE = process.env.INTERNAL_API_BASE_URL || process.env.API_BASE_URL || '';
+const PROXY_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
