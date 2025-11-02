@@ -192,7 +192,7 @@ export async function handleRunScheduler() {
     // Query pending scheduled posts (schema public)
     const { rows } = await query(
       `SELECT id, user_id, linkedin_access_token, payload, scheduled_for, author, target_id, target_type
-       FROM public.scheduled_posts
+       FROM scheduled_posts
        WHERE status = 'pending'
        ORDER BY scheduled_for ASC
        LIMIT 50`
@@ -220,7 +220,7 @@ export async function handleRunScheduler() {
       const accessToken = row.linkedin_access_token || payload.accessToken || null;
       if (!accessToken) {
         console.error(`[Cron LinkedIn] No access token for post ${postId}. Marking failed.`);
-        await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing access token', postId]);
+        await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing access token', postId]);
         continue;
       }
 
@@ -228,7 +228,7 @@ export async function handleRunScheduler() {
       const authorUrn = buildAuthorUrn(Object.assign({}, row, payload));
       if (!authorUrn) {
         console.error(`[Cron LinkedIn] Could not determine author URN for post ${postId}.`);
-        await query('UPDATE public.scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn', postId]);
+        await query('UPDATE scheduled_posts SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn', postId]);
         continue;
       }
 
