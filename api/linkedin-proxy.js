@@ -323,47 +323,57 @@ async function handleUploadAndCheckImage(fetch, request, response) {
 
         // Step 3: Poll the asset status until AVAILABLE (or timeout)
         const startTime = Date.now();
-        const timeoutMs = 30 * 1000; // 30 seconds timeout
+        const timeoutMs = 120 * 1000; // 120 seconds timeout
         let isAvailable = false;
         let lastStatus = null;
 
+        console.log(`[Proxy Polling] Starting polling for asset ${assetUrn}...`);
+        await delay(2000); // Initial delay to allow asset registration on LinkedIn's side.
+
         while (Date.now() - startTime < timeoutMs) {
-            await delay(1000);
             const statusUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
-            const statusResponse = await fetchWithRetry(fetch, statusUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${accessToken}`, 'LinkedIn-Version': LINKEDIN_API_VERSION } }, 5, 1000);
+            const statusResponse = await fetchWithRetry(fetch, statusUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${accessToken}`, 'LinkedIn-Version': LINKEDIN_API_VERSION, 'X-Restli-Protocol-Version': '2.0.0' } }, 5, 1000);
 
             if (!statusResponse) {
-                console.warn('[Proxy Polling] No response when checking status for', assetUrn);
+                console.warn(`[Proxy Polling] No response when checking status for ${assetUrn}. Retrying...`);
+                await delay(2000);
                 continue;
             }
 
-            if (statusResponse.status === 202) {
-                // still processing
-                console.log(`[Proxy Polling] Asset ${assetUrn} still processing (202).`);
-                lastStatus = 'PROCESSING';
-                continue;
+            if (statusResponse.status === 400) {
+                 console.warn(`[Proxy Polling] Received HTTP 400 for ${assetUrn}. Asset might not be ready. Retrying...`);
+                 lastStatus = 'PENDING_REGISTRATION';
+                 await delay(3000); // Longer delay for 400 errors
+                 continue;
             }
+
 
             if (!statusResponse.ok) {
-                const errText = await statusResponse.text().catch(() => null);
-                console.warn('[Proxy Polling] Non-ok status when checking asset:', statusResponse.status, 'body:', errText);
+                const errText = await statusResponse.text().catch(() => 'No body');
+                console.warn(`[Proxy Polling] Non-ok status when checking asset ${assetUrn}: ${statusResponse.status}`, 'body:', errText);
                 lastStatus = `HTTP ${statusResponse.status}`;
+                await delay(2000);
                 continue;
             }
 
             const statusData = await statusResponse.json().catch(() => null);
-            lastStatus = statusData && statusData.status ? statusData.status : (statusData && statusData.value && statusData.value.status) ? statusData.value.status : 'UNKNOWN';
-            console.log('[Proxy Polling] Status for', assetUrn, 'is', lastStatus);
-
-            if (lastStatus === 'AVAILABLE' || lastStatus === 'READY') {
-                isAvailable = true;
-                break;
+            if(statusData) {
+                 lastStatus = statusData.processingState || statusData.status || 'UNKNOWN';
+                 console.log(`[Proxy Polling] Status for ${assetUrn} is ${lastStatus}`);
+                 if (lastStatus === 'AVAILABLE') {
+                    isAvailable = true;
+                    break;
+                 }
+            } else {
+                console.warn(`[Proxy Polling] Could not parse JSON response for ${assetUrn}`);
             }
+
+            await delay(3000);
         }
 
         if (!isAvailable) {
             const totalTime = (Date.now() - startTime) / 1000;
-            console.error('[Proxy] Asset did not become available in time for', assetUrn, 'lastStatus:', lastStatus, 'elapsed(s):', totalTime);
+            console.error(`[Proxy] Asset did not become available in time for ${assetUrn}. Last status: ${lastStatus}. Elapsed(s): ${totalTime}`);
             return response.status(408).json({ message: `Image did not become available in time. Last status: ${lastStatus}` });
         }
 
@@ -384,21 +394,14 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
         }
 
-        let { targetId, targetType, content, images, video, title, author } = payload;
-        let authorUrn;
+        const { content, images, video, title, author } = payload;
 
-        if (author) {
-            authorUrn = author;
-        } else if (targetId && targetType) {
-            authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
-        }
-
-        if (!authorUrn || !content) {
+        if (!author || !content) {
              return response.status(400).json({ error: 'Missing author information or content for creating post.' });
         }
 
         const postData = {
-            author: authorUrn,
+            author: author,
             commentary: escapeLinkedinText(content),
             visibility: "PUBLIC",
             distribution: {
@@ -410,7 +413,6 @@ async function handleCreatePost(fetch, request, response) {
             isReshareDisabledByAuthor: false
         };
 
-        // --- MULTIIMAGE FIX PATCH ---
         if (video) {
             postData.content = {
                 media: {
@@ -422,27 +424,21 @@ async function handleCreatePost(fetch, request, response) {
             const normalizedUrns = images.map(img => (typeof img === 'string' ? img : img.id)).filter(Boolean);
             if (normalizedUrns.length === 1) {
                 postData.content = { media: { id: normalizedUrns[0] } };
-                console.log('[Proxy Patch] Single image post payload constructed:', postData.content);
             } else {
                 postData.content = {
                     multiImage: {
                         images: normalizedUrns.map(urn => ({ id: urn }))
                     }
                 };
-                console.log('[Proxy Patch] Multi-image payload constructed with URNs:', normalizedUrns);
             }
         }
-        // --- END PATCH ---
-
-        console.log('[Proxy Patch] Final postData before sending to LinkedIn:', JSON.stringify(postData, null, 2));
 
         return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
     } catch (error) {
-        console.error('[FATAL] Unhandled exception in handleCreatePost (multiImage fix):', error);
+        console.error('[FATAL] Unhandled exception in handleCreatePost:', error);
         return response.status(500).json({ error: 'An unexpected error occurred in handleCreatePost.' });
     }
 }
-
 
 async function handleGetProfiles(fetch, request, response) {
   const { accessToken, forceRefresh } = request.body;

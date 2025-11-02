@@ -47,47 +47,36 @@ export async function publishPost(fetch, post, accessToken) {
     const imageUrns = [];
 
     if (images.length > 0) {
-        for (const [index, imageUrl] of images.entries()) {
-            console.log(`[Cron Job] Processing image ${index + 1}/${images.length}: ${imageUrl}`);
-
-            const uniqueImageUrl = `${imageUrl}?t=${Date.now()}`;
-            const imageResponse = await fetch(uniqueImageUrl);
-            if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${uniqueImageUrl}`);
-
+        for (const imageUrl of images) {
+            console.log(`[Cron Job] Uploading image: ${imageUrl}`);
+            const imageResponse = await fetch(imageUrl);
+            if (!imageResponse.ok) throw new Error(`Failed to fetch image from blob store: ${imageUrl}`);
             const imageBuffer = await imageResponse.arrayBuffer();
-            const imageBase64 = Buffer.from(imageBuffer).toString('base64');
-            const imageType = imageResponse.headers.get('content-type');
 
-            console.log(`[Cron Job] Fetched image with Base64 size: ${imageBase64.length}. Uploading to LinkedIn...`);
-
-            const uploadCheckResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
+            const uploadResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
                 headers: internalApiHeaders,
                 body: JSON.stringify({
                     action: 'uploadAndCheckImage',
                     accessToken,
                     authorUrn,
-                    imageBase64,
-                    imageType
+                    imageBase64: Buffer.from(imageBuffer).toString('base64'),
+                    imageType: imageResponse.headers.get('content-type')
                 })
             });
 
-            // If we get a 401, return the response immediately. The main scheduler loop
-            // will catch this and attempt to refresh the token.
-            if (uploadCheckResponse.status === 401) return uploadCheckResponse;
-
-            if (!uploadCheckResponse.ok) {
-                const errorData = await uploadCheckResponse.json();
-                throw new Error(`Failed during uploadAndCheckImage for ${imageUrl}: ${errorData.message || 'Unknown error'}`);
+            if (uploadResponse.status === 401) return uploadResponse; // Defer 401 handling to the main loop
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                throw new Error(`Image upload failed for ${imageUrl}: ${errorData.message || 'Unknown proxy error'}`);
             }
 
-            const { assetUrn } = await uploadCheckResponse.json();
-            if (!assetUrn) {
-                throw new Error(`Proxy did not return an assetUrn for ${imageUrl}.`);
+            const { assetUrn } = await uploadResponse.json();
+            if(!assetUrn){
+                throw new Error(`Proxy did not return an assetUrn for ${imageUrl}`);
             }
-
-            console.log(`[Cron Job] Successfully received asset URN: ${assetUrn}`);
             imageUrns.push(assetUrn);
+            console.log(`[Cron Job] Successfully uploaded image and received URN: ${assetUrn}`);
         }
     }
 
@@ -100,20 +89,6 @@ export async function publishPost(fetch, post, accessToken) {
         title: post.post_content?.titulo || 'Video Post'
     };
 
-
-            // --- PATCHED: extra validation & logging to debug duplicate-image issue ---
-            console.log('[Cron Patch] Final image URNs collected:', imageUrns);
-            // Ensure number of URNs matches number of images requested
-            const distinctUrns = Array.from(new Set(imageUrns));
-            if (distinctUrns.length !== images.length) {
-                console.warn('[Cron Patch] number of distinct URNs does not match images.length', { imagesLength: images.length, distinctUrnsLength: distinctUrns.length });
-            }
-            // Defensive small pause to ensure LinkedIn has finalized processing (extra safety)
-            await delay(1200);
-            // Reassign payload images explicitly to avoid accidental mutation
-            payload.images = distinctUrns.slice(0, images.length);
-            console.log('[Cron Patch] Posting payload images (final):', payload.images);
-            // --- end patch ---
 
 return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
