@@ -191,10 +191,11 @@ export async function handleRunScheduler() {
   try {
     // Query pending scheduled posts (schema public)
     const { rows } = await query(
-      `SELECT id, user_id, linkedin_access_token, payload, scheduled_for, author, target_id, target_type
-       FROM linkedin_schedules
-       WHERE status = 'pending'
-       ORDER BY scheduled_for ASC
+      `SELECT ls.id, ls.user_id, u.linkedin_access_token, ls.payload, ls.scheduled_for, ls.author, ls.target_id, ls.target_type
+       FROM linkedin_schedules ls
+       JOIN users u ON ls.user_id = u.id
+       WHERE ls.status = 'pending' AND u.linkedin_access_token IS NOT NULL
+       ORDER BY ls.scheduled_for ASC
        LIMIT 50`
     );
 

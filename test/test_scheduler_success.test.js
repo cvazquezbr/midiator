@@ -35,7 +35,7 @@ describe('Scheduler Success Test', () => {
         const testPost = {
             id: 101,
             user_id: 1,
-            linkedin_access_token: 'test_token',
+            linkedin_access_token: 'test_token', // This now comes from the JOINed users table
             payload: {
                 content: 'Test Content',
             },
@@ -45,7 +45,7 @@ describe('Scheduler Success Test', () => {
         };
 
         // Mock database responses
-        // 1. For the SELECT query
+        // 1. For the SELECT query which now has a JOIN
         query.mockResolvedValueOnce({ rows: [testPost] });
         // 2. For the UPDATE query
         query.mockResolvedValueOnce({ rows: [] });
