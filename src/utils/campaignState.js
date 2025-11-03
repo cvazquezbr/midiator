@@ -142,6 +142,19 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
         owner.mimeType = vercelBlobResponse.contentType;
         owner.size = vercelBlobResponse.size;
       }
+
+      // ADDED: Special handling for audio objects from AudioGenerator.jsx
+      if (owner.source && (owner.source === 'google-tts' || owner.source === 'browser') && key === 'url') {
+        owner.url = permanentUrl;
+        owner.vercelBlobUrl = permanentUrl; // Keep a consistent vercel-specific property
+        owner.vercelBlobPathname = vercelBlobResponse.pathname;
+        owner.mimeType = vercelBlobResponse.contentType;
+        owner.size = vercelBlobResponse.size;
+
+        // The original `blob` property is now invalid and points to a local blob that
+        // won't exist on reload. It must be removed to prevent confusion.
+        delete owner.blob;
+      }
     }
   });
   console.log('[serializeCampaignData] Step 4 COMPLETE.');
@@ -288,7 +301,22 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
   console.log('[deserializeCampaignData] Step 3: Replacing permanent URLs with local blob URLs...');
   traverseState(finalState, (key, value, owner) => {
     if (typeof value === 'string' && permanentToTempUrlMap.has(value)) {
-      owner[key] = permanentToTempUrlMap.get(value);
+      const tempUrl = permanentToTempUrlMap.get(value);
+
+      // Generic replacement for simple URL fields
+      owner[key] = tempUrl;
+
+      // Special handling for audio objects to ensure the `blob` property is restored
+      // for the `getPlayableBlob` utility to find it.
+      if (owner.source && (owner.source === 'google-tts' || owner.source === 'browser') && key === 'url') {
+        owner.url = tempUrl;
+        // The `getPlayableBlob` function needs the `blob` property to be present on the object
+        // after deserialization. We can get it from the `newlyCreatedAssets` map we just populated.
+        const downloadedFile = newlyCreatedAssets[tempUrl];
+        if (downloadedFile) {
+          owner.blob = downloadedFile;
+        }
+      }
     }
   });
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
