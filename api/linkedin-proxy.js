@@ -1,261 +1,758 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { kv } from './kv.js';
-import fetch from 'node-fetch';
 
 const LINKEDIN_API_VERSION = '202411';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff = 3000) {
+  let backoff = initialBackoff;
+  for (let i = 0; i < retries; i++) {
+    const response = await fetch(url, options);
+    // Retry on rate limit or server errors
+    if (response.status === 429 || response.status >= 500) {
+      const isRateLimit = response.status === 429;
+      const retryAfterHeader = response.headers.get('Retry-After');
+      // Use Retry-After header if present (for 429), otherwise use exponential backoff
+      const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+      const jitter = Math.random() * 1000;
+
+      const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
+      console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
+      await delay(retryAfter + jitter);
+
+      backoff *= 2;
+      continue;
+    }
+    return response;
+  }
+  throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
+}
+
+async function handleTokenExchange(fetch, request, response) {
+  const { code, redirectUri } = request.body;
+  const userId = request.user.sub;
+  if (!code || !redirectUri) return response.status(400).json({ error: 'Missing code or redirectUri for token exchange.' });
+  const { LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET } = process.env;
+  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) return response.status(400).json({ error: 'LinkedIn credentials not configured.' });
+
+  const params = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    client_id: LINKEDIN_CLIENT_ID,
+    client_secret: LINKEDIN_CLIENT_SECRET,
+  });
+
+  try {
+    const linkedinResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const data = await linkedinResponse.json();
+    if (linkedinResponse.ok) {
+        const { access_token, expires_in, refresh_token } = data;
+        const expiryDate = new Date(Date.now() + expires_in * 1000);
+        await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4', [access_token, expiryDate, refresh_token, userId]);
+    }
+    return response.status(linkedinResponse.status).json(data);
+  } catch (error) {
+    console.error('Error during token exchange:', error);
+    return response.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
 function stripEmojis(text) {
-  if (!text || typeof text !== 'string') return text;
-  return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+    if (!text) return text;
+    // This regex removes most common emojis and symbols.
+    return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
 }
 
 function escapeLinkedinText(text) {
-  if (!text || typeof text !== 'string') return '';
-  return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
+    if (!text) return '';
+    // Escape special characters that LinkedIn might interpret as formatting.
+    // The list of characters is based on community documentation and testing.
+    // The backslash '\' needs to be escaped in the regex and in the replacement string.
+    return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
 }
 
-async function handleExchangeCode(request, response) {
-    const { code, redirectUri } = request.body;
-    if (!code) {
-        return response.status(400).json({ error: 'Authorization code is missing.' });
-    }
-
-    const clientId = process.env.LINKEDIN_CLIENT_ID;
-    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-        return response.status(500).json({ error: 'LinkedIn API credentials are not configured on the server.' });
-    }
-
-    const params = new URLSearchParams();
-    params.append('grant_type', 'authorization_code');
-    params.append('code', code);
-    params.append('redirect_uri', redirectUri || `${process.env.VITE_API_BASE_URL}`);
-    params.append('client_id', clientId);
-    params.append('client_secret', clientSecret);
-
+async function handleGenericPost(fetch, request, response, url) {
+    const { accessToken, payload } = request.body;
+    if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload.' });
     try {
-        const linkedinResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params,
-        });
-
-        const data = await linkedinResponse.json();
-
-        if (!linkedinResponse.ok) {
-            return response.status(linkedinResponse.status).json({
-                error: 'Failed to exchange authorization code for token.',
-                details: data.error_description || data.error || 'Unknown error from LinkedIn.',
-            });
+        // Ensure commentary is clean before sending
+        if (payload.commentary) {
+            payload.commentary = stripEmojis(payload.commentary);
         }
 
-        return response.status(200).json(data);
-    } catch (error) {
-        console.error('Error exchanging LinkedIn auth code:', error);
-        return response.status(500).json({ error: 'An internal error occurred while communicating with LinkedIn.' });
-    }
-}
+        const linkedinResponse = await fetchWithRetry(fetch, url, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
+            body: JSON.stringify(payload),
+        });
 
-
-async function handleUploadAndCheckImage(request, response) {
-    const { accessToken, authorUrn, imageBase64, imageType } = request.body;
-
-    if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
-        return response.status(400).json({ error: 'Missing required parameters for image upload.' });
-    }
-
-    try {
-        // Step 1: Register the upload
-        const registerPayload = {
-            "registerUploadRequest": {
-                "owner": authorUrn,
-                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
-                "serviceRelationships": [{
-                    "relationshipType": "OWNER",
-                    "identifier": "urn:li:userGeneratedContent"
-                }],
-                "supportedUploadMechanism": ["SYNCHRONOUS_UPLOAD"]
+        if (linkedinResponse.ok) {
+            // For post creation, the ID is in the x-restli-id header.
+            const postId = linkedinResponse.headers.get('x-restli-id');
+            if (postId) {
+                return response.status(linkedinResponse.status).json({ id: postId });
             }
-        };
 
-        const registerRes = await fetch('https://api.linkedin.com/rest/assets?action=registerUpload', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': LINKEDIN_API_VERSION,
-            },
-            body: JSON.stringify(registerPayload),
-        });
-
-        const registerData = await registerRes.json();
-        if (!registerRes.ok || !registerData.value || !registerData.value.uploadMechanism || !registerData.value.asset) {
-            console.error('LinkedIn register upload failed:', registerData);
-            return response.status(500).json({ error: 'Failed to register image upload with LinkedIn.', details: registerData });
+            const responseText = await linkedinResponse.text();
+            if (!responseText) {
+                console.warn('[WARN] LinkedIn API returned 200 OK with an empty response body.');
+                return response.status(200).json({ value: { warning: 'Empty response from LinkedIn API.' } });
+            }
+            try {
+                const data = JSON.parse(responseText);
+                return response.status(linkedinResponse.status).json(data.value || data);
+            } catch (e) {
+                console.warn(`[WARN] LinkedIn API returned 200 OK but with invalid JSON body: ${responseText}`);
+                return response.status(200).json({ value: { warning: 'Invalid JSON response from LinkedIn API.', body: responseText } });
+            }
+        } else {
+            // Handle error response
+            const errorBody = await linkedinResponse.text();
+            console.error(`[ERROR] LinkedIn API responded with status ${linkedinResponse.status}:`, errorBody);
+            try {
+                // Try to parse the error body as JSON, as LinkedIn often returns structured errors.
+                const errorJson = JSON.parse(errorBody);
+                if (errorJson.errorDetails) {
+                    console.error('[ERROR DETAILS] LinkedIn API Error Details:', JSON.stringify(errorJson.errorDetails, null, 2));
+                }
+                return response.status(linkedinResponse.status).json(errorJson);
+            } catch (e) {
+                // If the error body is not JSON, return it as a plain text message.
+                return response.status(linkedinResponse.status).json({ message: errorBody });
+            }
         }
-
-        const uploadUrl = registerData.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"].uploadUrl;
-        const assetUrn = registerData.value.asset;
-
-        // Step 2: Upload the image binary
-        const imageBuffer = Buffer.from(imageBase64, 'base64');
-        const uploadRes = await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': imageType,
-            },
-            body: imageBuffer,
+    } catch (error) {
+        console.error(`[FATAL] Error during POST to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during POST to ${url}`,
+            details: error.message,
+            stack: error.stack,
         });
+    }
+}
 
-        if (!uploadRes.ok) {
-            return response.status(500).json({ error: 'Failed to upload image binary to LinkedIn.' });
-        }
+async function handleUploadVideo(fetch, request, response) {
+  const { uploadUrl, videoBase64, videoContentType } = request.body;
+  if (!uploadUrl || !videoBase64 || !videoContentType) return response.status(400).json({ error: 'Missing parameters for video part upload.' });
 
-        // Step 3: Poll for asset availability
-        let assetStatus = 'PENDING';
-        let pollAttempts = 0;
-        const maxPollAttempts = 15;
+  const videoBuffer = Buffer.from(videoBase64, 'base64');
+  try {
+    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': videoContentType }, body: videoBuffer });
+    if (!linkedinResponse.ok) {
+      const errorText = await linkedinResponse.text();
+      console.error("LinkedIn Video Part Upload Error Body:", errorText);
+      return response.status(linkedinResponse.status).json({ message: `Failed to upload video part. Status: ${linkedinResponse.status}` });
+    }
+    const eTag = linkedinResponse.headers.get('ETag');
+    if (!eTag) return response.status(500).json({ message: 'ETag missing from LinkedIn upload response.' });
+    return response.status(200).json({ eTag: eTag.replace(/"/g, '') });
+  } catch (error) {
+    console.error('Error during video part upload:', error);
+    return response.status(500).json({ error: 'Internal Server Error' });
+  }
+}
 
-        while (assetStatus !== 'AVAILABLE' && pollAttempts < maxPollAttempts) {
-            await delay(4000); // Wait for 4 seconds before checking
-            pollAttempts++;
+async function handleCheckVideoStatus(fetch, request, response) {
+    const { accessToken, videoUrn } = request.body;
+    if (!videoUrn) return response.status(400).json({ error: 'Missing videoUrn' });
+    const statusUrl = `https://api.linkedin.com/rest/videos/${encodeURIComponent(videoUrn)}`;
+    try {
+        const linkedinResponse = await fetch(statusUrl, { headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION } });
+        const data = await linkedinResponse.json();
+        return response.status(linkedinResponse.status).json(data);
+    } catch (error) {
+        console.error('Error checking video status:', error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
 
-            const statusRes = await fetch(`https://api.linkedin.com/rest/assets/${encodeURIComponent(assetUrn)}`, {
-                method: 'GET',
+async function handleCheckImageStatus(fetch, request, response) {
+    try {
+      const { accessToken } = request.body;
+      const imageUrn = request.body.imageUrn || request.body.assetUrn; // accept both names
+      if (!accessToken || !imageUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or imageUrn/assetUrn' });
+      }
+      const encoded = encodeURIComponent(imageUrn);
+      const url = `https://api.linkedin.com/rest/images/${encoded}`;
+      const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-RestLi-Protocol-Version': '2.0.0'
+      };
+      const liResp = await fetch(url, { method: 'GET', headers });
+      const data = await liResp.json();
+      return response.status(liResp.status).json(data);
+    } catch (err) {
+      console.error('Error in handleCheckImageStatus:', err);
+      return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+async function handleGetProfile(fetch, request, response) {
+    const { accessToken } = request.body;
+    if (!accessToken) return response.status(400).json({ error: 'Missing accessToken for getProfile.' });
+    const profileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
+    try {
+        const linkedinResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const data = await linkedinResponse.json();
+        return response.status(linkedinResponse.status).json(data);
+    } catch (error) {
+        console.error('Error during proxied getProfile:', error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+async function handleUploadImage(fetch, request, response) {
+  const { uploadUrl, imageBase64, imageType } = request.body;
+  if (!uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
+  const imageBuffer = Buffer.from(imageBase64, 'base64');
+  try {
+    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
+    if (!linkedinResponse.ok) {
+        const errorText = await linkedinResponse.text();
+        console.error("LinkedIn Image Upload Error Body:", errorText);
+        return response.status(linkedinResponse.status).json({ message: `Failed to upload image. Status: ${linkedinResponse.status}`, details: errorText });
+    }
+    return response.status(linkedinResponse.status).json({ success: true });
+  } catch (error) {
+    console.error('Error during image upload:', error);
+    return response.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
+async function handleUploadAndCheckImage(fetch, request, response) {
+    const { accessToken, authorUrn, imageBase64, imageType } = request.body;
+    if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
+        return response.status(400).json({ error: 'Missing required parameters for uploadAndCheckImage.' });
+    }
+
+    try {
+        console.log('[Proxy] Starting uploadAndCheck for author:', authorUrn);
+
+        // Step 1: Register the upload (unique per call)
+        const registerPayload = { initializeUploadRequest: { owner: authorUrn } };
+        const registerResponse = await fetchWithRetry(
+            fetch,
+            'https://api.linkedin.com/rest/images?action=initializeUpload',
+            {
+                method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
                     'X-Restli-Protocol-Version': '2.0.0',
-                    'LinkedIn-Version': LINKEDIN_API_VERSION,
+                    'LinkedIn-Version': LINKEDIN_API_VERSION
                 },
-            });
+                body: JSON.stringify(registerPayload),
+            }
+        );
 
-            const statusData = await statusRes.json();
-            if (statusRes.ok && statusData.recipes && statusData.recipes.length > 0) {
-                assetStatus = statusData.recipes[0].status;
+        const registerText = await registerResponse.text().catch(() => null);
+        let registerData = null;
+        try { registerData = registerText ? JSON.parse(registerText) : null; } catch (e) {
+            console.warn('[Proxy] Failed to parse registerResponse as JSON, raw:', registerText);
+        }
+        console.log('[Proxy] registerResponse status:', registerResponse.status, 'body:', registerData);
+
+        if (registerResponse.status === 401) {
+            console.error('[Proxy] Unauthorized during register upload.');
+            return response.status(401).json({ message: 'Unauthorized during register upload' });
+        }
+        if (!registerResponse.ok || !registerData) {
+            return response.status(registerResponse.status).json({ message: 'Failed to register image upload', details: registerData });
+        }
+
+        // More robustly extract asset URN and upload URL, accommodating various potential LinkedIn response shapes.
+        let assetUrn = null;
+        let uploadUrl = null;
+
+        const value = registerData.value || {};
+
+        // Primary paths for asset URN
+        if (value.asset) assetUrn = value.asset;
+        else if (value.image) assetUrn = value.image; // As seen in some Image API responses
+        else if (value.urn) assetUrn = value.urn;
+        else if (registerData.asset) assetUrn = registerData.asset; // Root level fallback
+
+        // Primary paths for upload URL
+        if (value.uploadUrl) {
+            uploadUrl = value.uploadUrl;
+        } else {
+            try {
+                const mech = value.uploadMechanism;
+                if (mech && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl) {
+                    uploadUrl = mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+                }
+            } catch (e) {
+                console.warn('[Proxy] Error extracting uploadUrl from uploadMechanism:', e);
+            }
+        }
+        // Root level fallback
+        if (!uploadUrl && registerData.uploadUrl) uploadUrl = registerData.uploadUrl;
+
+
+        console.log('[Proxy] Obtained assetUrn:', assetUrn, 'uploadUrl present:', !!uploadUrl);
+
+        if (!assetUrn) {
+            console.error('[Proxy] CRITICAL: Could not determine assetUrn from register response. Full response:', JSON.stringify(registerData, null, 2));
+            return response.status(500).json({ message: 'Could not determine assetUrn from register response', details: registerData });
+        }
+        if (!uploadUrl) {
+            console.warn('[Proxy] No uploadUrl returned by register; proceeding to return assetUrn for server-side upload handling.');
+            // If there is no uploadUrl, still return urn so caller may perform alternate steps.
+            return response.status(200).json({ assetUrn });
+        }
+
+        // Step 2: Upload binary to the returned uploadUrl
+        const imageBuffer = Buffer.from(imageBase64, 'base64');
+        console.log(`[Proxy] Uploading binary to uploadUrl for asset ${assetUrn}. Size: ${imageBuffer.length} bytes`);
+
+        const uploadResp = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
+        const uploadText = await uploadResp.text().catch(() => null);
+        if (!uploadResp.ok) {
+            console.error('[Proxy] Upload failed for asset:', assetUrn, 'status:', uploadResp.status, 'body:', uploadText);
+            return response.status(uploadResp.status).json({ message: 'Failed to upload image binary', details: uploadText });
+        }
+        console.log('[Proxy] Upload binary response status for', assetUrn, uploadResp.status);
+
+        // Step 3: Poll the asset status until AVAILABLE (or timeout)
+        const startTime = Date.now();
+        const timeoutMs = 30 * 1000; // 30 seconds timeout
+        let isAvailable = false;
+        let lastStatus = null;
+
+        while (Date.now() - startTime < timeoutMs) {
+            await delay(1000);
+            const statusUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
+            const statusResponse = await fetchWithRetry(fetch, statusUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${accessToken}`, 'LinkedIn-Version': LINKEDIN_API_VERSION } }, 5, 1000);
+
+            if (!statusResponse) {
+                console.warn('[Proxy Polling] No response when checking status for', assetUrn);
+                continue;
+            }
+
+            if (statusResponse.status === 202) {
+                // still processing
+                console.log(`[Proxy Polling] Asset ${assetUrn} still processing (202).`);
+                lastStatus = 'PROCESSING';
+                continue;
+            }
+
+            if (!statusResponse.ok) {
+                const errText = await statusResponse.text().catch(() => null);
+                console.warn('[Proxy Polling] Non-ok status when checking asset:', statusResponse.status, 'body:', errText);
+                lastStatus = `HTTP ${statusResponse.status}`;
+                continue;
+            }
+
+            const statusData = await statusResponse.json().catch(() => null);
+            lastStatus = statusData && statusData.status ? statusData.status : (statusData && statusData.value && statusData.value.status) ? statusData.value.status : 'UNKNOWN';
+            console.log('[Proxy Polling] Status for', assetUrn, 'is', lastStatus);
+
+            if (lastStatus === 'AVAILABLE' || lastStatus === 'READY') {
+                isAvailable = true;
+                break;
             }
         }
 
-        if (assetStatus !== 'AVAILABLE') {
-            return response.status(500).json({ error: 'Image asset did not become available in time.' });
+        if (!isAvailable) {
+            const totalTime = (Date.now() - startTime) / 1000;
+            console.error('[Proxy] Asset did not become available in time for', assetUrn, 'lastStatus:', lastStatus, 'elapsed(s):', totalTime);
+            return response.status(408).json({ message: `Image did not become available in time. Last status: ${lastStatus}` });
         }
 
+        console.log(`[Proxy] Asset ${assetUrn} is available. Total time: ${(Date.now() - startTime) / 1000}s.`);
         return response.status(200).json({ assetUrn });
 
     } catch (error) {
         console.error('[FATAL] Error in handleUploadAndCheckImage:', error);
-        return response.status(500).json({ error: 'Internal Server Error during image upload process.', details: error.message });
+        return response.status(500).json({ error: 'Internal Server Error in handleUploadAndCheckImage' });
     }
 }
 
 
-// LinkedIn create post handler with full commentary and multi-image support
-async function handleCreatePost(request, response) {
-  try {
-    const { accessToken, payload } = request.body;
-    if (!accessToken || !payload) {
-      return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
-    }
+async function handleCreatePost(fetch, request, response) {
+    try {
+        const { accessToken, payload } = request.body;
+        if (!accessToken || !payload) {
+            return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+        }
 
-    let { targetId, targetType, commentary, content, images, video, title, author } = payload;
-    let authorUrn;
+        let { targetId, targetType, content, images, video, title, author } = payload;
+        let authorUrn;
 
-    if (author) {
-      authorUrn = author;
-    } else if (targetId && targetType) {
-      authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
-    }
+        if (author) {
+            authorUrn = author;
+        } else if (targetId && targetType) {
+            authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
+        }
 
-    if (!authorUrn || (!commentary && !content)) {
-      return response.status(400).json({ error: 'Missing author or commentary/content.' });
-    }
+        if (!authorUrn || !content) {
+             return response.status(400).json({ error: 'Missing author information or content for creating post.' });
+        }
 
-    const textContent = stripEmojis(escapeLinkedinText(commentary || content || ''));
-    const postData = {
-      author: authorUrn,
-      commentary: textContent,
-      visibility: 'PUBLIC',
-      distribution: {
-        feedDistribution: 'MAIN_FEED',
-        targetEntities: [],
-        thirdPartyDistributionChannels: []
-      },
-      lifecycleState: 'PUBLISHED',
-      isReshareDisabledByAuthor: false
-    };
-
-    if (video) {
-      postData.content = {
-        media: { id: video, title: title || 'Video Post' }
-      };
-    } else if (images && images.length > 0) {
-      const normalizedUrns = images.map(img => (typeof img === 'string' ? img : img.id)).filter(Boolean);
-      if (normalizedUrns.length === 1) {
-        postData.content = { media: { id: normalizedUrns[0] } };
-      } else if (normalizedUrns.length > 1) {
-        postData.content = {
-          multiImage: {
-            images: normalizedUrns.map(urn => ({ id: urn, altText: ' ' }))
-          },
-          contentFormat: 'MULTI_IMAGE'
+        const postData = {
+            author: authorUrn,
+            commentary: escapeLinkedinText(content),
+            visibility: "PUBLIC",
+            distribution: {
+                feedDistribution: "MAIN_FEED",
+                targetEntities: [],
+                thirdPartyDistributionChannels: []
+            },
+            lifecycleState: "PUBLISHED",
+            isReshareDisabledByAuthor: false
         };
+
+        // --- MULTIIMAGE FIX PATCH ---
+        if (video) {
+            postData.content = {
+                media: {
+                    id: video,
+                    title: title || 'Video Post'
+                }
+            };
+        } else if (images && images.length > 0) {
+            const normalizedUrns = images.map(img => (typeof img === 'string' ? img : img.id)).filter(Boolean);
+            if (normalizedUrns.length === 1) {
+                postData.content = { media: { id: normalizedUrns[0] } };
+                console.log('[Proxy Patch] Single image post payload constructed:', postData.content);
+            } else {
+                postData.content = {
+                    multiImage: {
+                        images: normalizedUrns.map(urn => ({ id: urn }))
+                    }
+                };
+                console.log('[Proxy Patch] Multi-image payload constructed with URNs:', normalizedUrns);
+            }
+        }
+        // --- END PATCH ---
+
+        console.log('[Proxy Patch] Final postData before sending to LinkedIn:', JSON.stringify(postData, null, 2));
+
+        return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
+    } catch (error) {
+        console.error('[FATAL] Unhandled exception in handleCreatePost (multiImage fix):', error);
+        return response.status(500).json({ error: 'An unexpected error occurred in handleCreatePost.' });
+    }
+}
+
+
+async function handleGetProfiles(fetch, request, response) {
+  const { accessToken, forceRefresh } = request.body;
+  if (!accessToken) return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
+  const headers = { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION };
+  try {
+    const [personalResponse, orgAclsResponse] = await Promise.all([
+      fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
+      fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED', { headers })
+    ]);
+    if (!personalResponse.ok) throw new Error(`Failed to fetch personal profile: ${personalResponse.status}`);
+    const personalData = await personalResponse.json();
+    const personal = { id: personalData.id, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'person', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
+    let organizations = [];
+    if (orgAclsResponse.ok) {
+      const orgAclsData = await orgAclsResponse.json();
+
+      const allowedRoles = new Set(['ADMINISTRATOR', 'CONTENT_ADMINISTRATOR']);
+      const approvedAcls = orgAclsData.elements?.filter(acl => allowedRoles.has(acl.role)) || [];
+
+      if (approvedAcls.length > 0) {
+        const allOrgDetails = [];
+        for (const acl of approvedAcls) {
+            const orgId = acl.organization.split(':').pop();
+            const cacheKey = `linkedin:org:${orgId}`;
+            let orgData = null;
+
+            if (!forceRefresh) {
+                const cached = await kv.get(cacheKey);
+                if (cached) {
+                    orgData = JSON.parse(cached);
+                }
+            }
+
+            if (!orgData) {
+                const orgUrl = `https://api.linkedin.com/rest/organizations/${orgId}`;
+                try {
+                    const orgResponse = await fetchWithRetry(fetch, orgUrl, { headers });
+                    if (orgResponse.ok) {
+                        orgData = await orgResponse.json();
+                        await kv.set(cacheKey, JSON.stringify(orgData), 'EX', 3600);
+                    }
+                } catch (error) {
+                    console.error(`Failed to fetch details for org ${orgId}:`, error);
+                }
+            }
+
+            if (orgData) {
+                allOrgDetails.push({ id: orgId, ...orgData });
+            }
+            await delay(200); // 200ms delay between each request
+        }
+
+        organizations = allOrgDetails.map(details => {
+            const acl = approvedAcls.find(a => a.organization.endsWith(details.id));
+            return {
+                id: details.id,
+                name: details.localizedName || 'Nome Indisponível',
+                role: acl?.role,
+                logo: details.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                type: 'organization'
+            };
+        });
       }
     }
-
-    const url = 'https://api.linkedin.com/rest/posts';
-    const linkedinResponse = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': LINKEDIN_API_VERSION
-      },
-      body: JSON.stringify(postData)
-    });
-
-    if (linkedinResponse.status === 201) {
-      const postId = linkedinResponse.headers.get('x-restli-id');
-      if (postId) {
-        return response.status(200).json({ id: postId });
-      }
-    }
-
-    const result = await linkedinResponse.json().catch(() => ({}));
-    return response.status(linkedinResponse.status).json(result);
+    return response.status(200).json({ personal, organizations, hasOrganizations: organizations.length > 0 });
   } catch (error) {
-    console.error('[FATAL] Error in handleCreatePost:', error);
-    return response.status(500).json({ error: 'Internal Server Error', details: error.message });
+    console.error('Error in handleGetProfiles:', error);
+    return response.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
-async function handler(request, response) {
-    const { action } = request.body;
-
-    if (action === 'getClientId') {
-        return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+// For server-to-server calls (e.g., scheduler)
+async function handleRefreshTokenInternal(fetch, userId) {
+    if (!userId) {
+        throw new Error('User ID is required for internal token refresh.');
     }
 
-    if (action === 'exchangeCode') {
-        return handleExchangeCode(request, response);
+    const { rows } = await query('SELECT linkedin_refresh_token FROM users WHERE id = $1', [userId]);
+    if (rows.length === 0 || !rows[0].linkedin_refresh_token) {
+        throw new Error(`Refresh token not found for user ${userId}.`);
     }
 
-    // For all other actions, apply the auth middleware
-    return withAuth(async (req, res) => {
-        const { action } = req.body;
-        switch (action) {
-            case 'createPost':
-                return handleCreatePost(req, res);
-            case 'uploadAndCheckImage':
-                return handleUploadAndCheckImage(req, res);
-            // Add other authenticated actions here
-            default:
-                return res.status(400).json({ error: `Action '${action}' not supported.` });
-        }
-    })(request, response);
+    const { LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET } = process.env;
+    if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+        throw new Error('LinkedIn credentials not configured.');
+    }
+
+    const params = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: rows[0].linkedin_refresh_token,
+        client_id: LINKEDIN_CLIENT_ID,
+        client_secret: LINKEDIN_CLIENT_SECRET
+    });
+
+    const linkedinResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    });
+
+    const data = await linkedinResponse.json();
+
+    if (linkedinResponse.ok) {
+        const { access_token, expires_in, refresh_token } = data;
+        await query(
+            'UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4',
+            [access_token, new Date(Date.now() + expires_in * 1000), refresh_token || rows[0].linkedin_refresh_token, userId]
+        );
+        return { success: true, accessToken: access_token };
+    } else {
+        // If refresh fails, the token is invalid. Nullify the user's LinkedIn credentials.
+        console.warn(`Failed to refresh token for user ${userId}. The token is likely expired or revoked. Nullifying credentials.`);
+        await query(
+            'UPDATE users SET linkedin_access_token = NULL, linkedin_access_token_expiry = NULL, linkedin_refresh_token = NULL WHERE id = $1',
+            [userId]
+        );
+
+        // Construct a meaningful error from LinkedIn's response
+        const errorMessage = data.error_description || data.error || `LinkedIn API error with status ${linkedinResponse.status}`;
+        throw new Error(errorMessage);
+    }
 }
 
-export default handler;
+// For user-initiated calls (e.g., from the frontend)
+async function handleRefreshToken(fetch, request, response) {
+    const userId = request.user?.sub;
+    if (!userId) {
+        return response.status(401).json({ error: 'User not authenticated.' });
+    }
+    try {
+        const result = await handleRefreshTokenInternal(fetch, userId);
+        return response.status(200).json({ accessToken: result.accessToken });
+    } catch (error) {
+        console.error(`Error refreshing LinkedIn token for user ${userId}:`, error.message);
+        return response.status(500).json({ error: 'Internal Server Error', details: error.message });
+    }
+}
+
+
+async function handleGetShareStatistics(fetch, request, response) {
+    const { accessToken, payload } = request.body;
+    const { authorUrn, shareUrns } = payload;
+
+    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
+        return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
+    }
+
+    // Separate URNs by type.
+    const shares = shareUrns.filter(u => u.includes(':share:'));
+    const ugcPosts = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
+
+    let url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
+    const queryParams = [];
+
+    // Use the standard List() format for both parameter types.
+    if (shares.length > 0) {
+        queryParams.push(`shares=List(${shares.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+    if (ugcPosts.length > 0) {
+        queryParams.push(`ugcPosts=List(${ugcPosts.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+
+    if (queryParams.length === 0) {
+        return response.status(200).json({ elements: [] }); // Nothing to fetch.
+    }
+
+    url += `&${queryParams.join('&')}`;
+
+    try {
+        const res = await fetchWithRetry(fetch, url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            }
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Stats API responded with status ${res.status} for author ${authorUrn}:`, data);
+            return response.status(res.status).json(data);
+        }
+
+    } catch (error) {
+        console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to organizationalEntityShareStatistics`,
+            details: error.message,
+        });
+    }
+}
+
+async function handleGetMemberPostStatistics(fetch, request, response) {
+    const { accessToken, payload } = request.body;
+    const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
+
+    if (!accessToken || !ugcPostUrn || !queryType || !aggregation || !dateRange) {
+        return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
+    }
+
+    // The correct format for the entity parameter is `(ugc:<urn>)`.
+    const encodedEntity = encodeURIComponent(`(ugc:${ugcPostUrn})`);
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+
+    try {
+        const linkedinResponse = await fetchWithRetry(fetch, url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+        });
+
+        const data = await linkedinResponse.json();
+
+        if (linkedinResponse.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Member Post Stats API responded with status ${linkedinResponse.status} for post ${ugcPostUrn}:`, data);
+            return response.status(linkedinResponse.status).json(data);
+        }
+    } catch (error) {
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to ${url}`,
+            details: error.message,
+        });
+    }
+}
+
+const protectedHandler = async (request, response) => {
+  const fetch = (await import('node-fetch')).default;
+  const { action } = request.body;
+  switch (action) {
+    case 'tokenExchange': return handleTokenExchange(fetch, request, response);
+    case 'refreshToken': return handleRefreshToken(fetch, request, response);
+    case 'testConnection': return handleGetProfile(fetch, request, response);
+    case 'getProfile': return handleGetProfile(fetch, request, response);
+    case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/images?action=initializeUpload');
+    case 'uploadImage': return handleUploadImage(fetch, request, response);
+    case 'uploadAndCheckImage': return handleUploadAndCheckImage(fetch, request, response);
+    case 'createPost': return handleCreatePost(fetch, request, response);
+    case 'getProfiles': return handleGetProfiles(fetch, request, response);
+    case 'getShareStatistics': return handleGetShareStatistics(fetch, request, response);
+    case 'getMemberPostStatistics': return handleGetMemberPostStatistics(fetch, request, response);
+    case 'initializeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=initializeUpload');
+    case 'uploadVideo': return handleUploadVideo(fetch, request, response);
+    case 'finalizeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=finalizeUpload');
+    case 'checkVideoStatus': return handleCheckVideoStatus(fetch, request, response);
+    case 'checkImageStatus': return handleCheckImageStatus(fetch, request, response);
+    case 'getClientId': return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+    default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
+  }
+};
+
+const SCHEDULER_ACTIONS = new Set([
+  'refreshTokenInternal',
+  'createPost',
+  'checkImageStatus',
+  'registerUpload',
+  'uploadImage',
+  'uploadAndCheckImage',
+  'initializeVideoUpload',
+  'uploadVideo',
+  'finalizeVideoUpload',
+  'checkVideoStatus',
+  'getShareStatistics',
+  'getMemberPostStatistics'
+]);
+
+// This handler is for requests that are authenticated via a shared secret.
+const internalRequestHandler = async (request, response) => {
+    const { action, userId } = request.body;
+    const fetch = (await import('node-fetch')).default;
+
+    if (action === 'refreshTokenInternal') {
+        try {
+            const result = await handleRefreshTokenInternal(fetch, userId);
+            return response.status(200).json(result);
+        } catch (error) {
+            console.error(`[INTERNAL] Error refreshing token for user ${userId}:`, error.message);
+            return response.status(500).json({ error: 'Internal Server Error', details: error.message });
+        }
+    }
+
+    // Other scheduler actions can be handled by the protectedHandler, which we call directly, bypassing withAuth.
+    // The protectedHandler will get the accessToken from the request body, which is what the scheduler provides.
+    return protectedHandler(request, response);
+}
+
+
+const mainHandler = async (request, response) => {
+    const { action } = request.body;
+
+    // Check for internal, server-to-server requests from the scheduler
+    const internalSecret = request.headers['x-internal-secret'] || request.headers['X-Internal-Secret'];
+    if (SCHEDULER_ACTIONS.has(action) && internalSecret && internalSecret === process.env.INTERNAL_API_SECRET) {
+        console.log(`[Proxy] Executing internal action via secret: ${action}`);
+        return internalRequestHandler(request, response);
+    }
+
+    // Default to the standard, user-facing authentication flow which requires a JWT cookie
+    console.log(`[Proxy] Executing user-facing action: ${action}`);
+    return withAuth(protectedHandler)(request, response);
+};
+
+export default mainHandler;
