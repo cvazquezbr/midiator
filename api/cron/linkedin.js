@@ -258,10 +258,11 @@ export async function handleRunScheduler(response) {
 
       try {
         // If payload has images as URLs (blob store), upload them now
-        if (payload.images && Array.isArray(payload.images) && payload.images.length > 0) {
-          console.log(`[Cron LinkedIn] Found ${payload.images.length} image(s) for post ${postId}. Uploading to LinkedIn...`);
+        const imagesToUpload = (payload.content && payload.content.images) || payload.images || [];
+        if (imagesToUpload.length > 0) {
+          console.log(`[Cron LinkedIn] Found ${imagesToUpload.length} image(s) for post ${postId}. Uploading to LinkedIn...`);
 
-          for (const imgRef of payload.images) {
+          for (const imgRef of imagesToUpload) {
             // imgRef may be a full URL (string) or an object { url: '', ... } or an existing urn
             let imgUrl = null;
             let maybeUrn = null;
