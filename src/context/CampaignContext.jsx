@@ -126,7 +126,7 @@ export const CampaignProvider = ({ children }) => {
       csvData: sanitizedCsvData,
       generatedPagesData: synchronizedPages,
       currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
-      pendingAssets: { ...prevState.pendingAssets, ...(loadedData.pendingAssets || {}) }, // Correctly merge the loaded assets
+      pendingAssets: loadedData.pendingAssets || {}, // This is the fix: Overwrite, don't merge.
       selectedAutorForCampaign: loadedData.autor_id || '',
       selectedPersonaForCampaign: loadedData.persona_id || '',
       // Ensure specific fields are initialized correctly to prevent app crashes
