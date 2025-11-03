@@ -481,7 +481,6 @@ export async function handleGetProfileForTest(req, res) {
 }
 
 const mainHandler = async (request, response) => {
-  console.log(`[DIAGNOSTIC] LinkedIn Client ID from env: ${process.env.LINKEDIN_CLIENT_ID}`);
   console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
 
   if (request.method !== 'POST') {
