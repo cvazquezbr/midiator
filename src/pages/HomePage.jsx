@@ -314,6 +314,18 @@ function HomePage() {
   }, [user?.uuid]);
 
   useEffect(() => {
+    const checkLinkedInRedirect = () => {
+      const isLinkedInRedirect = sessionStorage.getItem('linkedin_oauth_inprogress');
+      if (isLinkedInRedirect) {
+        sessionStorage.removeItem('linkedin_oauth_inprogress');
+        setShowSetupModal(true);
+        setInitialSetupTab(4); // LinkedIn is the 5th tab (index 4)
+      }
+    };
+    checkLinkedInRedirect();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
     document.documentElement.classList.toggle('dark-mode-active', darkMode);
   }, [darkMode]);
