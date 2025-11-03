@@ -82,6 +82,14 @@ async function handleCreatePost(request, response) {
       body: JSON.stringify(postData)
     });
 
+    // If the post was created successfully (201 Created), the ID is in the headers
+    if (linkedinResponse.status === 201) {
+      const postId = linkedinResponse.headers.get('x-restli-id');
+      if (postId) {
+        return response.status(200).json({ id: postId });
+      }
+    }
+
     const result = await linkedinResponse.json().catch(() => ({}));
     return response.status(linkedinResponse.status).json(result);
   } catch (error) {
