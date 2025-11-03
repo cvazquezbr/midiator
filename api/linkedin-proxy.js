@@ -50,47 +50,13 @@ async function handleTokenExchange(fetch, request, response) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     });
-
-    const tokenData = await linkedinResponse.json();
-
-    if (!linkedinResponse.ok) {
-        return response.status(linkedinResponse.status).json(tokenData);
+    const data = await linkedinResponse.json();
+    if (linkedinResponse.ok) {
+        const { access_token, expires_in, refresh_token } = data;
+        const expiryDate = new Date(Date.now() + expires_in * 1000);
+        await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4', [access_token, expiryDate, refresh_token, userId]);
     }
-
-    const { access_token, expires_in, refresh_token } = tokenData;
-    const expiryDate = new Date(Date.now() + expires_in * 1000);
-    await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4', [access_token, expiryDate, refresh_token, userId]);
-
-    // After successfully getting and storing the token, fetch the user's profile.
-    const profileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
-    const profileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${access_token}` } });
-    const profileData = await profileResponse.json();
-
-    if (!profileResponse.ok) {
-        console.error('Failed to fetch LinkedIn profile after token exchange:', profileData);
-        // Even if profile fetch fails, the token exchange was successful.
-        // We can return success and let the frontend handle the missing profile data.
-        return response.status(200).json({
-            success: true,
-            accessToken: access_token,
-            profile: null,
-            warning: 'Token was acquired, but failed to fetch profile information.'
-        });
-    }
-
-    const firstName = profileData.firstName?.localized?.pt_BR || profileData.firstName?.localized?.en_US;
-    const lastName = profileData.lastName?.localized?.pt_BR || profileData.lastName?.localized?.en_US;
-
-    // Return a consolidated object to the frontend
-    return response.status(200).json({
-        success: true,
-        accessToken: access_token,
-        profile: {
-            localizedFirstName: firstName,
-            localizedLastName: lastName
-        }
-    });
-
+    return response.status(linkedinResponse.status).json(data);
   } catch (error) {
     console.error('Error during token exchange:', error);
     return response.status(500).json({ error: 'Internal Server Error' });
@@ -206,29 +172,6 @@ async function handleCheckVideoStatus(fetch, request, response) {
     }
 }
 
-async function handleCheckImageStatus(fetch, request, response) {
-    try {
-      const { accessToken } = request.body;
-      const imageUrn = request.body.imageUrn || request.body.assetUrn; // accept both names
-      if (!accessToken || !imageUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or imageUrn/assetUrn' });
-      }
-      const encoded = encodeURIComponent(imageUrn);
-      const url = `https://api.linkedin.com/rest/images/${encoded}`;
-      const headers = {
-        Authorization: `Bearer ${accessToken}`,
-        'LinkedIn-Version': LINKEDIN_API_VERSION,
-        'X-RestLi-Protocol-Version': '2.0.0'
-      };
-      const liResp = await fetch(url, { method: 'GET', headers });
-      const data = await liResp.json();
-      return response.status(liResp.status).json(data);
-    } catch (err) {
-      console.error('Error in handleCheckImageStatus:', err);
-      return response.status(500).json({ error: 'Internal Server Error' });
-    }
-}
-
 async function handleGetProfile(fetch, request, response) {
     const { accessToken } = request.body;
     if (!accessToken) return response.status(400).json({ error: 'Missing accessToken for getProfile.' });
@@ -244,172 +187,17 @@ async function handleGetProfile(fetch, request, response) {
 }
 
 async function handleUploadImage(fetch, request, response) {
-  const { uploadUrl, imageBase64, imageType } = request.body;
-  if (!uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
+  const { accessToken, uploadUrl, imageBase64, imageType } = request.body;
+  if (!accessToken || !uploadUrl || !imageBase64 || !imageType) return response.status(400).json({ error: 'Missing parameters for image upload.' });
   const imageBuffer = Buffer.from(imageBase64, 'base64');
   try {
-    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
-    if (!linkedinResponse.ok) {
-        const errorText = await linkedinResponse.text();
-        console.error("LinkedIn Image Upload Error Body:", errorText);
-        return response.status(linkedinResponse.status).json({ message: `Failed to upload image. Status: ${linkedinResponse.status}`, details: errorText });
-    }
+    const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': imageType }, body: imageBuffer });
     return response.status(linkedinResponse.status).json({ success: true });
   } catch (error) {
     console.error('Error during image upload:', error);
     return response.status(500).json({ error: 'Internal Server Error' });
   }
 }
-
-async function handleUploadAndCheckImage(fetch, request, response) {
-    const { accessToken, authorUrn, imageBase64, imageType } = request.body;
-    if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
-        return response.status(400).json({ error: 'Missing required parameters for uploadAndCheckImage.' });
-    }
-
-    try {
-        console.log('[Proxy] Starting uploadAndCheck for author:', authorUrn);
-
-        // Step 1: Register the upload (unique per call)
-        const registerPayload = { initializeUploadRequest: { owner: authorUrn } };
-        const registerResponse = await fetchWithRetry(
-            fetch,
-            'https://api.linkedin.com/rest/images?action=initializeUpload',
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                    'X-Restli-Protocol-Version': '2.0.0',
-                    'LinkedIn-Version': LINKEDIN_API_VERSION
-                },
-                body: JSON.stringify(registerPayload),
-            }
-        );
-
-        const registerText = await registerResponse.text().catch(() => null);
-        let registerData = null;
-        try { registerData = registerText ? JSON.parse(registerText) : null; } catch (e) {
-            console.warn('[Proxy] Failed to parse registerResponse as JSON, raw:', registerText);
-        }
-        console.log('[Proxy] registerResponse status:', registerResponse.status, 'body:', registerData);
-
-        if (registerResponse.status === 401) {
-            console.error('[Proxy] Unauthorized during register upload.');
-            return response.status(401).json({ message: 'Unauthorized during register upload' });
-        }
-        if (!registerResponse.ok || !registerData) {
-            return response.status(registerResponse.status).json({ message: 'Failed to register image upload', details: registerData });
-        }
-
-        // More robustly extract asset URN and upload URL, accommodating various potential LinkedIn response shapes.
-        let assetUrn = null;
-        let uploadUrl = null;
-
-        const value = registerData.value || {};
-
-        // Primary paths for asset URN
-        if (value.asset) assetUrn = value.asset;
-        else if (value.image) assetUrn = value.image; // As seen in some Image API responses
-        else if (value.urn) assetUrn = value.urn;
-        else if (registerData.asset) assetUrn = registerData.asset; // Root level fallback
-
-        // Primary paths for upload URL
-        if (value.uploadUrl) {
-            uploadUrl = value.uploadUrl;
-        } else {
-            try {
-                const mech = value.uploadMechanism;
-                if (mech && mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl) {
-                    uploadUrl = mech['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
-                }
-            } catch (e) {
-                console.warn('[Proxy] Error extracting uploadUrl from uploadMechanism:', e);
-            }
-        }
-        // Root level fallback
-        if (!uploadUrl && registerData.uploadUrl) uploadUrl = registerData.uploadUrl;
-
-
-        console.log('[Proxy] Obtained assetUrn:', assetUrn, 'uploadUrl present:', !!uploadUrl);
-
-        if (!assetUrn) {
-            console.error('[Proxy] CRITICAL: Could not determine assetUrn from register response. Full response:', JSON.stringify(registerData, null, 2));
-            return response.status(500).json({ message: 'Could not determine assetUrn from register response', details: registerData });
-        }
-        if (!uploadUrl) {
-            console.warn('[Proxy] No uploadUrl returned by register; proceeding to return assetUrn for server-side upload handling.');
-            // If there is no uploadUrl, still return urn so caller may perform alternate steps.
-            return response.status(200).json({ assetUrn });
-        }
-
-        // Step 2: Upload binary to the returned uploadUrl
-        const imageBuffer = Buffer.from(imageBase64, 'base64');
-        console.log(`[Proxy] Uploading binary to uploadUrl for asset ${assetUrn}. Size: ${imageBuffer.length} bytes`);
-
-        const uploadResp = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': imageType }, body: imageBuffer });
-        const uploadText = await uploadResp.text().catch(() => null);
-        if (!uploadResp.ok) {
-            console.error('[Proxy] Upload failed for asset:', assetUrn, 'status:', uploadResp.status, 'body:', uploadText);
-            return response.status(uploadResp.status).json({ message: 'Failed to upload image binary', details: uploadText });
-        }
-        console.log('[Proxy] Upload binary response status for', assetUrn, uploadResp.status);
-
-        // Step 3: Poll the asset status until AVAILABLE (or timeout)
-        const startTime = Date.now();
-        const timeoutMs = 30 * 1000; // 30 seconds timeout
-        let isAvailable = false;
-        let lastStatus = null;
-
-        while (Date.now() - startTime < timeoutMs) {
-            await delay(1000);
-            const statusUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
-            const statusResponse = await fetchWithRetry(fetch, statusUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${accessToken}`, 'LinkedIn-Version': LINKEDIN_API_VERSION } }, 5, 1000);
-
-            if (!statusResponse) {
-                console.warn('[Proxy Polling] No response when checking status for', assetUrn);
-                continue;
-            }
-
-            if (statusResponse.status === 202) {
-                // still processing
-                console.log(`[Proxy Polling] Asset ${assetUrn} still processing (202).`);
-                lastStatus = 'PROCESSING';
-                continue;
-            }
-
-            if (!statusResponse.ok) {
-                const errText = await statusResponse.text().catch(() => null);
-                console.warn('[Proxy Polling] Non-ok status when checking asset:', statusResponse.status, 'body:', errText);
-                lastStatus = `HTTP ${statusResponse.status}`;
-                continue;
-            }
-
-            const statusData = await statusResponse.json().catch(() => null);
-            lastStatus = statusData && statusData.status ? statusData.status : (statusData && statusData.value && statusData.value.status) ? statusData.value.status : 'UNKNOWN';
-            console.log('[Proxy Polling] Status for', assetUrn, 'is', lastStatus);
-
-            if (lastStatus === 'AVAILABLE' || lastStatus === 'READY') {
-                isAvailable = true;
-                break;
-            }
-        }
-
-        if (!isAvailable) {
-            const totalTime = (Date.now() - startTime) / 1000;
-            console.error('[Proxy] Asset did not become available in time for', assetUrn, 'lastStatus:', lastStatus, 'elapsed(s):', totalTime);
-            return response.status(408).json({ message: `Image did not become available in time. Last status: ${lastStatus}` });
-        }
-
-        console.log(`[Proxy] Asset ${assetUrn} is available. Total time: ${(Date.now() - startTime) / 1000}s.`);
-        return response.status(200).json({ assetUrn });
-
-    } catch (error) {
-        console.error('[FATAL] Error in handleUploadAndCheckImage:', error);
-        return response.status(500).json({ error: 'Internal Server Error in handleUploadAndCheckImage' });
-    }
-}
-
 
 async function handleCreatePost(fetch, request, response) {
     try {
@@ -418,19 +206,27 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
         }
 
+        console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
+
+        // Make the function more flexible by handling both formats from the UI and the scheduler.
         let { targetId, targetType, content, images, video, title, author } = payload;
         let authorUrn;
 
         if (author) {
+            // Format sent by the scheduler, which already has the full URN.
             authorUrn = author;
         } else if (targetId && targetType) {
+            // Format sent by the user-facing UI.
             authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
         }
 
+        // Validate that we have the necessary information to proceed.
         if (!authorUrn || !content) {
+             console.error('[DEBUG] Validation failed in handleCreatePost:', { authorUrn, contentExists: !!content });
              return response.status(400).json({ error: 'Missing author information or content for creating post.' });
         }
 
+        // Base structure for the new Posts API
         const postData = {
             author: authorUrn,
             commentary: escapeLinkedinText(content),
@@ -444,7 +240,6 @@ async function handleCreatePost(fetch, request, response) {
             isReshareDisabledByAuthor: false
         };
 
-        // --- MULTIIMAGE FIX PATCH ---
         if (video) {
             postData.content = {
                 media: {
@@ -453,30 +248,31 @@ async function handleCreatePost(fetch, request, response) {
                 }
             };
         } else if (images && images.length > 0) {
-            const normalizedUrns = images.map(img => (typeof img === 'string' ? img : img.id)).filter(Boolean);
-            if (normalizedUrns.length === 1) {
-                postData.content = { media: { id: normalizedUrns[0] } };
-                console.log('[Proxy Patch] Single image post payload constructed:', postData.content);
-            } else {
+            if (images.length === 1) {
+                // Single image post
                 postData.content = {
-                    multiImage: {
-                        images: normalizedUrns.map(urn => ({ id: urn }))
+                    media: {
+                        id: images[0]
                     }
                 };
-                console.log('[Proxy Patch] Multi-image payload constructed with URNs:', normalizedUrns);
+            } else {
+                // Multi-image post
+                postData.content = {
+                    multiImage: {
+                        images: images.map(urn => ({ id: urn }))
+                    }
+                };
             }
         }
-        // --- END PATCH ---
 
-        console.log('[Proxy Patch] Final postData before sending to LinkedIn:', JSON.stringify(postData, null, 2));
+        console.log('[DEBUG] Calling handleGenericPost with new Posts API payload:', JSON.stringify(postData, null, 2));
 
         return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
     } catch (error) {
-        console.error('[FATAL] Unhandled exception in handleCreatePost (multiImage fix):', error);
+        console.error('[FATAL] Unhandled exception in handleCreatePost:', error);
         return response.status(500).json({ error: 'An unexpected error occurred in handleCreatePost.' });
     }
 }
-
 
 async function handleGetProfiles(fetch, request, response) {
   const { accessToken, forceRefresh } = request.body;
@@ -717,13 +513,12 @@ const protectedHandler = async (request, response) => {
   const fetch = (await import('node-fetch')).default;
   const { action } = request.body;
   switch (action) {
-    case 'exchangeCode': return handleTokenExchange(fetch, request, response);
+    case 'tokenExchange': return handleTokenExchange(fetch, request, response);
     case 'refreshToken': return handleRefreshToken(fetch, request, response);
     case 'testConnection': return handleGetProfile(fetch, request, response);
     case 'getProfile': return handleGetProfile(fetch, request, response);
     case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/images?action=initializeUpload');
     case 'uploadImage': return handleUploadImage(fetch, request, response);
-    case 'uploadAndCheckImage': return handleUploadAndCheckImage(fetch, request, response);
     case 'createPost': return handleCreatePost(fetch, request, response);
     case 'getProfiles': return handleGetProfiles(fetch, request, response);
     case 'getShareStatistics': return handleGetShareStatistics(fetch, request, response);
@@ -732,7 +527,6 @@ const protectedHandler = async (request, response) => {
     case 'uploadVideo': return handleUploadVideo(fetch, request, response);
     case 'finalizeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=finalizeUpload');
     case 'checkVideoStatus': return handleCheckVideoStatus(fetch, request, response);
-    case 'checkImageStatus': return handleCheckImageStatus(fetch, request, response);
     case 'getClientId': return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
     default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
   }
@@ -741,10 +535,8 @@ const protectedHandler = async (request, response) => {
 const SCHEDULER_ACTIONS = new Set([
   'refreshTokenInternal',
   'createPost',
-  'checkImageStatus',
   'registerUpload',
   'uploadImage',
-  'uploadAndCheckImage',
   'initializeVideoUpload',
   'uploadVideo',
   'finalizeVideoUpload',
