@@ -50,13 +50,47 @@ async function handleTokenExchange(fetch, request, response) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     });
-    const data = await linkedinResponse.json();
-    if (linkedinResponse.ok) {
-        const { access_token, expires_in, refresh_token } = data;
-        const expiryDate = new Date(Date.now() + expires_in * 1000);
-        await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4', [access_token, expiryDate, refresh_token, userId]);
+
+    const tokenData = await linkedinResponse.json();
+
+    if (!linkedinResponse.ok) {
+        return response.status(linkedinResponse.status).json(tokenData);
     }
-    return response.status(linkedinResponse.status).json(data);
+
+    const { access_token, expires_in, refresh_token } = tokenData;
+    const expiryDate = new Date(Date.now() + expires_in * 1000);
+    await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4', [access_token, expiryDate, refresh_token, userId]);
+
+    // After successfully getting and storing the token, fetch the user's profile.
+    const profileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
+    const profileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${access_token}` } });
+    const profileData = await profileResponse.json();
+
+    if (!profileResponse.ok) {
+        console.error('Failed to fetch LinkedIn profile after token exchange:', profileData);
+        // Even if profile fetch fails, the token exchange was successful.
+        // We can return success and let the frontend handle the missing profile data.
+        return response.status(200).json({
+            success: true,
+            accessToken: access_token,
+            profile: null,
+            warning: 'Token was acquired, but failed to fetch profile information.'
+        });
+    }
+
+    const firstName = profileData.firstName?.localized?.pt_BR || profileData.firstName?.localized?.en_US;
+    const lastName = profileData.lastName?.localized?.pt_BR || profileData.lastName?.localized?.en_US;
+
+    // Return a consolidated object to the frontend
+    return response.status(200).json({
+        success: true,
+        accessToken: access_token,
+        profile: {
+            localizedFirstName: firstName,
+            localizedLastName: lastName
+        }
+    });
+
   } catch (error) {
     console.error('Error during token exchange:', error);
     return response.status(500).json({ error: 'Internal Server Error' });

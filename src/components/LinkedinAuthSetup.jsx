@@ -53,15 +53,16 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
             }
 
             const data = await response.json();
-            const { access_token, expires_in } = data;
-
-            if (access_token) {
-                const expiry = Date.now() + expires_in * 1000;
-                updateSetting('linkedin', { ...linkedinConfig, accessToken: access_token, expiry });
+            if (data.success && data.accessToken && data.profile) {
+                // Update the context with the new token
+                updateSetting('linkedin', { ...linkedinConfig, accessToken: data.accessToken });
+                // Update the local state with the user profile
+                setConnectedUser(data.profile);
                 toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             } else {
-                throw new Error('Token de acesso não encontrado na resposta.');
+                 throw new Error(data.warning || 'A API não retornou os dados de perfil esperados.');
             }
+
         } catch (err) {
             console.error("Erro ao trocar código por token:", err);
             setError(`Ocorreu um erro: ${err.message}`);
@@ -100,7 +101,12 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   }, []);
 
   useEffect(() => {
+    // This effect now primarily handles the case where the user is ALREADY connected
+    // when the component loads. The initial connection flow is handled by exchangeCodeForToken.
     const fetchUserDetails = async (accessToken) => {
+      // Only fetch if we don't have a connected user already from the auth flow.
+      if (connectedUser) return;
+
       try {
         const response = await fetch('/api/linkedin-proxy', {
           method: 'POST',
@@ -114,7 +120,10 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         setConnectedUser({ localizedFirstName: firstName, localizedLastName: lastName });
       } catch (err) {
         console.error("Erro ao buscar detalhes do usuário do LinkedIn:", err);
-        setConnectedUser({ localizedFirstName: 'Usuário', localizedLastName: 'Desconhecido' });
+        // If fetching details fails, it could mean the token is stale.
+        // We clear the connection to force a re-auth.
+        handleRemove();
+        toast.error("Sua sessão do LinkedIn expirou. Por favor, conecte novamente.");
       }
     };
 
@@ -123,7 +132,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     } else {
       setConnectedUser(null);
     }
-  }, [linkedinConfig.accessToken]);
+  }, [settings, linkedinConfig.accessToken, connectedUser]);
 
   const handleFolderIdChange = (e) => {
     const { value } = e.target;
