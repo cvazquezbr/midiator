@@ -19,7 +19,7 @@ function escapeLinkedinText(text) {
 // LinkedIn create post handler with full commentary and multi-image support
 async function handleCreatePost(request, response) {
   try {
-    const { action, accessToken, payload } = request.body;
+    const { accessToken, payload } = request.body;
     if (!accessToken || !payload) {
       return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
     }
@@ -69,7 +69,6 @@ async function handleCreatePost(request, response) {
       }
     }
 
-    console.log('[Proxy Fixed] Final postData before sending:', JSON.stringify(postData, null, 2));
     const url = 'https://api.linkedin.com/rest/posts';
     const linkedinResponse = await fetch(url, {
       method: 'POST',
@@ -82,7 +81,6 @@ async function handleCreatePost(request, response) {
       body: JSON.stringify(postData)
     });
 
-    // If the post was created successfully (201 Created), the ID is in the headers
     if (linkedinResponse.status === 201) {
       const postId = linkedinResponse.headers.get('x-restli-id');
       if (postId) {
@@ -93,9 +91,29 @@ async function handleCreatePost(request, response) {
     const result = await linkedinResponse.json().catch(() => ({}));
     return response.status(linkedinResponse.status).json(result);
   } catch (error) {
-    console.error('[FATAL] Error in handleCreatePost (fixed):', error);
+    console.error('[FATAL] Error in handleCreatePost:', error);
     return response.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
 
-export default handleCreatePost;
+async function handler(request, response) {
+    const { action } = request.body;
+
+    if (action === 'getClientId') {
+        return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+    }
+
+    // For all other actions, apply the auth middleware
+    return withAuth(async (req, res) => {
+        const { action } = req.body;
+        switch (action) {
+            case 'createPost':
+                return handleCreatePost(req, res);
+            // Add other authenticated actions here
+            default:
+                return res.status(400).json({ error: `Action '${action}' not supported.` });
+        }
+    })(request, response);
+}
+
+export default handler;
