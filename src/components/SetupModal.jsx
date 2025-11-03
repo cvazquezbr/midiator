@@ -101,11 +101,24 @@ const GeneralSettings = () => {
 const SetupModal = ({ open, onClose, initialTab = 0 }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(initialTab);
+  const { settings, saveSettings, isLoading } = useSettings();
+  const [initialSettings, setInitialSettings] = useState(null);
 
   useEffect(() => {
     setValue(initialTab);
   }, [initialTab]);
-  const { saveSettings, isLoading } = useSettings();
+
+  useEffect(() => {
+    if (open && settings) {
+      // Deep copy to prevent reference issues
+      setInitialSettings(JSON.parse(JSON.stringify(settings)));
+    }
+  }, [open, settings]);
+
+  const hasUnsavedChanges = () => {
+    if (!initialSettings) return false;
+    return JSON.stringify(settings) !== JSON.stringify(initialSettings);
+  };
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -121,7 +134,18 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
   };
 
   const handleSaveForRedirect = async () => {
-    await saveSettings();
+    if (hasUnsavedChanges()) {
+      const userConfirmed = window.confirm("You have unsaved changes. Do you want to save them before proceeding?");
+      if (userConfirmed) {
+        await saveSettings();
+        return true; // Indicate that settings were saved and it's safe to proceed.
+      } else {
+        // User chose not to save, but we can still proceed with the redirect.
+        // The unsaved changes will be lost as per standard web behavior.
+        return true;
+      }
+    }
+    return true; // No unsaved changes, safe to proceed.
   };
 
   const a11yProps = (index) => {
