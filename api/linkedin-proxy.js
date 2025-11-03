@@ -16,6 +16,50 @@ function escapeLinkedinText(text) {
   return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
 }
 
+async function handleExchangeCode(request, response) {
+    const { code, redirectUri } = request.body;
+    if (!code) {
+        return response.status(400).json({ error: 'Authorization code is missing.' });
+    }
+
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        return response.status(500).json({ error: 'LinkedIn API credentials are not configured on the server.' });
+    }
+
+    const params = new URLSearchParams();
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code);
+    params.append('redirect_uri', redirectUri || `${process.env.VITE_API_BASE_URL}`);
+    params.append('client_id', clientId);
+    params.append('client_secret', clientSecret);
+
+    try {
+        const linkedinResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params,
+        });
+
+        const data = await linkedinResponse.json();
+
+        if (!linkedinResponse.ok) {
+            return response.status(linkedinResponse.status).json({
+                error: 'Failed to exchange authorization code for token.',
+                details: data.error_description || data.error || 'Unknown error from LinkedIn.',
+            });
+        }
+
+        return response.status(200).json(data);
+    } catch (error) {
+        console.error('Error exchanging LinkedIn auth code:', error);
+        return response.status(500).json({ error: 'An internal error occurred while communicating with LinkedIn.' });
+    }
+}
+
+
 // LinkedIn create post handler with full commentary and multi-image support
 async function handleCreatePost(request, response) {
   try {
@@ -101,6 +145,10 @@ async function handler(request, response) {
 
     if (action === 'getClientId') {
         return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+    }
+
+    if (action === 'exchangeCode') {
+        return handleExchangeCode(request, response);
     }
 
     // For all other actions, apply the auth middleware
