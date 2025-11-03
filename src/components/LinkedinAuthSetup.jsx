@@ -55,7 +55,6 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
   useEffect(() => {
     const exchangeCodeForToken = async (code) => {
-        // You might want to add a loading state here
         try {
             const redirectUri = window.location.origin;
             const response = await fetch('/api/linkedin-proxy', {
@@ -84,9 +83,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
             setError(`Ocorreu um erro: ${err.message}`);
             toast.error('Não foi possível conectar com o LinkedIn.');
         } finally {
-            // Clean up the URL
             window.history.replaceState({}, document.title, window.location.pathname);
-            // You might want to turn off the loading state here
         }
     };
 
@@ -148,7 +145,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
       if (onBeforeRedirect) await onBeforeRedirect();
 
       const redirectUri = window.location.origin;
-      const scope = encodeURIComponent('r_liteprofile r_organization_social w_member_social w_organization_social rw_organization_admin r_member_social_analytics r_organization_social_analytics');
+      const scope = encodeURIComponent('r_liteprofile w_member_social r_organization_social w_organization_social rw_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
       window.location.href = authUrl;
     } else {
