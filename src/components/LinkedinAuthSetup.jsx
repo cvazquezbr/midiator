@@ -36,25 +36,6 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const linkedinConfig = settings.linkedin || {};
 
   useEffect(() => {
-    const fetchClientId = async () => {
-      try {
-        const response = await fetch('/api/linkedin-proxy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'getClientId' }),
-        });
-        if (!response.ok) throw new Error('Falha ao buscar o Client ID do LinkedIn.');
-        const data = await response.json();
-        setClientId(data.clientId);
-      } catch (err) {
-        console.error("Erro ao buscar o Client ID do LinkedIn:", err);
-        setError('Não foi possível obter a configuração para a conexão com o LinkedIn.');
-      }
-    };
-    fetchClientId();
-  }, []);
-
-  useEffect(() => {
     const exchangeCodeForToken = async (code) => {
         setIsExchangingCode(true);
         setError('');
@@ -97,7 +78,26 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     if (code) {
         exchangeCodeForToken(code);
     }
-}, [updateSetting]);
+  }, [updateSetting]);
+
+  useEffect(() => {
+    const fetchClientId = async () => {
+      try {
+        const response = await fetch('/api/linkedin-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'getClientId' }),
+        });
+        if (!response.ok) throw new Error('Falha ao buscar o Client ID do LinkedIn.');
+        const data = await response.json();
+        setClientId(data.clientId);
+      } catch (err) {
+        console.error("Erro ao buscar o Client ID do LinkedIn:", err);
+        setError('Não foi possível obter a configuração para a conexão com o LinkedIn.');
+      }
+    };
+    fetchClientId();
+  }, []);
 
   useEffect(() => {
     const fetchUserDetails = async (accessToken) => {
@@ -150,7 +150,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
       if (onBeforeRedirect) await onBeforeRedirect();
 
       const redirectUri = window.location.origin;
-      const scope = encodeURIComponent('r_basicprofile r_organization_social w_member_social w_organization_social rw_organization_admin r_member_social_analytics r_organization_social_analytics');
+      const scope = encodeURIComponent('r_liteprofile r_organization_social w_member_social w_organization_social rw_organization_admin r_member_social_analytics r_organization_social_analytics');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
       window.location.href = authUrl;
     } else {

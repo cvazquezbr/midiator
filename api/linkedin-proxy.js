@@ -683,7 +683,7 @@ const protectedHandler = async (request, response) => {
   const fetch = (await import('node-fetch')).default;
   const { action } = request.body;
   switch (action) {
-    case 'tokenExchange': return handleTokenExchange(fetch, request, response);
+    case 'exchangeCode': return handleTokenExchange(fetch, request, response);
     case 'refreshToken': return handleRefreshToken(fetch, request, response);
     case 'testConnection': return handleGetProfile(fetch, request, response);
     case 'getProfile': return handleGetProfile(fetch, request, response);
