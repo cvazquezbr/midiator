@@ -31,6 +31,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const [showInfobox, setShowInfobox] = useState(false);
   const [error, setError] = useState('');
   const [clientId, setClientId] = useState('');
+  const [isLoadingClientId, setIsLoadingClientId] = useState(true);
 
   const linkedinConfig = settings.linkedin || {};
 
@@ -44,10 +45,16 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         });
         if (!response.ok) throw new Error('Falha ao buscar o Client ID do LinkedIn.');
         const data = await response.json();
-        setClientId(data.clientId);
+        if (data && data.clientId) {
+          setClientId(data.clientId);
+        } else {
+          throw new Error('A resposta do servidor não continha um Client ID.');
+        }
       } catch (err) {
         console.error("Erro ao buscar o Client ID do LinkedIn:", err);
-        setError('Não foi possível obter a configuração para a conexão com o LinkedIn.');
+        setError(err.message || 'Não foi possível obter a configuração para a conexão com o LinkedIn.');
+      } finally {
+        setIsLoadingClientId(false);
       }
     };
     fetchClientId();
@@ -269,8 +276,12 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
                 Desconectar
               </Button>
             ) : (
-              <Button onClick={handleConnect} variant="contained">
-                Conectar
+              <Button
+                onClick={handleConnect}
+                variant="contained"
+                disabled={isLoadingClientId}
+              >
+                {isLoadingClientId ? 'Carregando...' : 'Conectar'}
               </Button>
             )}
           </Box>

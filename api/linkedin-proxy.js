@@ -521,7 +521,6 @@ const mainHandler = async (request, response) => {
     case 'checkVideoStatus':
         return handleCheckVideoStatus(request, response);
     case 'getClientId':
-        console.log(`[DIAGNOSTIC] LinkedIn Client ID from env: ${process.env.LINKEDIN_CLIENT_ID}`);
         return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
     default:
       return response.status(400).json({ error: `Invalid action specified: ${action}` });
