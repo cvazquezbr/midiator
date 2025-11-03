@@ -60,6 +60,98 @@ async function handleExchangeCode(request, response) {
 }
 
 
+async function handleUploadAndCheckImage(request, response) {
+    const { accessToken, authorUrn, imageBase64, imageType } = request.body;
+
+    if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
+        return response.status(400).json({ error: 'Missing required parameters for image upload.' });
+    }
+
+    try {
+        // Step 1: Register the upload
+        const registerPayload = {
+            "registerUploadRequest": {
+                "owner": authorUrn,
+                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                "serviceRelationships": [{
+                    "relationshipType": "OWNER",
+                    "identifier": "urn:li:userGeneratedContent"
+                }],
+                "supportedUploadMechanism": ["SYNCHRONOUS_UPLOAD"]
+            }
+        };
+
+        const registerRes = await fetch('https://api.linkedin.com/rest/assets?action=registerUpload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION,
+            },
+            body: JSON.stringify(registerPayload),
+        });
+
+        const registerData = await registerRes.json();
+        if (!registerRes.ok || !registerData.value || !registerData.value.uploadMechanism || !registerData.value.asset) {
+            console.error('LinkedIn register upload failed:', registerData);
+            return response.status(500).json({ error: 'Failed to register image upload with LinkedIn.', details: registerData });
+        }
+
+        const uploadUrl = registerData.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"].uploadUrl;
+        const assetUrn = registerData.value.asset;
+
+        // Step 2: Upload the image binary
+        const imageBuffer = Buffer.from(imageBase64, 'base64');
+        const uploadRes = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': imageType,
+            },
+            body: imageBuffer,
+        });
+
+        if (!uploadRes.ok) {
+            return response.status(500).json({ error: 'Failed to upload image binary to LinkedIn.' });
+        }
+
+        // Step 3: Poll for asset availability
+        let assetStatus = 'PENDING';
+        let pollAttempts = 0;
+        const maxPollAttempts = 15;
+
+        while (assetStatus !== 'AVAILABLE' && pollAttempts < maxPollAttempts) {
+            await delay(4000); // Wait for 4 seconds before checking
+            pollAttempts++;
+
+            const statusRes = await fetch(`https://api.linkedin.com/rest/assets/${encodeURIComponent(assetUrn)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Restli-Protocol-Version': '2.0.0',
+                    'LinkedIn-Version': LINKEDIN_API_VERSION,
+                },
+            });
+
+            const statusData = await statusRes.json();
+            if (statusRes.ok && statusData.recipes && statusData.recipes.length > 0) {
+                assetStatus = statusData.recipes[0].status;
+            }
+        }
+
+        if (assetStatus !== 'AVAILABLE') {
+            return response.status(500).json({ error: 'Image asset did not become available in time.' });
+        }
+
+        return response.status(200).json({ assetUrn });
+
+    } catch (error) {
+        console.error('[FATAL] Error in handleUploadAndCheckImage:', error);
+        return response.status(500).json({ error: 'Internal Server Error during image upload process.', details: error.message });
+    }
+}
+
+
 // LinkedIn create post handler with full commentary and multi-image support
 async function handleCreatePost(request, response) {
   try {
@@ -157,6 +249,8 @@ async function handler(request, response) {
         switch (action) {
             case 'createPost':
                 return handleCreatePost(req, res);
+            case 'uploadAndCheckImage':
+                return handleUploadAndCheckImage(req, res);
             // Add other authenticated actions here
             default:
                 return res.status(400).json({ error: `Action '${action}' not supported.` });

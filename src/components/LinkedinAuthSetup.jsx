@@ -31,6 +31,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const [showInfobox, setShowInfobox] = useState(false);
   const [error, setError] = useState('');
   const [clientId, setClientId] = useState('');
+  const [isExchangingCode, setIsExchangingCode] = useState(false);
 
   const linkedinConfig = settings.linkedin || {};
 
@@ -52,6 +53,51 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     };
     fetchClientId();
   }, []);
+
+  useEffect(() => {
+    const exchangeCodeForToken = async (code) => {
+        setIsExchangingCode(true);
+        setError('');
+        try {
+            const redirectUri = window.location.origin;
+            const response = await fetch('/api/linkedin-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'exchangeCode', code, redirectUri }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Falha ao trocar o código de autorização.');
+            }
+
+            const data = await response.json();
+            const { access_token, expires_in } = data;
+
+            if (access_token) {
+                const expiry = Date.now() + expires_in * 1000;
+                updateSetting('linkedin', { ...linkedinConfig, accessToken: access_token, expiry });
+                toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
+            } else {
+                throw new Error('Token de acesso não encontrado na resposta.');
+            }
+        } catch (err) {
+            console.error("Erro ao trocar código por token:", err);
+            setError(`Ocorreu um erro: ${err.message}`);
+            toast.error('Não foi possível conectar com o LinkedIn.');
+        } finally {
+            setIsExchangingCode(false);
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+        exchangeCodeForToken(code);
+    }
+}, [updateSetting]);
 
   useEffect(() => {
     const fetchUserDetails = async (accessToken) => {
@@ -197,7 +243,14 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
           {isDriveLoading ? 'Aguarde...' : 'Procurar no Google Drive...'}
         </Button>
 
-        {(!linkedinConfig.accessToken) && (
+        {isExchangingCode && (
+            <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
+                <CircularProgress size={24} sx={{ mr: 2 }} />
+                <Typography>Finalizando conexão com o LinkedIn...</Typography>
+            </Box>
+        )}
+
+        {(!linkedinConfig.accessToken && !isExchangingCode) && (
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>
@@ -228,7 +281,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
                 Desconectar
               </Button>
             ) : (
-              <Button onClick={handleConnect} variant="contained">
+              <Button onClick={handleConnect} variant="contained" disabled={isExchangingCode}>
                 Conectar
               </Button>
             )}
