@@ -25,6 +25,9 @@ async function handleCreateSchedule(request, response) {
         const match = linkedin_post_url ? linkedin_post_url.match(/(urn:li:(?:share|ugcPost):\d+)/) : null;
         const linkedin_post_id = match ? match[0] : null;
 
+        // Robustly handle content to prevent double-stringifying
+        const contentObject = typeof content === 'string' ? JSON.parse(content) : content;
+
         const { rows } = await query(
             `INSERT INTO linkedin_schedules (user_id, campaign_id, parent_id, scheduled_at, user_selected_time, post_content, status, linkedin_post_url, linkedin_post_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
@@ -34,7 +37,7 @@ async function handleCreateSchedule(request, response) {
                 parent_id || null,
                 executionDate.toISOString(),
                 scheduled_at,
-                JSON.stringify({ ...content, authorUrn }),
+                JSON.stringify({ ...contentObject, authorUrn }),
                 status,
                 linkedin_post_url,
                 linkedin_post_id

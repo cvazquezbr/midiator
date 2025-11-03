@@ -631,6 +631,7 @@ const Publisher = ({
               conteudo: post.conteudo || '',
               cta: post.cta || '',
               hashtags: post.hashtags_sugeridas || [],
+              images: permanentImageUrls, // Attach same images to follow-ups
             },
           };
           await createSchedule(followupPayload);
