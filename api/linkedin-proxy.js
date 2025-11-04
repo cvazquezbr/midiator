@@ -598,8 +598,7 @@ export async function handleGetProfileForTest(req, res) {
 const internalRequestHandler = async (request, response) => {
     const { action } = request.body;
     switch (action) {
-        case 'uploadImage':
-            return handleUploadImage(request, response);
+        case 'uploadImage': // Legacy action, alias to the new one for robustness.
         case 'uploadAndCheckImage':
             return handleUploadAndCheckImage(request, response);
         case 'createPost':
