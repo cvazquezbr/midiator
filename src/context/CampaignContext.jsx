@@ -100,7 +100,7 @@ export const CampaignProvider = ({ children }) => {
         clearPendingAssets(prevState.pendingAssets);
       }
 
-    const campaignData = safeDeepClone(loadedData.campaign_data || {});
+    const campaignData = loadedData.campaign_data || {};
 
     // Ensure csvData is always a valid array of objects
     const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
