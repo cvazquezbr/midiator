@@ -410,6 +410,8 @@ async function handleCreatePost(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or payload for createPost.' });
     }
 
+    console.log('[LinkedIn Proxy] Received createPost request with payload:', JSON.stringify(payload, null, 2));
+
     const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
     try {

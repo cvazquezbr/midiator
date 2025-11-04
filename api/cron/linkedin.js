@@ -315,6 +315,12 @@ export async function handleRunScheduler(response) {
           if (imagesToUpload.length > 0 && uploadedUrns.length === 0) {
             throw new Error('All image uploads failed for this post.');
           }
+
+          // Defensive delay for asset propagation if images were uploaded
+          if (uploadedUrns.length > 0) {
+            console.log(`[Cron LinkedIn] All images processed. Waiting 5 seconds for asset propagation before creating post...`);
+            await delay(5000);
+          }
         } // end if images
 
         // If video present (payload.videoUrl OR payload.video)
@@ -436,5 +442,3 @@ export async function handleRunScheduler(response) {
 export default async function handler(request, response) {
   return handleRunScheduler(response);
 }
-
-
