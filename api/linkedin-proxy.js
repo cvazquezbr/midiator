@@ -303,10 +303,10 @@ async function handleUploadAndCheckImage(request, response) {
         'LinkedIn-Version': '202507'
     };
 
-    // Step 1: Register Upload
-    const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
+    // Step 1: Register Upload (using the /rest/images endpoint)
+    const registerUploadUrl = 'https://api.linkedin.com/rest/images?action=initializeUpload';
     const registerPayload = {
-        registerUploadRequest: {
+        initializeUploadRequest: {
             owner: authorUrn
         }
     };

@@ -304,10 +304,16 @@ export async function handleRunScheduler(response) {
               uploadedUrns.push(assetUrn);
               console.log(`[Cron LinkedIn UploadImage] Uploaded and obtained assetUrn: ${assetUrn}`);
             } catch (err) {
-              console.error(`[Cron LinkedIn UploadImage] Failed processing image ${imgUrl} for post ${postId}:`, err.message || err);
-              // Decide: continue with remaining images or mark as failed. We'll continue but log.
+              // Re-throw the error to be caught by the main post processor's catch block.
+              // This will halt the process for this post and mark it as failed.
+              throw new Error(`Failed processing image ${imgUrl}: ${err.message || err}`);
             }
           } // end for images
+
+          // If there were images to upload, but none were successful, abort.
+          if (imagesToUpload.length > 0 && uploadedUrns.length === 0) {
+            throw new Error('All image uploads failed for this post.');
+          }
         } // end if images
 
         // If video present (payload.videoUrl OR payload.video)
