@@ -307,8 +307,7 @@ async function handleUploadAndCheckImage(request, response) {
     const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
     const registerPayload = {
         registerUploadRequest: {
-            owner: authorUrn,
-            supportedUploadMechanism: ['SYNCHRONOUS_UPLOAD']
+            owner: authorUrn
         }
     };
 
@@ -399,61 +398,49 @@ async function handleUploadAndCheckImage(request, response) {
 
 
 async function handleCreatePost(request, response) {
-  const { accessToken, payload } = request.body;
+    const { accessToken, payload } = request.body;
 
-  if (!accessToken || !payload || !payload.content || !payload.targetId) {
-    return response.status(400).json({ error: 'Missing parameters for creating post.' });
-  }
-
-  const { content, targetId, targetType = 'personal', images = [] } = payload;
-
-  const author = targetType === 'organization'
-    ? `urn:li:organization:${targetId}`
-    : `urn:li:person:${targetId}`;
-
-  const shareContent = {
-    shareCommentary: { text: content },
-    shareMediaCategory: images.length > 0 ? 'IMAGE' : 'NONE',
-  };
-
-  if (images.length > 0) {
-    shareContent.media = images.map(assetUrn => ({
-      status: 'READY',
-      media: assetUrn,
-    }));
-  }
-
-  const postData = {
-    author,
-    lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': shareContent
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+    if (!accessToken || !payload) {
+        return response.status(400).json({ error: 'Missing accessToken or payload for createPost.' });
     }
-  };
 
-  const createPostUrl = 'https://api.linkedin.com/v2/ugcPosts';
+    const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
-  try {
-    const linkedinResponse = await fetch(createPostUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202507'
-      },
-      body: JSON.stringify(postData),
-    });
+    try {
+        const linkedinResponse = await fetch(createPostUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202507'
+            },
+            body: JSON.stringify(payload),
+        });
 
-    const data = await linkedinResponse.json();
-    return response.status(linkedinResponse.status).json(data);
-  } catch (error) {
-    console.error('Error during post creation:', error);
-    return response.status(500).json({ error: 'Internal Server Error during post creation' });
-  }
+        const responseText = await linkedinResponse.text();
+        let responseData;
+        try {
+            responseData = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            responseData = { raw: responseText };
+        }
+
+        if (!linkedinResponse.ok) {
+            console.error('LinkedIn Post Creation Error:', responseData);
+            return response.status(linkedinResponse.status).json(responseData);
+        }
+
+        const postIdFromHeader = linkedinResponse.headers.get('x-restli-id');
+        if (postIdFromHeader) {
+            responseData.id = postIdFromHeader;
+        }
+
+        return response.status(linkedinResponse.status).json(responseData);
+    } catch (error) {
+        console.error('Error during post creation:', error);
+        return response.status(500).json({ error: 'Internal Server Error during post creation' });
+    }
 }
 
 async function handleGetProfiles(request, response) {
