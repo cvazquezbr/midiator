@@ -63,7 +63,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   useEffect(() => {
     const exchangeCodeForToken = async (code) => {
         try {
-            const redirectUri = `${window.location.origin}/?from=linkedin`;
+            const redirectUri = window.location.origin;
             const response = await fetch('/api/linkedin-proxy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -155,7 +155,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
       }
 
       sessionStorage.setItem('linkedin_oauth_inprogress', 'true');
-      const redirectUri = `${window.location.origin}/?from=linkedin`;
+      const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_liteprofile w_member_social r_organization_social w_organization_social rw_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
       window.location.href = authUrl;
