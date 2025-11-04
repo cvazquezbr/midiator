@@ -138,12 +138,12 @@ const Publisher = ({
     const uploadsToProcess = [];
 
     // Find which of the selected URLs are blob URLs that need uploading.
-    for (const url of imageUrls) {
+    for (const [index, url] of imageUrls.entries()) {
       if (url.startsWith('blob:') && pendingAssets[url]) {
         uploadsToProcess.push({
           url,
           blob: pendingAssets[url],
-          filename: `scheduled-post-${Date.now()}`,
+          filename: `scheduled-post-${Date.now()}-${index}`,
         });
       } else {
         // If it's not a blob URL, it's already a permanent URL.
@@ -633,7 +633,8 @@ const Publisher = ({
               conteudo: post.conteudo || '',
               cta: post.cta || '',
               hashtags: post.hashtags_sugeridas || [],
-              images: permanentImageUrls, // Attach same images to follow-ups
+              // Clone the array to prevent potential mutation issues across loop iterations
+              images: [...permanentImageUrls],
             },
           };
           await createSchedule(followupPayload);
