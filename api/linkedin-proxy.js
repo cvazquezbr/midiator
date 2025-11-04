@@ -383,11 +383,13 @@ async function handleUploadAndCheckImage(request, response) {
             }
 
             const statusData = await statusResponse.json();
-            if (statusData.processingState === 'AVAILABLE') {
+            const processingState = statusData.processingState || statusData.status;
+
+            if (processingState === 'AVAILABLE') {
                 console.log(`Image ${assetUrn} is AVAILABLE.`);
                 return response.status(200).json({ assetUrn });
             }
-             console.log(`Polling attempt ${i+1}/${maxRetries} for ${assetUrn}: Image status is ${statusData.processingState}.`);
+             console.log(`Polling attempt ${i+1}/${maxRetries} for ${assetUrn}: Image status is ${processingState}.`);
              await delay(retryDelay);
         }
 
