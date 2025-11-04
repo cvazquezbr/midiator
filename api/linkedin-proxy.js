@@ -280,7 +280,7 @@ async function handleUploadImage(request, response) {
       return response.status(linkedinResponse.status).json({ message: `Falha no upload da imagem para o LinkedIn. Status: ${linkedinResponse.status}` });
     }
 
-    return response.status(201).send();
+    return response.status(201).json({ success: true });
 
   } catch (error) {
     console.error('Error during image upload:', error);
