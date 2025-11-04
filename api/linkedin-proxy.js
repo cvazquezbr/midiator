@@ -303,11 +303,12 @@ async function handleUploadAndCheckImage(request, response) {
         'LinkedIn-Version': '202507'
     };
 
-    // Step 1: Register Upload (using the /rest/images endpoint)
-    const registerUploadUrl = 'https://api.linkedin.com/rest/images?action=initializeUpload';
+    // Step 1: Register Upload (using the verified v2/assets endpoint)
+    const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
     const registerPayload = {
-        initializeUploadRequest: {
-            owner: authorUrn
+        registerUploadRequest: {
+            owner: authorUrn,
+            supportedUploadMechanism: ['SYNCHRONOUS_UPLOAD'],
         }
     };
 
@@ -324,9 +325,10 @@ async function handleUploadAndCheckImage(request, response) {
             console.error('LinkedIn Register Upload Error:', registerData);
             return response.status(registerResponse.status).json({ error: 'Failed to register image upload.', details: registerData });
         }
+        // Use the verified, direct path from handleRegisterUpload
         uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+        assetUrn = registerData.value.asset;
 
-        assetUrn = registerData.value.asset || registerData.value.urn || registerData.value.image;
         if (!uploadUrl || !assetUrn) {
             throw new Error('Missing uploadUrl or assetUrn in registration response.');
         }
