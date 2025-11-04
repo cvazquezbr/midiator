@@ -258,14 +258,9 @@ export async function handleRunScheduler(response) {
 
       try {
         // If payload has images as URLs (blob store), upload them now
-        const rawImagesToUpload = (payload.content && payload.content.images) || payload.images || [];
-        // Deduplicate image URLs before processing
-        const uniqueImageUrls = [...new Set(rawImagesToUpload.map(img => (typeof img === 'string' ? img : img.url || img.src)).filter(Boolean))];
-        const imagesToUpload = uniqueImageUrls.map(url => (rawImagesToUpload.find(img => (img.url === url || img.src === url || img === url))));
-
-
+        const imagesToUpload = (payload.content && payload.content.images) || payload.images || [];
         if (imagesToUpload.length > 0) {
-          console.log(`[Cron LinkedIn] Found ${imagesToUpload.length} unique image(s) for post ${postId}. Uploading to LinkedIn...`);
+          console.log(`[Cron LinkedIn] Found ${imagesToUpload.length} image(s) for post ${postId}. Uploading to LinkedIn...`);
 
           for (const imgRef of imagesToUpload) {
             // imgRef may be a full URL (string) or an object { url: '', ... } or an existing urn
@@ -401,10 +396,18 @@ export async function handleRunScheduler(response) {
           }
           const postUrl = `https://www.linkedin.com/feed/update/${postIdFromApi}/`;
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post URL: ${postUrl}`);
-          await query(
+
+          console.log(`[Cron LinkedIn DB] Attempting to update post ${postId} to 'sent' with URL...`);
+          const updateResult = await query(
             'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3, error_message = NULL WHERE id = $4',
             ['sent', postIdFromApi, postUrl, postId]
           );
+          console.log(`[Cron LinkedIn DB] Update result for post ${postId}:`, JSON.stringify(updateResult));
+
+          if (updateResult.rowCount === 0) {
+            throw new Error(`DB update failed for post ${postId}. Post was published but its status could not be updated in the database.`);
+          }
+
         } else {
           console.error(`[Cron LinkedIn CreatePost] Failed to create post ${postId}:`, createResp.status, createData);
           await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', JSON.stringify(createData), postId]);
