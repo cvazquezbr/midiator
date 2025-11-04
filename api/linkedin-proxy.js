@@ -489,51 +489,66 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
-const mainHandler = async (request, response) => {
-  console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
-
-  if (request.method !== 'POST') {
-    response.setHeader('Allow', ['POST']);
-    return response.status(405).end('Method Not Allowed');
-  }
-
-  const { action } = request.body;
-
-  // Actions that require authentication are handled by the withAuth middleware.
-  // 'tokenExchange' is special because it establishes the auth, so it's wrapped.
-  // Other actions that depend on an accessToken passed in the body might not need user context
-  // from the middleware if the accessToken is sufficient.
-  // However, for consistency and security, we can protect them all.
-  switch (action) {
-    case 'tokenExchange':
-      return handleTokenExchange(request, response); // Already has user context from withAuth
-    case 'refreshToken':
-        return handleRefreshToken(request, response);
-    case 'testConnection':
-      return handleGetProfile(request, response);
-    case 'getProfile':
-        return handleGetProfile(request, response);
-    case 'registerUpload': // For images
-      return handleRegisterUpload(request, response);
-    case 'uploadImage':
-      return handleUploadImage(request, response);
-    case 'createPost':
-        return handleCreatePost(request, response);
-    case 'getProfiles':
-        return handleGetProfiles(request, response);
-    case 'initializeVideoUpload':
-        return handleInitializeVideoUpload(request, response);
-    case 'uploadVideo':
-        return handleUploadVideo(request, response);
-    case 'finalizeVideoUpload':
-        return handleFinalizeVideoUpload(request, response);
-    case 'checkVideoStatus':
-        return handleCheckVideoStatus(request, response);
-    case 'getClientId':
-        return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
-    default:
-      return response.status(400).json({ error: `Invalid action specified: ${action}` });
-  }
+// Handler for requests coming from the cron scheduler, authenticated with a secret.
+const internalRequestHandler = async (request, response) => {
+    const { action } = request.body;
+    switch (action) {
+        case 'uploadImage':
+            return handleUploadImage(request, response);
+        case 'createPost':
+            return handleCreatePost(request, response);
+        default:
+            return response.status(400).json({ error: `Invalid internal action: ${action}` });
+    }
 };
 
-export default withAuth(mainHandler);
+// Handler for requests from the frontend, authenticated with user session.
+const protectedHandler = async (request, response) => {
+    const { action } = request.body;
+    switch (action) {
+        case 'tokenExchange':
+            return handleTokenExchange(request, response);
+        case 'refreshToken':
+            return handleRefreshToken(request, response);
+        case 'testConnection':
+        case 'getProfile':
+            return handleGetProfile(request, response);
+        case 'registerUpload':
+            return handleRegisterUpload(request, response);
+        case 'createPost':
+            return handleCreatePost(request, response);
+        case 'getProfiles':
+            return handleGetProfiles(request, response);
+        case 'initializeVideoUpload':
+            return handleInitializeVideoUpload(request, response);
+        case 'uploadVideo':
+            return handleUploadVideo(request, response);
+        case 'finalizeVideoUpload':
+            return handleFinalizeVideoUpload(request, response);
+        case 'checkVideoStatus':
+            return handleCheckVideoStatus(request, response);
+        case 'getClientId':
+             return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+        default:
+            return response.status(400).json({ error: `Invalid protected action: ${action}` });
+    }
+};
+
+const mainHandler = async (request, response) => {
+    console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
+
+    if (request.method !== 'POST') {
+        response.setHeader('Allow', ['POST']);
+        return response.status(405).end('Method Not Allowed');
+    }
+
+    // Check for the internal secret for cron jobs
+    if (request.headers['x-internal-secret'] === process.env.INTERNAL_API_SECRET) {
+        return internalRequestHandler(request, response);
+    }
+
+    // For all other requests, apply the standard authentication middleware.
+    return withAuth(protectedHandler)(request, response);
+};
+
+export default mainHandler;
