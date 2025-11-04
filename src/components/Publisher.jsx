@@ -158,11 +158,13 @@ const Publisher = ({
     const toastId = toast.loading(`Fazendo upload de ${uploadsToProcess.length} imagem(ns) para o agendamento...`);
 
     try {
+      const customFetch = (url, options) => fetch(url, { ...options, credentials: 'include' });
       await Promise.all(
         uploadsToProcess.map(async (uploadData) => {
           const newBlob = await upload(uploadData.filename, uploadData.blob, {
             access: 'public',
             handleUploadUrl: '/api/upload-client',
+            fetch: customFetch,
           });
           // Map the original blob: URL to the new permanent URL
           urlMap[uploadData.url] = newBlob.url;
