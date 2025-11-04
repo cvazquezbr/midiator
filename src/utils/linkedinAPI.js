@@ -66,8 +66,17 @@ class LinkedInAPI {
   async registerUpload(authorUrn) {
     return this._proxyFetch('registerUpload', {
       payload: {
-        "initializeUploadRequest": {
-          "owner": authorUrn
+        "registerUploadRequest": {
+          "owner": authorUrn,
+          "recipes": [
+              "urn:li:digitalmediaRecipe:feedshare-image"
+          ],
+          "serviceRelationships": [
+              {
+                  "relationshipType": "OWNER",
+                  "identifier": "urn:li:userGeneratedContent"
+              }
+          ]
         }
       }
     });
@@ -256,10 +265,10 @@ export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, author
     setStatus(`Registering image ${i + 1} of ${imageBlobs.length}...`);
 
     const registerResponse = await api.registerUpload(authorUrn);
-    if (!registerResponse || !registerResponse.uploadUrl || !registerResponse.image) {
+    if (!registerResponse || !registerResponse.uploadUrl || !registerResponse.assetUrn) {
       throw new Error('Failed to register image upload with LinkedIn. The response from the server was invalid.');
     }
-    const { uploadUrl, image: assetUrn } = registerResponse;
+    const { uploadUrl, assetUrn } = registerResponse;
 
     setStatus(`Uploading image ${i + 1} of ${imageBlobs.length}...`);
     await api.uploadImage(uploadUrl, blob);
