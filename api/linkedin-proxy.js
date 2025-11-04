@@ -295,20 +295,29 @@ async function handleCreatePost(request, response) {
     return response.status(400).json({ error: 'Missing parameters for creating post.' });
   }
 
-  const { content, targetId, targetType = 'personal' } = payload;
+  const { content, targetId, targetType = 'personal', images = [] } = payload;
 
   const author = targetType === 'organization'
     ? `urn:li:organization:${targetId}`
     : `urn:li:person:${targetId}`;
 
+  const shareContent = {
+    shareCommentary: { text: content },
+    shareMediaCategory: images.length > 0 ? 'IMAGE' : 'NONE',
+  };
+
+  if (images.length > 0) {
+    shareContent.media = images.map(assetUrn => ({
+      status: 'READY',
+      media: assetUrn,
+    }));
+  }
+
   const postData = {
     author,
     lifecycleState: 'PUBLISHED',
     specificContent: {
-      'com.linkedin.ugc.ShareContent': {
-        shareCommentary: { text: content },
-        shareMediaCategory: 'NONE' // Simplified for now, as per report
-      }
+      'com.linkedin.ugc.ShareContent': shareContent
     },
     visibility: {
       'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
