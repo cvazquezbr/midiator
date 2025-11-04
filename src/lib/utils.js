@@ -44,6 +44,11 @@ export const safeDeepClone = (obj) => {
     return obj;
   }
 
+  // If the object is a Blob, return it directly to avoid losing the reference.
+  if (obj instanceof Blob) {
+    return obj;
+  }
+
   // If the object looks like an image element with a blob URL, shallow-clone it.
   // This prevents the blob URL from being lost during JSON serialization/deserialization.
   if (typeof obj.src === 'string' && obj.src.startsWith('blob:')) {
