@@ -258,9 +258,14 @@ export async function handleRunScheduler(response) {
 
       try {
         // If payload has images as URLs (blob store), upload them now
-        const imagesToUpload = (payload.content && payload.content.images) || payload.images || [];
+        const rawImagesToUpload = (payload.content && payload.content.images) || payload.images || [];
+        // Deduplicate image URLs before processing
+        const uniqueImageUrls = [...new Set(rawImagesToUpload.map(img => (typeof img === 'string' ? img : img.url || img.src)).filter(Boolean))];
+        const imagesToUpload = uniqueImageUrls.map(url => (rawImagesToUpload.find(img => (img.url === url || img.src === url || img === url))));
+
+
         if (imagesToUpload.length > 0) {
-          console.log(`[Cron LinkedIn] Found ${imagesToUpload.length} image(s) for post ${postId}. Uploading to LinkedIn...`);
+          console.log(`[Cron LinkedIn] Found ${imagesToUpload.length} unique image(s) for post ${postId}. Uploading to LinkedIn...`);
 
           for (const imgRef of imagesToUpload) {
             // imgRef may be a full URL (string) or an object { url: '', ... } or an existing urn
@@ -303,6 +308,7 @@ export async function handleRunScheduler(response) {
               const assetUrn = await uploadImageViaProxy(accessToken, authorUrn, base64, mimeType);
               uploadedUrns.push(assetUrn);
               console.log(`[Cron LinkedIn UploadImage] Uploaded and obtained assetUrn: ${assetUrn}`);
+              await delay(1000); // Add a 1s delay between image uploads
             } catch (err) {
               // Re-throw the error to be caught by the main post processor's catch block.
               // This will halt the process for this post and mark it as failed.
@@ -390,10 +396,13 @@ export async function handleRunScheduler(response) {
 
         if (createResp.ok) {
           const postIdFromApi = createData.id;
+          if (!postIdFromApi) {
+             throw new Error('Post created on LinkedIn, but x-restli-id header was missing in the response from proxy.');
+          }
           const postUrl = `https://www.linkedin.com/feed/update/${postIdFromApi}/`;
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post URL: ${postUrl}`);
           await query(
-            'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3 WHERE id = $4',
+            'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3, error_message = NULL WHERE id = $4',
             ['sent', postIdFromApi, postUrl, postId]
           );
         } else {
