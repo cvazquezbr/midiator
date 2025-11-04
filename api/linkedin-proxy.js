@@ -1,6 +1,8 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
 // A general-purpose, action-based proxy for LinkedIn API calls.
 // This is more secure than an endpoint-based proxy as it doesn't allow calling arbitrary URLs.
 
@@ -288,6 +290,114 @@ async function handleUploadImage(request, response) {
   }
 }
 
+async function handleUploadAndCheckImage(request, response) {
+    const { accessToken, authorUrn, imageBase64, imageType } = request.body;
+    if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
+        return response.status(400).json({ error: 'Missing parameters for uploadAndCheckImage.' });
+    }
+
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202507'
+    };
+
+    // Step 1: Register Upload
+    const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
+    const registerPayload = {
+        registerUploadRequest: {
+            owner: authorUrn,
+            supportedUploadMechanism: ['SYNCHRONOUS_UPLOAD']
+        }
+    };
+
+    let uploadUrl, assetUrn;
+
+    try {
+        const registerResponse = await fetch(registerUploadUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(registerPayload),
+        });
+        const registerData = await registerResponse.json();
+        if (!registerResponse.ok) {
+            console.error('LinkedIn Register Upload Error:', registerData);
+            return response.status(registerResponse.status).json({ error: 'Failed to register image upload.', details: registerData });
+        }
+        uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+
+        assetUrn = registerData.value.asset || registerData.value.urn || registerData.value.image;
+        if (!uploadUrl || !assetUrn) {
+            throw new Error('Missing uploadUrl or assetUrn in registration response.');
+        }
+
+    } catch (error) {
+        console.error('Error during upload registration:', error);
+        return response.status(500).json({ error: 'Internal Server Error during upload registration.' });
+    }
+
+
+    // Step 2: Upload Image Binary
+    try {
+        const imageBuffer = Buffer.from(imageBase64, 'base64');
+        const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': imageType }, // No Auth header here
+            body: imageBuffer,
+        });
+
+        if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error("LinkedIn Image Upload Error:", errorText);
+            return response.status(uploadResponse.status).json({ error: `Failed to upload image to LinkedIn.`, details: errorText });
+        }
+    } catch (error) {
+        console.error('Error during image upload:', error);
+        return response.status(500).json({ error: 'Internal Server Error during image upload.' });
+    }
+
+
+    // Step 3: Poll for Image Status
+    const statusUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
+    const maxRetries = 10; // ~30 seconds total
+    const retryDelay = 3000;
+
+    try {
+        await delay(1000); // Initial delay before first poll
+
+        for (let i = 0; i < maxRetries; i++) {
+            const statusResponse = await fetch(statusUrl, { headers });
+
+            if (statusResponse.status === 401) {
+                return response.status(401).json({ error: 'Unauthorized while checking image status. Token may have expired.'});
+            }
+
+            if (!statusResponse.ok) {
+                console.warn(`Polling attempt ${i+1}/${maxRetries} failed for ${assetUrn} with status ${statusResponse.status}`);
+                await delay(retryDelay);
+                continue;
+            }
+
+            const statusData = await statusResponse.json();
+            if (statusData.processingState === 'AVAILABLE') {
+                console.log(`Image ${assetUrn} is AVAILABLE.`);
+                return response.status(200).json({ assetUrn });
+            }
+             console.log(`Polling attempt ${i+1}/${maxRetries} for ${assetUrn}: Image status is ${statusData.processingState}.`);
+             await delay(retryDelay);
+        }
+
+        console.error(`Polling timed out for asset ${assetUrn}.`);
+        return response.status(500).json({ error: 'Image processing timed out.' });
+
+    } catch (error) {
+        console.error('Error while polling for image status:', error);
+        return response.status(500).json({ error: 'Internal Server Error while polling image status.' });
+    }
+}
+
+
 async function handleCreatePost(request, response) {
   const { accessToken, payload } = request.body;
 
@@ -495,6 +605,8 @@ const internalRequestHandler = async (request, response) => {
     switch (action) {
         case 'uploadImage':
             return handleUploadImage(request, response);
+        case 'uploadAndCheckImage':
+            return handleUploadAndCheckImage(request, response);
         case 'createPost':
             return handleCreatePost(request, response);
         default:

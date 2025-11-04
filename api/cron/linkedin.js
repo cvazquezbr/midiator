@@ -40,7 +40,7 @@ async function downloadToBase64(url) {
 async function uploadImageViaProxy(accessToken, authorUrn, imageBase64, imageType) {
   console.log('[Cron LinkedIn UploadImage] starting upload for author:', authorUrn);
   const body = {
-    action: 'uploadImage',
+    action: 'uploadAndCheckImage',
     accessToken,
     authorUrn,
     imageBase64,
