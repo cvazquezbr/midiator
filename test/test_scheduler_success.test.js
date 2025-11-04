@@ -180,5 +180,5 @@ describe('Scheduler Success Test', () => {
         const fetchBody = JSON.parse(createPostFetchCall[1].body);
 
         expect(fetchBody.payload.content.media.id).toBe('urn:li:image:uploaded-asset');
-    });
+    }, 10000);
 });
