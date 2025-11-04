@@ -403,10 +403,10 @@ export async function handleRunScheduler(response) {
           const postUrl = `https://www.linkedin.com/feed/update/${postIdFromApi}/`;
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post URL: ${postUrl}`);
 
-          console.log(`[Cron LinkedIn DB] Attempting to update post ${postId} to 'sent' with URL...`);
+          console.log(`[Cron LinkedIn DB] Attempting to update post ${postId} to 'published' with URL...`);
           const updateResult = await query(
             'UPDATE linkedin_schedules SET status = $1, linkedin_post_id = $2, linkedin_post_url = $3, error_message = NULL WHERE id = $4',
-            ['sent', postIdFromApi, postUrl, postId]
+            ['published', postIdFromApi, postUrl, postId]
           );
           console.log(`[Cron LinkedIn DB] Update result for post ${postId}:`, JSON.stringify(updateResult));
 
