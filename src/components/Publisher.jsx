@@ -596,6 +596,9 @@ const Publisher = ({
         content: {
             // Salva o texto final, já formatado, para garantir consistência.
             fullText: content,
+            // Adiciona CTA e Hashtags para consistência com follow-ups
+            cta: campaignContent?.cta || '',
+            hashtags: campaignContent?.hashtags || [],
             // Mantém as imagens associadas.
             images: permanentImageUrls,
             // Mantém o título para exibição na lista de agendamentos.
