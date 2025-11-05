@@ -22,13 +22,17 @@ export const UserAuthContextProvider = ({ children, initialUser = null, initialT
       setLoading(false);
       return;
     }
+    console.log('Checking user...');
     try {
       const res = await fetch('/api/auth/me');
+      console.log('User check response:', res.status);
       if (res.ok) {
         const userData = await res.json();
+        console.log('User data:', userData);
         setUser(userData);
         setGoogleAccessToken(userData.googleAccessToken);
       } else {
+        console.log('User not logged in.');
         setUser(null);
         setGoogleAccessToken(null);
       }
