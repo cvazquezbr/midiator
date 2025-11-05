@@ -933,11 +933,6 @@ function HomePage() {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
             }),
-            width: '100%', // Default width for mobile
-            ...(!isMobile && sidebarOpen && {
-              width: `calc(100% - ${320}px)`,
-              marginLeft: `${320}px`,
-            }),
           }}
         >
           <Toolbar />
