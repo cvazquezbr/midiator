@@ -962,14 +962,11 @@ function HomePage() {
           sx={{
             flexGrow: 1,
             p: { xs: 1, sm: 2, md: 3 },
-            transition: theme.transitions.create(['margin', 'width'], {
+            transition: theme.transitions.create('margin', {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
             }),
-            ...(!isMobile && sidebarOpen && {
-              width: `calc(100% - ${320}px)`,
-              marginLeft: `${320}px`,
-            }),
+            marginLeft: 0,
           }}
         >
           <Toolbar />
