@@ -210,6 +210,8 @@ export async function handleRunScheduler(response) {
 
     console.log(`[Cron LinkedIn] ${rows.length} pending posts found.`);
 
+    const parentPostData = new Map();
+
     for (const row of rows) {
       const postId = row.id;
       console.log(`[Cron LinkedIn] Processing post ${postId}...`);
@@ -249,9 +251,75 @@ export async function handleRunScheduler(response) {
         continue;
       }
 
-      // Prepare commentary/text, checking for main post structure (fullText) and follow-up structure (conteudo).
-      const commentaryRaw = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || payload.content || payload.commentary || '';
-      const commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
+      // Prepare commentary/text, handling main and follow-up posts differently
+      // to selectively escape content and preserve hashtags.
+      let commentary = '';
+
+      if (row.parent_id) {
+        let parentData = parentPostData.get(row.parent_id);
+
+        // Fallback: If parent data is not in the map (e.g., processed in a previous run), query the DB.
+        if (!parentData) {
+          console.log(`[Cron LinkedIn] Parent data for ${row.parent_id} not in memory, querying DB.`);
+          const { rows: parentRows } = await query(
+            'SELECT linkedin_post_url, post_content FROM linkedin_schedules WHERE id = $1',
+            [row.parent_id]
+          );
+          if (parentRows.length > 0) {
+            const parentRow = parentRows[0];
+            const parentPostContent = typeof parentRow.post_content === 'string'
+              ? JSON.parse(parentRow.post_content)
+              : parentRow.post_content;
+
+            parentData = {
+              url: parentRow.linkedin_post_url,
+              cta: parentPostContent.cta || (parentPostContent.content && parentPostContent.content.cta) || '',
+              hashtags: parentPostContent.hashtags || (parentPostContent.content && parentPostContent.content.hashtags) || [],
+            };
+          }
+        }
+
+        if (parentData) {
+            // This is a follow-up post. Construct its content from parts.
+            const mainContent = payload.conteudo || '';
+            const cta = parentData.cta || '';
+            const hashtags = (parentData.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ');
+            const parentUrl = parentData.url;
+
+            const escapedContent = escapeLinkedinText(stripEmojis(mainContent));
+            const escapedCta = escapeLinkedinText(stripEmojis(cta));
+
+            commentary = [
+                escapedContent,
+                '----',
+                escapedCta,
+                '----',
+                hashtags, // Hashtags should not be escaped
+                `\nPost original: ${parentUrl}` // URL should not be escaped
+            ].join('\n').trim();
+        } else {
+             console.error(`[Cron LinkedIn] Could not find parent post data for follow-up ${postId}. Skipping formatting.`);
+             // Fallback to original content if parent is not found
+             const commentaryRaw = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || payload.content || payload.commentary || '';
+             commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
+        }
+      } else {
+        // This is a main post. The payload's fullText contains everything.
+        // To avoid escaping hashtags, we must split, escape, and rejoin.
+        const fullTextRaw = (payload.content && payload.content.fullText) || payload.fullText || '';
+        const parts = fullTextRaw.split('----');
+
+        const contentPart = parts[0] ? escapeLinkedinText(stripEmojis(parts[0].trim())) : '';
+        const ctaPart = parts[1] ? escapeLinkedinText(stripEmojis(parts[1].trim())) : '';
+        const hashtagsPart = parts[2] ? parts[2].trim() : ''; // Do not escape hashtags
+
+        let commentaryParts = [];
+        if (contentPart) commentaryParts.push(contentPart);
+        if (ctaPart) commentaryParts.push(ctaPart);
+        if (hashtagsPart) commentaryParts.push(hashtagsPart);
+
+        commentary = commentaryParts.join('\n----\n');
+      }
 
       // Collect uploaded asset URNs for this post
       const uploadedUrns = [];
@@ -402,6 +470,15 @@ export async function handleRunScheduler(response) {
           }
           const postUrl = `https://www.linkedin.com/feed/update/${postIdFromApi}/`;
           console.log(`[Cron LinkedIn CreatePost] Post ${postId} created successfully. LinkedIn Post URL: ${postUrl}`);
+
+          // If this is a main post, store its data for follow-ups
+          if (!row.parent_id) {
+            parentPostData.set(postId, {
+              url: postUrl,
+              cta: (payload.content && payload.content.cta) || payload.cta || '',
+              hashtags: (payload.content && payload.content.hashtags) || payload.hashtags || [],
+            });
+          }
 
           console.log(`[Cron LinkedIn DB] Attempting to update post ${postId} to 'published' with URL...`);
           const updateResult = await query(
