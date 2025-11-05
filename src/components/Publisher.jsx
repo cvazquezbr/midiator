@@ -493,8 +493,8 @@ const Publisher = ({
 
   useEffect(() => {
     console.log('generatedPagesData in Publisher:', generatedPagesData);
-    const images = (generatedPagesData || []).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
-    const videos = (generatedVideos || []).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
+    const images = (generatedPagesData || []).filter(Boolean).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
+    const videos = (generatedVideos || []).filter(Boolean).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
     const allMedia = [...images, ...videos];
     setUnifiedMedia(allMedia);
     if (allMedia.length > 0) {
