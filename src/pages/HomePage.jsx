@@ -917,7 +917,40 @@ function HomePage() {
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <MainAppBar {...{ darkMode, setDarkMode, setShowSetupModal, onMenuClick: () => setSidebarOpen(!sidebarOpen), isMobile, onSaveCampaign: () => setShowSaveModal(true), onShowPersonas: () => handleNavigation(() => setCurrentView('personas')), onShowAutores: () => handleNavigation(() => setCurrentView('autores')), onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')), onShowCampaigns: () => handleNavigation(() => { setCurrentView('campaigns'); setCampaignsView('my-campaigns'); }), onShowSharedCampaigns: () => { setCurrentView('campaigns'); setCampaignsView('shared-campaigns'); }, onShowMonitor: () => handleNavigation(() => setCurrentView('monitor')), campaignsView, currentView, onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen), onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen), onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen), isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen, onShowMemorial: () => setShowMemorialDescritivoModal(true), isCampaignOpen: currentCampaign !== null }} />
+        <MainAppBar
+          {...{
+            darkMode,
+            setDarkMode,
+            setShowSetupModal,
+            onMenuClick: () => setSidebarOpen(!sidebarOpen),
+            isMobile,
+            onSaveCampaign: () => setShowSaveModal(true),
+            onShowPersonas: () => handleNavigation(() => setCurrentView('personas')),
+            onShowAutores: () => handleNavigation(() => setCurrentView('autores')),
+            onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')),
+            onShowCampaigns: () => handleNavigation(() => { setCurrentView('campaigns'); setCampaignsView('my-campaigns'); }),
+            onShowSharedCampaigns: () => { setCurrentView('campaigns'); setCampaignsView('shared-campaigns'); },
+            onShowMonitor: () => handleNavigation(() => setCurrentView('monitor')),
+            campaignsView,
+            currentView,
+            onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen),
+            onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen),
+            onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen),
+            isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen,
+            onShowMemorial: () => setShowMemorialDescritivoModal(true),
+            isCampaignOpen: currentCampaign !== null
+          }}
+          sx={{
+            transition: theme.transitions.create(['margin', 'width'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+            ...(!isMobile && sidebarOpen && {
+              width: `calc(100% - ${320}px)`,
+              marginLeft: `${320}px`,
+            }),
+          }}
+        />
         {currentView === 'campaigns' && (
           <>
             <Sidebar {...{ sidebarOpen, darkMode, steps, activeStep, csvData, backgroundImageSrc: pageTemplate?.images?.[0]?.src, visibleFields, totalFields, styledFields, variant: isMobile ? 'temporary' : 'persistent', onClose: () => setSidebarOpen(false), onStepClick: handleSidebarStepClick }} />
@@ -932,6 +965,10 @@ function HomePage() {
             transition: theme.transitions.create(['margin', 'width'], {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
+            }),
+            ...(!isMobile && sidebarOpen && {
+              width: `calc(100% - ${320}px)`,
+              marginLeft: `${320}px`,
             }),
           }}
         >
