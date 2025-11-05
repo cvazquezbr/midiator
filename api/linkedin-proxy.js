@@ -594,6 +594,67 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
+async function handleGetShareStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    const { authorUrn, shareUrns } = payload;
+
+    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
+        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
+    }
+
+    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=List(${shareUrns.map(encodeURIComponent).join(',')})`;
+
+    try {
+        const linkedinResponse = await fetch(statsUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202507'
+            },
+        });
+
+        const data = await linkedinResponse.json();
+        return response.status(linkedinResponse.status).json(data);
+    } catch (error) {
+        console.error('Error during proxied getShareStatistics:', error);
+        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+    }
+}
+
+async function handleGetMemberPostStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    const { ugcPostUrn } = payload;
+
+    if (!accessToken || !ugcPostUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or ugcPostUrn for getMemberPostStatistics.' });
+    }
+
+    // Note: The new endpoint is simpler and uses the URN in the path.
+    const statsUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(ugcPostUrn)}/analytics`;
+
+    try {
+        const linkedinResponse = await fetch(statsUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202507'
+            },
+        });
+
+        const data = await linkedinResponse.json();
+        // The analytics collector expects the URN to be in the response for mapping.
+        if (linkedinResponse.ok) {
+            data.urn = ugcPostUrn;
+        }
+        return response.status(linkedinResponse.status).json(data);
+    } catch (error) {
+        console.error('Error during proxied getMemberPostStatistics:', error);
+        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+    }
+}
+
 // Handler for requests coming from the cron scheduler, authenticated with a secret.
 const internalRequestHandler = async (request, response) => {
     const { action } = request.body;
@@ -603,6 +664,10 @@ const internalRequestHandler = async (request, response) => {
             return handleUploadAndCheckImage(request, response);
         case 'createPost':
             return handleCreatePost(request, response);
+        case 'getShareStatistics':
+            return handleGetShareStatistics(request, response);
+        case 'getMemberPostStatistics':
+            return handleGetMemberPostStatistics(request, response);
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }
