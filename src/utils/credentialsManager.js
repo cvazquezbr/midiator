@@ -138,7 +138,7 @@ export const loadSettingsFromDb = async () => {
   const settings = await res.json();
   if (settings && Object.keys(settings).length > 0) {
     applySettings(settings);
-    console.log('Settings successfully loaded from database and applied.');
+    console.log('Settings successfully loaded from database and applied:', JSON.stringify(settings, null, 2));
   } else {
     console.log('No settings found in the database for this user.');
   }
