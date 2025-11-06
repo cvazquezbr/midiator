@@ -594,18 +594,14 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
-async function handleGetShareStatistics(request, response) {
-    const { accessToken, payload } = request.body;
-    const { authorUrn, shareUrns } = payload;
+async function getSinglePostAnalytics(accessToken, postUrn) {
+    const postType = postUrn.includes(':share:') ? 'share' : 'ugc';
+    const entityUrn = `(${postType}:${postUrn})`;
+    const encodedEntityUrn = encodeURIComponent(entityUrn);
 
-    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
-        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
-    }
+    const statsUrl = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntityUrn}`;
 
-    console.log(`[Proxy] Fetching batch share statistics for author ${authorUrn} with ${shareUrns.length} shares.`);
-    const sharesListString = `List(${shareUrns.join(',')})`;
-    // A codificação dupla estava causando o erro 400. A API espera o formato List(...) sem codificação de URL.
-    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${sharesListString}`;
+    console.log(`[Analytics] Fetching stats for ${postUrn} using URL: ${statsUrl}`);
 
     try {
         const linkedinResponse = await fetch(statsUrl, {
@@ -618,11 +614,64 @@ async function handleGetShareStatistics(request, response) {
         });
 
         const data = await linkedinResponse.json();
-        return response.status(linkedinResponse.status).json(data);
+        if (linkedinResponse.ok) {
+            data.urn = postUrn; // Add urn to the response for mapping
+        }
+        return {
+            status: linkedinResponse.status,
+            data
+        };
     } catch (error) {
-        console.error('Error during proxied getShareStatistics:', error);
-        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+        console.error(`[Analytics] Error fetching stats for ${postUrn}:`, error);
+        return {
+            status: 500,
+            data: {
+                error: `Internal Server Error while fetching analytics for ${postUrn}`,
+                urn: postUrn
+            }
+        };
     }
+}
+
+
+async function handleGetShareStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    const { authorUrn, shareUrns } = payload;
+
+    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
+        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
+    }
+
+    console.log(`[Analytics] Starting batch fetch for ${shareUrns.length} organization shares for author ${authorUrn}.`);
+
+    const promises = shareUrns.map(urn => getSinglePostAnalytics(accessToken, urn));
+    const results = await Promise.all(promises);
+
+    const successfulResults = [];
+    let firstErrorStatus = null;
+
+    for (const result of results) {
+        if (result.status >= 200 && result.status < 300) {
+            successfulResults.push(result.data);
+        } else {
+            console.error(`[Analytics] Failed to fetch stats for URN ${result.data.urn}: Status ${result.status}`, result.data);
+            if (!firstErrorStatus) {
+                firstErrorStatus = result.status;
+            }
+        }
+    }
+
+    // To maintain compatibility with the cron job that expects a certain structure.
+    const finalResponse = {
+        elements: successfulResults,
+        errors: results.filter(r => r.status >= 400).map(r => r.data)
+    };
+
+
+    // If all failed, return the status of the first error. Otherwise, return 200 with partial data.
+    const finalStatus = successfulResults.length === 0 && firstErrorStatus ? firstErrorStatus : 200;
+
+    return response.status(finalStatus).json(finalResponse);
 }
 
 async function handleGetMemberPostStatistics(request, response) {
@@ -633,28 +682,8 @@ async function handleGetMemberPostStatistics(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or ugcPostUrn for getMemberPostStatistics.' });
     }
 
-    console.log(`[Proxy] Fetching member post statistics for ugcPostUrn: ${ugcPostUrn}`);
-    const statsUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(ugcPostUrn)}/analytics`;
-
-    try {
-        const linkedinResponse = await fetch(statsUrl, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
-            },
-        });
-
-        const data = await linkedinResponse.json();
-        if (linkedinResponse.ok) {
-            data.urn = ugcPostUrn;
-        }
-        return response.status(linkedinResponse.status).json(data);
-    } catch (error) {
-        console.error('Error during proxied getMemberPostStatistics:', error);
-        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
-    }
+    const result = await getSinglePostAnalytics(accessToken, ugcPostUrn);
+    return response.status(result.status).json(result.data);
 }
 
 async function handleGetPersonalShareStatistics(request, response) {
@@ -665,28 +694,8 @@ async function handleGetPersonalShareStatistics(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or shareUrn for getPersonalShareStatistics.' });
     }
 
-    console.log(`[Proxy] Fetching personal share statistics for shareUrn: ${shareUrn}`);
-    const statsUrl = `https://api.linkedin.com/rest/shares/${encodeURIComponent(shareUrn)}/analytics`;
-
-    try {
-        const linkedinResponse = await fetch(statsUrl, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
-            },
-        });
-
-        const data = await linkedinResponse.json();
-        if (linkedinResponse.ok) {
-            data.urn = shareUrn;
-        }
-        return response.status(linkedinResponse.status).json(data);
-    } catch (error) {
-        console.error('Error during proxied getPersonalShareStatistics:', error);
-        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
-    }
+    const result = await getSinglePostAnalytics(accessToken, shareUrn);
+    return response.status(result.status).json(result.data);
 }
 
 
