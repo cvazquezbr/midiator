@@ -80,21 +80,31 @@ describe('Scheduler Success Test', () => {
     });
 
     it('should correctly publish a follow-up post (follow-up structure)', async () => {
+        const parentPostInDb = {
+            linkedin_post_url: 'https://www.linkedin.com/feed/update/urn:li:share:parent123/',
+            post_content: JSON.stringify({
+                cta: 'Check out the main post!',
+                hashtags: ['#testing', '#followup']
+            })
+        };
+
         const followUpPost = {
             id: 102,
+            parent_id: 100, // Make this a follow-up post
             user_id: 2,
             linkedin_access_token: 'test_token_2',
             post_content: {
                 authorUrn: 'urn:li:organization:test-org',
                 conteudo: 'This is the content for a follow-up post.',
-                // Note the different structure: no nested 'content' object
             },
             campaign_data: null,
             scheduled_at: new Date().toISOString(),
             status: 'scheduled',
         };
 
+        // Mock DB calls in order: get post, get parent, update post
         query.mockResolvedValueOnce({ rows: [followUpPost] });
+        query.mockResolvedValueOnce({ rows: [parentPostInDb] });
         query.mockResolvedValueOnce({ rows: [] });
 
         const mockHeaders = new Map();
@@ -119,7 +129,18 @@ describe('Scheduler Success Test', () => {
         const fetchCall = fetch.mock.calls[0];
         const fetchBody = JSON.parse(fetchCall[1].body);
         expect(fetchBody.payload.author).toBe(followUpPost.post_content.authorUrn);
-        expect(fetchBody.payload.commentary).toBe(followUpPost.post_content.conteudo);
+
+        // Assert that the commentary is correctly constructed
+        const expectedCommentary = [
+            'This is the content for a follow-up post.',
+            '----',
+            'Check out the main post!',
+            '----',
+            '#testing #followup',
+            '\nPost original: https://www.linkedin.com/feed/update/urn:li:share:parent123/'
+        ].join('\n').trim();
+        expect(fetchBody.payload.commentary).toBe(expectedCommentary);
+
 
         const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
         expect(updateQueryCall).toBeDefined();
