@@ -247,22 +247,12 @@ function HomePage() {
   const fetchPalettesForCampaign = useCallback(() => getPalettes().then(setPalettes).catch(err => toast.error('Could not load palettes.')), []);
 
   useEffect(() => {
-    // Lazy-load data based on the current view or if a campaign is active.
     if (!loading && user) {
-      const isCampaignActive = activeStep > 0;
-
-      // Fetch data if in the relevant view or editing a campaign, and the list is empty.
-      if ((currentView === 'personas' || isCampaignActive) && personaList.length === 0) {
-        fetchPersonasForCampaign();
-      }
-      if ((currentView === 'autores' || isCampaignActive) && autorList.length === 0) {
-        fetchAutoresForCampaign();
-      }
-      if ((currentView === 'palettes' || isCampaignActive) && palettes.length === 0) {
-        fetchPalettesForCampaign();
-      }
+      fetchPersonasForCampaign();
+      fetchAutoresForCampaign();
+      fetchPalettesForCampaign();
     }
-  }, [loading, user, currentView, activeStep, personaList.length, autorList.length, palettes.length, fetchPersonasForCampaign, fetchAutoresForCampaign, fetchPalettesForCampaign]);
+  }, [loading, user, fetchPersonasForCampaign, fetchAutoresForCampaign, fetchPalettesForCampaign]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -317,11 +307,6 @@ function HomePage() {
     }
   }, [googleAccessToken, setGoogleAccessToken]);
 
-  useEffect(() => {
-    if (user) {
-      loadSettingsFromDb().catch(err => toast.error(`Could not load settings: ${err.message}`));
-    }
-  }, [user?.uuid]);
 
   useEffect(() => {
     const checkLinkedInRedirect = () => {
