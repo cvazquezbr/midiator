@@ -4,12 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Existing Providers
-import { CampaignProvider } from './context/CampaignContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // New Auth Provider for Application Users
 import { UserAuthContextProvider } from './context/UserAuthContext.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
+import { CampaignProvider } from './context/CampaignContext.jsx';
 
 import './index.css';
 import App from './App.jsx';
