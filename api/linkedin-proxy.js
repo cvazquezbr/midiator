@@ -634,67 +634,16 @@ async function getSinglePostAnalytics(accessToken, postUrn) {
 }
 
 
-async function handleGetShareStatistics(request, response) {
+// A unified handler for getting stats for any single post URN.
+async function handleGetPostStatistics(request, response) {
     const { accessToken, payload } = request.body;
-    const { authorUrn, shareUrns } = payload;
+    const { postUrn } = payload;
 
-    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
-        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
+    if (!accessToken || !postUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or postUrn for getPostStatistics.' });
     }
 
-    console.log(`[Analytics] Starting batch fetch for ${shareUrns.length} organization shares for author ${authorUrn}.`);
-
-    const promises = shareUrns.map(urn => getSinglePostAnalytics(accessToken, urn));
-    const results = await Promise.all(promises);
-
-    const successfulResults = [];
-    let firstErrorStatus = null;
-
-    for (const result of results) {
-        if (result.status >= 200 && result.status < 300) {
-            successfulResults.push(result.data);
-        } else {
-            console.error(`[Analytics] Failed to fetch stats for URN ${result.data.urn}: Status ${result.status}`, result.data);
-            if (!firstErrorStatus) {
-                firstErrorStatus = result.status;
-            }
-        }
-    }
-
-    // To maintain compatibility with the cron job that expects a certain structure.
-    const finalResponse = {
-        elements: successfulResults,
-        errors: results.filter(r => r.status >= 400).map(r => r.data)
-    };
-
-
-    // If all failed, return the status of the first error. Otherwise, return 200 with partial data.
-    const finalStatus = successfulResults.length === 0 && firstErrorStatus ? firstErrorStatus : 200;
-
-    return response.status(finalStatus).json(finalResponse);
-}
-
-async function handleGetMemberPostStatistics(request, response) {
-    const { accessToken, payload } = request.body;
-    const { ugcPostUrn } = payload;
-
-    if (!accessToken || !ugcPostUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or ugcPostUrn for getMemberPostStatistics.' });
-    }
-
-    const result = await getSinglePostAnalytics(accessToken, ugcPostUrn);
-    return response.status(result.status).json(result.data);
-}
-
-async function handleGetPersonalShareStatistics(request, response) {
-    const { accessToken, payload } = request.body;
-    const { shareUrn } = payload;
-
-    if (!accessToken || !shareUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or shareUrn for getPersonalShareStatistics.' });
-    }
-
-    const result = await getSinglePostAnalytics(accessToken, shareUrn);
+    const result = await getSinglePostAnalytics(accessToken, postUrn);
     return response.status(result.status).json(result.data);
 }
 
@@ -708,12 +657,8 @@ const internalRequestHandler = async (request, response) => {
             return handleUploadAndCheckImage(request, response);
         case 'createPost':
             return handleCreatePost(request, response);
-        case 'getShareStatistics':
-            return handleGetShareStatistics(request, response);
-        case 'getMemberPostStatistics':
-            return handleGetMemberPostStatistics(request, response);
-        case 'getPersonalShareStatistics':
-            return handleGetPersonalShareStatistics(request, response);
+        case 'getPostStatistics':
+            return handleGetPostStatistics(request, response);
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }

@@ -23,39 +23,15 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    // This function now takes the token explicitly.
+    // This function now takes the token explicitly and processes all posts individually.
     const processAuthor = async (authorUrn, posts, token) => {
         const results = [];
-        const isOrganization = authorUrn.includes(':organization:');
+        console.log(`[Analytics] Processing ${posts.length} total posts for author ${authorUrn}`);
 
-        const shareUrns = posts.filter(p => p.urn.includes(':share:')).map(p => p.urn);
-        const ugcPostUrns = posts.filter(p => p.urn.includes(':ugcPost:')).map(p => p.urn);
-
-        // 1. Handle Organization Share URNs in a batch
-        if (isOrganization && shareUrns.length > 0) {
-            console.log(`[Analytics] Processing ${shareUrns.length} share URNs in a batch for organization ${authorUrn}`);
-            const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
+        for (const post of posts) {
+            const res = await callProxy('getPostStatistics', { postUrn: post.urn }, token);
             results.push(res);
-        }
-
-        // 2. Handle Personal Share URNs individually
-        if (!isOrganization && shareUrns.length > 0) {
-            console.log(`[Analytics] Processing ${shareUrns.length} personal share URNs individually for author ${authorUrn}`);
-            for (const urn of shareUrns) {
-                const res = await callProxy('getPersonalShareStatistics', { shareUrn: urn }, token);
-                results.push(res);
-                await delay(500);
-            }
-        }
-
-        // 3. Handle all ugcPost URNs individually
-        if (ugcPostUrns.length > 0) {
-            console.log(`[Analytics] Processing ${ugcPostUrns.length} ugcPost URNs individually for author ${authorUrn}`);
-            for (const urn of ugcPostUrns) {
-                const res = await callProxy('getMemberPostStatistics', { ugcPostUrn: urn }, token);
-                results.push(res);
-                await delay(500);
-            }
+            await delay(500); // Stagger requests to be kind to the API
         }
         return results;
     };
@@ -64,10 +40,8 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
-        let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
-
-        const isSingleResponse = !Array.isArray(responseOrResponses);
-        const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
+        // Initial attempt
+        let responses = await processAuthor(authorUrn, posts, currentAccessToken);
 
         const needsRefresh = responses.some(res => res.status === 401);
 
@@ -85,18 +59,17 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken; // Update token for the next author for this user.
-            console.log(`Token refreshed for user ${userId}. Retrying stat collection...`);
-            await delay(2000);
+            currentAccessToken = newAccessToken; // Update token for subsequent authors for this user.
+            console.log(`Token refreshed for user ${userId}. Retrying stat collection for author ${authorUrn}...`);
+            await delay(1000);
 
-            // Retry the API call with the new, explicitly passed token.
-            responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
+            // Retry the API calls for the current author with the new token.
+            responses = await processAuthor(authorUrn, posts, newAccessToken);
         }
 
-        allResults.push(responseOrResponses);
+        allResults.push(...responses);
     }
-
-    return allResults.flat();
+    return allResults;
 }
 
 
