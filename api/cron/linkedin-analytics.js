@@ -25,25 +25,12 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
     // This function now takes the token explicitly.
     const processAuthor = async (authorUrn, posts, token) => {
-        const batchResults = [];
-        const individualPostUrns = [];
-
-        if (authorUrn.includes(':organization:')) {
-            const shareUrns = posts.filter(p => p.urn.includes(':share:')).map(p => p.urn);
-            const ugcPostUrnsForOrg = posts.filter(p => p.urn.includes(':ugcPost:')).map(p => p.urn);
-
-            if (shareUrns.length > 0) {
-                const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
-                batchResults.push(res);
-            }
-            individualPostUrns.push(...ugcPostUrnsForOrg);
-        } else {
-            // Personal profiles are all individual posts
-            individualPostUrns.push(...posts.map(p => p.urn));
-        }
-
         const individualResults = [];
-        for (const urn of individualPostUrns) {
+
+        // Process all posts individually to handle mixed authorship cases correctly.
+        // The getMemberPostStatistics endpoint works for both share and ugcPost URNs.
+        for (const post of posts) {
+            const urn = post.urn;
             const endDate = new Date();
             const startDate = new Date();
             startDate.setDate(endDate.getDate() - 90);
@@ -59,8 +46,11 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             };
             const res = await callProxy('getMemberPostStatistics', payload, token);
             individualResults.push(res);
+
+            // Add a small delay to avoid hitting API rate limits with many individual requests.
+            await delay(500);
         }
-        return [...batchResults, ...individualResults];
+        return individualResults;
     };
 
     let allResults = [];
