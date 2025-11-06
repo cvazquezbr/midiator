@@ -602,8 +602,8 @@ async function handleGetShareStatistics(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
     }
 
-    const sharesQueryString = shareUrns.map(urn => `shares=${encodeURIComponent(urn)}`).join('&');
-    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&${sharesQueryString}`;
+    const sharesListString = `List(${shareUrns.join(',')})`;
+    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${encodeURIComponent(sharesListString)}`;
 
     try {
         const linkedinResponse = await fetch(statsUrl, {
