@@ -957,11 +957,6 @@ function HomePage() {
           sx={{
             flexGrow: 1,
             p: { xs: 1, sm: 2, md: 3 },
-            transition: theme.transitions.create('margin', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.leavingScreen,
-            }),
-            marginLeft: 0,
           }}
         >
           <Toolbar />
