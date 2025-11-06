@@ -23,33 +23,17 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    // This function now takes the token explicitly.
+    // This function now takes the token explicitly and treats all posts individually for robustness.
     const processAuthor = async (authorUrn, posts, token) => {
-        const batchResults = [];
-        const individualPostUrns = [];
-
-        if (authorUrn.includes(':organization:')) {
-            const shareUrns = posts.filter(p => p.urn.includes(':share:')).map(p => p.urn);
-            const ugcPostUrnsForOrg = posts.filter(p => p.urn.includes(':ugcPost:')).map(p => p.urn);
-
-            if (shareUrns.length > 0) {
-                const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
-                batchResults.push(res);
-            }
-            individualPostUrns.push(...ugcPostUrnsForOrg);
-        } else {
-            // Personal profiles are all individual posts
-            individualPostUrns.push(...posts.map(p => p.urn));
-        }
-
-        const individualResults = [];
-        for (const urn of individualPostUrns) {
+        const results = [];
+        for (const post of posts) {
             const endDate = new Date();
             const startDate = new Date();
             startDate.setDate(endDate.getDate() - 90);
 
+            // The getMemberPostStatistics proxy can handle both ugcPost and share URNs.
             const payload = {
-                ugcPostUrn: urn,
+                ugcPostUrn: post.urn, // The proxy endpoint uses this parameter name for both types.
                 queryType: 'TOTAL',
                 aggregation: 'TOTAL',
                 dateRange: {
@@ -58,9 +42,9 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
                 }
             };
             const res = await callProxy('getMemberPostStatistics', payload, token);
-            individualResults.push(res);
+            results.push(res);
         }
-        return [...batchResults, ...individualResults];
+        return results;
     };
 
     let allResults = [];
@@ -156,23 +140,24 @@ export async function handleRunAnalyticsCollector(request, response) {
                     }
 
                     const data = await res.json();
-                    const statsList = data.elements || [];
+                    const statsList = data.elements || [data]; // Handle both single and multi-element responses
 
                     for (const stat of statsList) {
                         const urn = stat.share || stat.ugcPost || stat.post || data.urn;
                         // For member stats, the data is in the 'elements' array, but the stats are nested differently.
                         // For share stats (organizations), the data is in `totalShareStatistics`.
                         let statsData = stat.totalShareStatistics;
-                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries)) {
+                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
                             statsData = {
-                                impressionCount: stat.totalImpressions?.count || 0,
+                                impressionCount: stat.totalImpressions?.count || stat.impressionCount || 0,
                                 likeCount: stat.reactionSummaries?.LIKE || 0,
-                                commentCount: stat.totalComments?.count || 0,
-                                shareCount: stat.totalReshares?.count || 0,
-                                clickCount: stat.totalClicks?.count || 0,
-                                engagement: stat.engagementRate?.rate || 0,
+                                commentCount: stat.totalComments?.count || stat.commentCount || 0,
+                                shareCount: stat.totalReshares?.count || stat.shareCount || 0,
+                                clickCount: stat.totalClicks?.count || stat.clickCount || 0,
+                                engagement: stat.engagementRate?.rate || stat.engagement || 0,
                             };
                         }
+
 
                         if (!statsData) continue;
 
