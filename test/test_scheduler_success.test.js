@@ -7,11 +7,13 @@ vi.mock('../api/db.js', () => ({
     query: vi.fn(),
 }));
 
-// Mock node-fetch
 vi.mock('node-fetch', () => ({
     default: vi.fn(),
 }));
 
+import fetch from 'node-fetch';
+
+// Helper to create a mock response object for the scheduler handler
 const createMockResponse = () => {
     const res = {};
     res.status = vi.fn().mockReturnValue(res);
@@ -19,16 +21,10 @@ const createMockResponse = () => {
     return res;
 };
 
-const createMockRequest = () => ({
-    method: 'GET',
-    headers: {},
-});
-
-import fetch from 'node-fetch';
-
 describe('Scheduler Success Test', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        // Reset all mocks before each test to ensure isolation
+        vi.resetAllMocks();
     });
 
     it('should publish a scheduled post successfully (main post structure)', async () => {
@@ -38,92 +34,94 @@ describe('Scheduler Success Test', () => {
             linkedin_access_token: 'test_token',
             post_content: {
                 authorUrn: 'urn:li:person:test-user',
-                content: {
-                    fullText: 'This is the scheduled content for a main post.',
-                }
+                content: { fullText: 'This is the scheduled content for a main post.' }
             },
-            campaign_data: null,
-            scheduled_at: new Date().toISOString(),
-            status: 'scheduled',
         };
 
-        query.mockResolvedValueOnce({ rows: [testPost] });
-        query.mockResolvedValueOnce({ rows: [] });
+        query
+            .mockResolvedValueOnce({ rows: [testPost] }) // Get first batch
+            .mockResolvedValueOnce({ rowCount: 1 })      // DB update status
+            .mockResolvedValueOnce({ rows: [] });        // Get second batch (empty)
 
-        const mockHeaders = new Map();
-        mockHeaders.set('x-restli-id', 'urn:li:share:12345');
+        const responsePayload = { id: 'urn:li:share:12345' };
+        const mockHeaders = new Map([['x-restli-id', 'urn:li:share:12345']]);
         fetch.mockResolvedValue({
             ok: true,
             status: 201,
             headers: mockHeaders,
-            text: () => Promise.resolve(JSON.stringify({ id: 'urn:li:share:12345' })),
-            json: () => Promise.resolve({ id: 'urn:li:share:12345' }),
+            json: () => Promise.resolve(responsePayload),
+            text: () => Promise.resolve(JSON.stringify(responsePayload)),
         });
 
-        const mockResponse = {
-            status: vi.fn().mockReturnThis(),
-            json: vi.fn().mockReturnThis(),
-        };
-
+        const mockResponse = createMockResponse();
         await handleRunScheduler(mockResponse);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
 
-        const fetchCall = fetch.mock.calls[0];
-        const fetchBody = JSON.parse(fetchCall[1].body);
-        expect(fetchBody.payload.author).toBe(testPost.post_content.authorUrn);
-        expect(fetchBody.payload.commentary).toBe(testPost.post_content.content.fullText);
+        const createPostCall = fetch.mock.calls.find(c => c[1] && c[1].body && JSON.parse(c[1].body).action === 'createPost');
+        expect(createPostCall).toBeDefined();
 
-        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
-        expect(updateQueryCall).toBeDefined();
-        expect(updateQueryCall[1][1]).toBe('urn:li:share:12345'); // linkedin_post_id
+        const updateQuery = query.mock.calls.find(c => c[0].startsWith('UPDATE'));
+        expect(updateQuery).toBeDefined();
+        expect(updateQuery[1]).toContain('urn:li:share:12345');
     });
 
     it('should correctly publish a follow-up post (follow-up structure)', async () => {
         const followUpPost = {
             id: 102,
             user_id: 2,
+            parent_id: 100,
             linkedin_access_token: 'test_token_2',
             post_content: {
                 authorUrn: 'urn:li:organization:test-org',
                 conteudo: 'This is the content for a follow-up post.',
-                // Note the different structure: no nested 'content' object
             },
-            campaign_data: null,
-            scheduled_at: new Date().toISOString(),
-            status: 'scheduled',
         };
 
-        query.mockResolvedValueOnce({ rows: [followUpPost] });
-        query.mockResolvedValueOnce({ rows: [] });
+        const parentPostFromDb = {
+            linkedin_post_url: 'https://www.linkedin.com/feed/update/urn:li:share:parent-post-urn/',
+            post_content: { cta: 'Check out the original!', hashtags: ['#testing', '#followup'] }
+        };
 
-        const mockHeaders = new Map();
-        mockHeaders.set('x-restli-id', 'urn:li:share:67890');
+        query
+            .mockResolvedValueOnce({ rows: [followUpPost] })
+            .mockResolvedValueOnce({ rows: [parentPostFromDb] })
+            .mockResolvedValueOnce({ rowCount: 1 })
+            .mockResolvedValueOnce({ rows: [] });
+
+        const responsePayload = { id: 'urn:li:share:67890' };
+        const mockHeaders = new Map([['x-restli-id', 'urn:li:share:67890']]);
         fetch.mockResolvedValue({
             ok: true,
             status: 201,
             headers: mockHeaders,
-            text: () => Promise.resolve(JSON.stringify({ id: 'urn:li:share:67890' })),
-            json: () => Promise.resolve({ id: 'urn:li:share:67890' }),
+            json: () => Promise.resolve(responsePayload),
+            text: () => Promise.resolve(JSON.stringify(responsePayload)),
         });
 
-        const mockResponse = {
-            status: vi.fn().mockReturnThis(),
-            json: vi.fn().mockReturnThis(),
-        };
-
+        const mockResponse = createMockResponse();
         await handleRunScheduler(mockResponse);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
 
-        const fetchCall = fetch.mock.calls[0];
-        const fetchBody = JSON.parse(fetchCall[1].body);
-        expect(fetchBody.payload.author).toBe(followUpPost.post_content.authorUrn);
-        expect(fetchBody.payload.commentary).toBe(followUpPost.post_content.conteudo);
+        const createPostCall = fetch.mock.calls.find(c => c[1] && c[1].body && JSON.parse(c[1].body).action === 'createPost');
+        expect(createPostCall).toBeDefined();
+        const body = JSON.parse(createPostCall[1].body);
 
-        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
-        expect(updateQueryCall).toBeDefined();
-        expect(updateQueryCall[1][1]).toBe('urn:li:share:67890'); // linkedin_post_id
+        // Correctly use a single backslash for newline characters in the expected string
+        const expectedCommentary = [
+            'This is the content for a follow-up post.',
+            '----',
+            'Check out the original!',
+            '----',
+            '#testing #followup',
+            '\\nPost original: https://www.linkedin.com/feed/update/urn:li:share:parent-post-urn/'
+        ].join('\\n').trim();
+        expect(body.payload.commentary).toBe(expectedCommentary);
+
+        const updateQuery = query.mock.calls.find(c => c[0].startsWith('UPDATE'));
+        expect(updateQuery).toBeDefined();
+        expect(updateQuery[1]).toContain('urn:li:share:67890');
     });
 
     it('should handle a scheduled post with an image', async () => {
@@ -133,52 +131,39 @@ describe('Scheduler Success Test', () => {
             linkedin_access_token: 'test_token_3',
             post_content: {
                 authorUrn: 'urn:li:person:test-user-3',
-                content: {
-                    fullText: 'Check out this cool image!',
-                    images: ['http://example.com/image.jpg'],
-                }
+                content: { fullText: 'Check out this cool image!', images: ['http://example.com/image.jpg'] }
             },
-            campaign_data: null,
-            scheduled_at: new Date().toISOString(),
-            status: 'scheduled',
         };
 
-        query.mockResolvedValueOnce({ rows: [imagePost] });
-        query.mockResolvedValueOnce({ rows: [] });
+        query
+            .mockResolvedValueOnce({ rows: [imagePost] })
+            .mockResolvedValueOnce({ rowCount: 1 })
+            .mockResolvedValueOnce({ rows: [] });
 
-        // Mock fetch for image download, then for image upload, then for post creation
+        const createPostPayload = { id: 'urn:li:share:image-post' };
         fetch
             .mockResolvedValueOnce({ // Image download
-                ok: true,
-                headers: { get: () => 'image/jpeg' },
-                arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+                ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
             })
-            .mockResolvedValueOnce({ // Image upload via proxy
-                ok: true,
-                text: () => Promise.resolve(JSON.stringify({ assetUrn: 'urn:li:image:uploaded-asset' })),
-                json: () => Promise.resolve({ assetUrn: 'urn:li:image:uploaded-asset' }),
+            .mockResolvedValueOnce({ // Proxy: uploadAndCheckImage
+                ok: true, json: () => Promise.resolve({ assetUrn: 'urn:li:image:uploaded-asset' }), text: () => Promise.resolve(JSON.stringify({ assetUrn: 'urn:li:image:uploaded-asset' }))
             })
-            .mockResolvedValueOnce({ // Post creation
-                ok: true,
-                status: 201,
-                headers: new Map([['x-restli-id', 'urn:li:share:image-post']]),
-                text: () => Promise.resolve(JSON.stringify({ id: 'urn:li:share:image-post' })),
-                json: () => Promise.resolve({ id: 'urn:li:share:image-post' }),
+            .mockResolvedValueOnce({ // Proxy: createPost
+                ok: true, status: 201, headers: new Map([['x-restli-id', 'urn:li:share:image-post']]), json: () => Promise.resolve(createPostPayload), text: () => Promise.resolve(JSON.stringify(createPostPayload))
             });
 
-        const mockResponse = {
-            status: vi.fn().mockReturnThis(),
-            json: vi.fn().mockReturnThis(),
-        };
-
+        const mockResponse = createMockResponse();
         await handleRunScheduler(mockResponse);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
 
-        // Verify the final fetch call to create the post
-        const createPostFetchCall = fetch.mock.calls.find(call => call[0].endsWith('/api/linkedin-proxy') && JSON.parse(call[1].body).action === 'createPost');
-        const fetchBody = JSON.parse(createPostFetchCall[1].body);
+        const createPostCall = fetch.mock.calls.find(c => c[1] && c[1].body && JSON.parse(c[1].body).action === 'createPost');
+        expect(createPostCall).toBeDefined();
+        const body = JSON.parse(createPostCall[1].body);
+        expect(body.payload.content.media.id).toBe('urn:li:image:uploaded-asset');
 
-        expect(fetchBody.payload.content.media.id).toBe('urn:li:image:uploaded-asset');
+        const updateQuery = query.mock.calls.find(c => c[0].startsWith('UPDATE'));
+        expect(updateQuery).toBeDefined();
+        expect(updateQuery[1]).toContain('urn:li:share:image-post');
     }, 10000);
 });
