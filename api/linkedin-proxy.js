@@ -634,6 +634,62 @@ async function getSinglePostAnalytics(accessToken, postUrn) {
 }
 
 
+// Handler for a batch of share statistics for an author (organization or person)
+async function handleGetShareStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    let { authorUrn, shareUrns } = payload; // APLICAÇÃO DO PATCH: 'let' e não 'const'
+
+    // APLICAÇÃO DO PATCH: Remoção de '|| !Array.isArray(shareUrns)'
+    if (!accessToken || !authorUrn || !shareUrns) {
+        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
+    }
+
+    // APLICAÇÃO DO PATCH: Garante que shareUrns seja sempre um array para consistência no processamento.
+    if (!Array.isArray(shareUrns)) {
+        shareUrns = [shareUrns];
+    }
+
+    console.log(`[Analytics] Starting batch fetch for ${shareUrns.length} organization shares for author ${authorUrn}.`);
+
+    const promises = shareUrns.map(urn => getSinglePostAnalytics(accessToken, urn));
+    const results = await Promise.all(promises);
+
+    const successfulResults = [];
+    let firstErrorStatus = null;
+    
+    // Process results to separate success from error
+    results.forEach(result => {
+        if (result.status >= 200 && result.status < 300) {
+            // Success: analytics data is in data.elements[0]
+            const analyticsData = result.data.elements?.[0];
+            if (analyticsData) {
+                // Ensure postUrn is included in the final result object
+                analyticsData.postUrn = result.data.urn;
+                successfulResults.push(analyticsData);
+            }
+        } else {
+            // Failure
+            if (!firstErrorStatus) {
+                firstErrorStatus = result.status;
+            }
+            console.error(`[Analytics] Failed to fetch stats for ${result.data.urn}. Status: ${result.status}`, result.data);
+        }
+    });
+
+    // If any error occurred, return the first one encountered.
+    if (firstErrorStatus) {
+        // Return 200 even with errors if we have partial data, or the first error status if no data was retrieved.
+        const finalStatus = successfulResults.length > 0 ? 207 : firstErrorStatus;
+        return response.status(finalStatus).json({
+            error: `Partial success. ${successfulResults.length} succeeded. First error status: ${firstErrorStatus}.`,
+            successfulResults
+        });
+    }
+
+    return response.status(200).json(successfulResults);
+}
+
+
 // A unified handler for getting stats for any single post URN.
 async function handleGetPostStatistics(request, response) {
     const { accessToken, payload } = request.body;
@@ -659,6 +715,8 @@ const internalRequestHandler = async (request, response) => {
             return handleCreatePost(request, response);
         case 'getPostStatistics':
             return handleGetPostStatistics(request, response);
+        case 'getShareStatistics': // APLICAÇÃO DO PATCH: Adiciona o handler ao internal handler.
+            return handleGetShareStatistics(request, response); 
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }
@@ -689,6 +747,8 @@ const protectedHandler = async (request, response) => {
             return handleFinalizeVideoUpload(request, response);
         case 'checkVideoStatus':
             return handleCheckVideoStatus(request, response);
+        case 'getShareStatistics': // APLICAÇÃO DO PATCH: Adiciona o handler ao protected handler.
+            return handleGetShareStatistics(request, response);
         case 'getClientId':
              return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
         default:
