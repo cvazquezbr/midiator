@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 // New Auth Provider for Application Users
 import { UserAuthContextProvider } from './context/UserAuthContext.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
+import { CampaignProvider } from './context/CampaignContext.jsx';
 
 import './index.css';
 import App from './App.jsx';
@@ -28,7 +29,9 @@ createRoot(document.getElementById('root')).render(
         <BrowserRouter>
           <UserAuthContextProvider>
             <SettingsProvider>
-              <App />
+              <CampaignProvider>
+                <App />
+              </CampaignProvider>
             </SettingsProvider>
           </UserAuthContextProvider>
         </BrowserRouter>
