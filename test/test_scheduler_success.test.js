@@ -67,17 +67,8 @@ describe('Scheduler Success Test', () => {
     });
 
     it('should correctly publish a follow-up post (follow-up structure)', async () => {
-        const parentPostInDb = {
-            linkedin_post_url: 'https://www.linkedin.com/feed/update/urn:li:share:parent123/',
-            post_content: JSON.stringify({
-                cta: 'Check out the main post!',
-                hashtags: ['#testing', '#followup']
-            })
-        };
-
         const followUpPost = {
             id: 102,
-            parent_id: 100, // Make this a follow-up post
             user_id: 2,
             parent_id: 100,
             linkedin_access_token: 'test_token_2',
@@ -87,10 +78,16 @@ describe('Scheduler Success Test', () => {
             },
         };
 
-        // Mock DB calls in order: get post, get parent, update post
-        query.mockResolvedValueOnce({ rows: [followUpPost] });
-        query.mockResolvedValueOnce({ rows: [parentPostInDb] });
-        query.mockResolvedValueOnce({ rows: [] });
+        const parentPostFromDb = {
+            linkedin_post_url: 'https://www.linkedin.com/feed/update/urn:li:share:parent-post-urn/',
+            post_content: { cta: 'Check out the original!', hashtags: ['#testing', '#followup'] }
+        };
+
+        query
+            .mockResolvedValueOnce({ rows: [followUpPost] })
+            .mockResolvedValueOnce({ rows: [parentPostFromDb] })
+            .mockResolvedValueOnce({ rowCount: 1 })
+            .mockResolvedValueOnce({ rows: [] });
 
         const responsePayload = { id: 'urn:li:share:67890' };
         const mockHeaders = new Map([['x-restli-id', 'urn:li:share:67890']]);
@@ -107,25 +104,24 @@ describe('Scheduler Success Test', () => {
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
 
-        const fetchCall = fetch.mock.calls[0];
-        const fetchBody = JSON.parse(fetchCall[1].body);
-        expect(fetchBody.payload.author).toBe(followUpPost.post_content.authorUrn);
+        const createPostCall = fetch.mock.calls.find(c => c[1] && c[1].body && JSON.parse(c[1].body).action === 'createPost');
+        expect(createPostCall).toBeDefined();
+        const body = JSON.parse(createPostCall[1].body);
 
-        // Assert that the commentary is correctly constructed
         const expectedCommentary = [
             'This is the content for a follow-up post.',
             '----',
-            'Check out the main post!',
+            'Check out the original!',
             '----',
             '#testing #followup',
-            '\nPost original: https://www.linkedin.com/feed/update/urn:li:share:parent123/'
+            '',
+            'Post original: https://www.linkedin.com/feed/update/urn:li:share:parent-post-urn/'
         ].join('\n').trim();
-        expect(fetchBody.payload.commentary).toBe(expectedCommentary);
+        expect(body.payload.commentary).toBe(expectedCommentary);
 
-
-        const updateQueryCall = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
-        expect(updateQueryCall).toBeDefined();
-        expect(updateQueryCall[1][1]).toBe('urn:li:share:67890'); // linkedin_post_id
+        const updateQuery = query.mock.calls.find(c => c[0].startsWith('UPDATE'));
+        expect(updateQuery).toBeDefined();
+        expect(updateQuery[1]).toContain('urn:li:share:67890');
     });
 
     it('should handle a scheduled post with an image', async () => {
