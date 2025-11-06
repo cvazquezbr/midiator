@@ -604,7 +604,8 @@ async function handleGetShareStatistics(request, response) {
 
     console.log(`[Proxy] Fetching batch share statistics for author ${authorUrn} with ${shareUrns.length} shares.`);
     const sharesListString = `List(${shareUrns.join(',')})`;
-    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${encodeURIComponent(sharesListString)}`;
+    // A codificação dupla estava causando o erro 400. A API espera o formato List(...) sem codificação de URL.
+    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${sharesListString}`;
 
     try {
         const linkedinResponse = await fetch(statsUrl, {
