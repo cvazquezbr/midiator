@@ -24,7 +24,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onShar
         maxWidth: '320px',
         // On desktop, allow it to take more space.
         '@media (min-width: 768px)': {
-          maxWidth: '80vw'
+          maxWidth: '65vw'
         }
       }}>
         <Swiper
