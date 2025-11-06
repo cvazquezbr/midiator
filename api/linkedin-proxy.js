@@ -595,10 +595,10 @@ export async function handleGetProfileForTest(req, res) {
 }
 
 async function getSinglePostAnalytics(accessToken, postUrn) {
-    const encodedEntityUrn = encodeURIComponent(postUrn);
-    const statsUrl = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntityUrn}`;
-    const postType = postUrn.includes(':share:') ? 'share' : 'ugc';
+    const postType = postUrn.includes(':share:') ? 'share' : 'ugcPost';
     const entityUrn = `(${postType}:${postUrn})`;
+    const encodedEntityParam = encodeURIComponent(entityUrn);
+    const statsUrl = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntityParam}`;
     console.log(`[Analytics] Fetching stats for ${postUrn} using URL: ${statsUrl}`);
 
     try {
