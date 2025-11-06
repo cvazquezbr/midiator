@@ -23,17 +23,33 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    // This function now takes the token explicitly and treats all posts individually for robustness.
+    // This function now takes the token explicitly.
     const processAuthor = async (authorUrn, posts, token) => {
-        const results = [];
-        for (const post of posts) {
+        const batchResults = [];
+        const individualPostUrns = [];
+
+        if (authorUrn.includes(':organization:')) {
+            const shareUrns = posts.filter(p => p.urn.includes(':share:')).map(p => p.urn);
+            const ugcPostUrnsForOrg = posts.filter(p => p.urn.includes(':ugcPost:')).map(p => p.urn);
+
+            if (shareUrns.length > 0) {
+                const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
+                batchResults.push(res);
+            }
+            individualPostUrns.push(...ugcPostUrnsForOrg);
+        } else {
+            // Personal profiles are all individual posts
+            individualPostUrns.push(...posts.map(p => p.urn));
+        }
+
+        const individualResults = [];
+        for (const urn of individualPostUrns) {
             const endDate = new Date();
             const startDate = new Date();
             startDate.setDate(endDate.getDate() - 90);
 
-            // The getMemberPostStatistics proxy can handle both ugcPost and share URNs.
             const payload = {
-                ugcPostUrn: post.urn, // The proxy endpoint uses this parameter name for both types.
+                ugcPostUrn: urn,
                 queryType: 'TOTAL',
                 aggregation: 'TOTAL',
                 dateRange: {
@@ -42,9 +58,9 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
                 }
             };
             const res = await callProxy('getMemberPostStatistics', payload, token);
-            results.push(res);
+            individualResults.push(res);
         }
-        return results;
+        return [...batchResults, ...individualResults];
     };
 
     let allResults = [];
@@ -157,7 +173,6 @@ export async function handleRunAnalyticsCollector(request, response) {
                                 engagement: stat.engagementRate?.rate || stat.engagement || 0,
                             };
                         }
-
 
                         if (!statsData) continue;
 
