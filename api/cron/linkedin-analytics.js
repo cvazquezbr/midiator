@@ -25,30 +25,42 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
     // This function now takes the token explicitly.
     const processAuthor = async (authorUrn, posts, token) => {
-        if (authorUrn.includes(':organization:')) {
-            const urns = posts.map(p => p.urn);
-            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
-        } else {
-            const results = [];
-            for (const post of posts) {
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(endDate.getDate() - 90);
+        const batchResults = [];
+        const individualPostUrns = [];
 
-                const payload = {
-                    ugcPostUrn: post.urn,
-                    queryType: 'TOTAL',
-                    aggregation: 'TOTAL',
-                    dateRange: {
-                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
-                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
-                    }
-                };
-                const res = await callProxy('getMemberPostStatistics', payload, token);
-                results.push(res);
+        if (authorUrn.includes(':organization:')) {
+            const shareUrns = posts.filter(p => p.urn.includes(':share:')).map(p => p.urn);
+            const ugcPostUrnsForOrg = posts.filter(p => p.urn.includes(':ugcPost:')).map(p => p.urn);
+
+            if (shareUrns.length > 0) {
+                const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
+                batchResults.push(res);
             }
-            return results;
+            individualPostUrns.push(...ugcPostUrnsForOrg);
+        } else {
+            // Personal profiles are all individual posts
+            individualPostUrns.push(...posts.map(p => p.urn));
         }
+
+        const individualResults = [];
+        for (const urn of individualPostUrns) {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 90);
+
+            const payload = {
+                ugcPostUrn: urn,
+                queryType: 'TOTAL',
+                aggregation: 'TOTAL',
+                dateRange: {
+                    start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+                    end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+                }
+            };
+            const res = await callProxy('getMemberPostStatistics', payload, token);
+            individualResults.push(res);
+        }
+        return [...batchResults, ...individualResults];
     };
 
     let allResults = [];
