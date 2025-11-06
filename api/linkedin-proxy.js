@@ -647,6 +647,42 @@ async function handleGetPostStatistics(request, response) {
     return response.status(result.status).json(result.data);
 }
 
+async function handleGetShareStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    let { authorUrn, shareUrns } = payload;
+
+    if (!accessToken || !authorUrn || !shareUrns) {
+        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
+    }
+
+    // Garante que shareUrns seja sempre um array para consistência no processamento.
+    if (!Array.isArray(shareUrns)) {
+        shareUrns = [shareUrns];
+    }
+
+    console.log(`[Analytics] Starting batch fetch for ${shareUrns.length} organization shares for author ${authorUrn}.`);
+
+    const promises = shareUrns.map(urn => getSinglePostAnalytics(accessToken, urn));
+    const results = await Promise.all(promises);
+
+    const successfulResults = [];
+    let firstErrorStatus = null;
+
+    for (const result of results) {
+        if (result.status >= 200 && result.status < 300) {
+            successfulResults.push(result.data);
+        } else if (!firstErrorStatus) {
+            firstErrorStatus = result.status;
+        }
+    }
+
+    if (firstErrorStatus && successfulResults.length === 0) {
+        return response.status(firstErrorStatus).json({ error: 'Failed to fetch all analytics in batch.', details: results.map(r => r.data) });
+    }
+
+    return response.status(200).json({ elements: successfulResults });
+}
+
 
 // Handler for requests coming from the cron scheduler, authenticated with a secret.
 const internalRequestHandler = async (request, response) => {
@@ -659,6 +695,8 @@ const internalRequestHandler = async (request, response) => {
             return handleCreatePost(request, response);
         case 'getPostStatistics':
             return handleGetPostStatistics(request, response);
+        case 'getShareStatistics':
+            return handleGetShareStatistics(request, response);
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }

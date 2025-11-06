@@ -10,7 +10,6 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         'X-Internal-Secret': process.env.INTERNAL_API_SECRET,
     };
 
-    // This function now takes the token explicitly to avoid closure issues.
     const callProxy = (action, payload, token) => {
         return fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
             method: 'POST',
@@ -23,29 +22,17 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    // This function now takes the token explicitly and processes all posts individually.
-    const processAuthor = async (authorUrn, posts, token) => {
-        const results = [];
-        console.log(`[Analytics] Processing ${posts.length} total posts for author ${authorUrn}`);
-
-        for (const post of posts) {
-            const res = await callProxy('getPostStatistics', { postUrn: post.urn }, token);
-            results.push(res);
-            await delay(500); // Stagger requests to be kind to the API
-        }
-        return results;
-    };
-
-    let allResults = [];
+    let allBatchResponses = [];
     let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
+        const shareUrns = posts.map(p => p.urn);
+        const payload = { authorUrn, shareUrns };
+
         // Initial attempt
-        let responses = await processAuthor(authorUrn, posts, currentAccessToken);
+        let response = await callProxy('getShareStatistics', payload, currentAccessToken);
 
-        const needsRefresh = responses.some(res => res.status === 401);
-
-        if (needsRefresh) {
+        if (response.status === 401) {
             console.log(`Token expired for user ${userId}. Refreshing...`);
             const refreshResponse = await fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
                 method: 'POST',
@@ -55,21 +42,21 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
             if (!refreshResponse.ok) {
                 console.warn(`Could not refresh token for user ${userId}, they may have revoked access. Skipping their posts.`);
-                continue; // Skip this author and move to the next.
+                continue;
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken; // Update token for subsequent authors for this user.
+            currentAccessToken = newAccessToken;
             console.log(`Token refreshed for user ${userId}. Retrying stat collection for author ${authorUrn}...`);
             await delay(1000);
 
-            // Retry the API calls for the current author with the new token.
-            responses = await processAuthor(authorUrn, posts, newAccessToken);
+            // Retry the batch API call with the new token.
+            response = await callProxy('getShareStatistics', payload, newAccessToken);
         }
 
-        allResults.push(...responses);
+        allBatchResponses.push(response);
     }
-    return allResults;
+    return allBatchResponses;
 }
 
 
