@@ -75,7 +75,7 @@ async function handleInitializeVideoUpload(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202507'
+        'LinkedIn-Version': '202411'
       },
       body: JSON.stringify(payload),
     });
@@ -145,7 +145,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload)
         });
@@ -176,7 +176,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             }
         });
         if (!linkedinResponse.ok) {
@@ -206,7 +206,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
         });
         const data = await linkedinResponse.json();
@@ -234,7 +234,7 @@ async function handleRegisterUpload(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202507'
+        'LinkedIn-Version': '202411'
       },
       body: JSON.stringify(payload),
     });
@@ -300,7 +300,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202507'
+        'LinkedIn-Version': '202411'
     };
 
     // Step 1: Register Upload (using the modern /rest/images endpoint)
@@ -421,7 +421,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -462,7 +462,7 @@ async function handleGetProfiles(request, response) {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
     'X-Restli-Protocol-Version': '2.0.0',
-    'LinkedIn-Version': '202507'
+    'LinkedIn-Version': '202411'
   };
 
   try {
@@ -653,7 +653,7 @@ async function handleGetShareStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             }
         });
 
@@ -684,8 +684,8 @@ async function handleGetMemberPostStatistics(request, response) {
         return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
     }
 
-    // The correct format for the entity parameter is `(ugcPost:<urn>)`.
-    const encodedEntity = encodeURIComponent(`(ugcPost:${ugcPostUrn})`);
+    // The correct format for the entity parameter is `(ugc:<urn>)`.
+    const encodedEntity = encodeURIComponent(`(ugc:${ugcPostUrn})`);
     const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
 
     try {
@@ -694,7 +694,7 @@ async function handleGetMemberPostStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
         });
 
