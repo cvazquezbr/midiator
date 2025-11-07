@@ -739,6 +739,11 @@ const protectedHandler = async (request, response) => {
             return handleCheckVideoStatus(request, response);
         case 'getClientId':
             return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+        case 'getShareStatistics':
+            return handleGetShareStatistics(request, response);
+        case 'getMemberPostStatistics':
+            return handleGetMemberPostStatistics(request, response);
+
         default:
             return response.status(400).json({ error: `Invalid protected action: ${action}` });
     }
