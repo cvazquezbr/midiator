@@ -1,4 +1,4 @@
-import { withAuth } from '../middleware/auth.js';
+import { withAdminAuth } from '../middleware/auth.js';
 import { del } from '@vercel/blob';
 
 const handler = async (req, res) => {
@@ -16,10 +16,10 @@ const handler = async (req, res) => {
     await del(urls);
 
     return res.status(200).json({ message: 'Files deleted successfully.' });
-  } catch (error) {
+  } catch (error)  {
     console.error('Error deleting blobs:', error);
     return res.status(500).json({ error: 'Internal server error while deleting files.' });
   }
 };
 
-export default withAuth(handler);
+export default withAdminAuth(handler);

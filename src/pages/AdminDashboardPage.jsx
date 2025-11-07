@@ -5,6 +5,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, PlayCircleOutline as PlayCircleOutlineIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
+import VercelBlobAdmin from '../components/VercelBlobAdmin';
 
 // For now, the edit functionality will be a placeholder.
 // A full implementation would require a modal or a separate edit page.
@@ -176,6 +177,10 @@ const AdminDashboardPage = () => {
             />
           </Box>
         )}
+      </Paper>
+      <Paper sx={{ my: 4, p: 3 }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Vercel Blob Management</Typography>
+        <VercelBlobAdmin />
       </Paper>
     </Container>
   );
