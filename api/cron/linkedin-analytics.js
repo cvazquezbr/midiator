@@ -4,13 +4,17 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const PROXY_API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
 
 // Fetches stats for a given set of posts, handling token refresh internally.
+// Fetches stats for a given set of posts, handling token refresh internally.
+// NOTA: Esta função pressupõe que as variáveis 'query', 'delay' e 'PROXY_API_BASE_URL' estão definidas no escopo.
 async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByAuthor) {
     const internalApiHeaders = {
         'Content-Type': 'application/json',
+        // Assumindo que 'INTERNAL_API_SECRET' é usado para autenticar no seu proxy interno
         'X-Internal-Secret': process.env.INTERNAL_API_SECRET,
     };
 
     const callProxy = (action, payload, token) => {
+        // PROXY_API_BASE_URL deve estar definido externamente
         return fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
             method: 'POST',
             headers: internalApiHeaders,
@@ -25,29 +29,42 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     const processAuthor = async (authorUrn, posts, token) => {
         if (authorUrn.includes(':organization:')) {
             const urns = posts.map(p => p.urn);
-            // Return a single promise that resolves to the response
+            // Organização: Chamada única em lote (organizationalEntityShareStatistics)
+            // 'getShareStatistics' deve mapear para o endpoint correto no proxy
             return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
         } else {
-            const results = [];
-            for (const post of posts) {
+            // Membro (Pessoa): Múltiplas chamadas (memberCreatorPostAnalytics)
+            // Corrigido para rodar em paralelo usando Promise.all para otimização
+            const fetchPromises = posts.map(post => {
                 const endDate = new Date();
                 const startDate = new Date();
                 startDate.setDate(endDate.getDate() - 90);
 
+                // Payload para analytics de membro (um post por chamada)
                 const payload = {
                     ugcPostUrn: post.urn,
                     queryType: 'TOTAL',
                     aggregation: 'TOTAL',
                     dateRange: {
-                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
-                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+                        // Usando métodos UTC e corrigindo o mês (+1)
+                        start: {
+                            day: startDate.getUTCDate(),
+                            month: startDate.getUTCMonth() + 1,
+                            year: startDate.getUTCFullYear()
+                        },
+                        end: {
+                            day: endDate.getUTCDate(),
+                            month: endDate.getUTCMonth() + 1,
+                            year: endDate.getUTCFullYear()
+                        }
                     }
                 };
-                const res = await callProxy('getMemberPostStatistics', payload, token);
-                results.push(res);
-                await delay(500); // Stagger requests
-            }
-            return results;
+                // 'getMemberPostStatistics' deve mapear para o endpoint correto no proxy
+                return callProxy('getMemberPostStatistics', payload, token);
+            });
+
+            // Executa todas as chamadas de membro em paralelo
+            return Promise.all(fetchPromises);
         }
     };
 
@@ -57,9 +74,11 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
         let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
 
+        // Padroniza a resposta para verificação de 401
         const isSingleResponse = !Array.isArray(responseOrResponses);
         const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
 
+        // Verifica se o token expirou (401 Unauthorized)
         const needsRefresh = responses.some(res => res.status === 401);
 
         if (needsRefresh) {
@@ -67,6 +86,7 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             const refreshResponse = await fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
                 method: 'POST',
                 headers: internalApiHeaders,
+                // 'refreshTokenInternal' deve buscar o refresh_token no DB, renovar o token e atualizar o DB
                 body: JSON.stringify({ action: 'refreshTokenInternal', userId }),
             });
 
@@ -76,16 +96,18 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken;
+            currentAccessToken = newAccessToken; // Atualiza o token para futuras chamadas
             console.log(`Token refreshed for user ${userId}. Retrying stat collection for ${authorUrn}...`);
-            await delay(1000);
+            await delay(1000); // Pequeno delay antes de tentar novamente
 
+            // Tenta novamente a coleta com o novo token
             responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
         }
 
         allResults.push(responseOrResponses);
     }
 
+    // Achata o array de respostas para retornar uma lista linear
     return allResults.flat();
 }
 
@@ -162,7 +184,7 @@ export async function handleRunAnalyticsCollector(request, response) {
                         }
 
                         if (!urn || !statsData) {
-                             console.warn('Skipping stat object without URN or statistics:', stat);
+                            console.warn('Skipping stat object without URN or statistics:', stat);
                             continue;
                         }
 
