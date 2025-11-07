@@ -2,13 +2,30 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { DataGrid } from '@mui/x-data-grid';
-import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton } from '@mui/material';
+import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton, Tabs, Tab, AppBar } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, PlayCircleOutline as PlayCircleOutlineIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import VercelBlobAdmin from '../components/VercelBlobAdmin';
 
-// For now, the edit functionality will be a placeholder.
-// A full implementation would require a modal or a separate edit page.
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`admin-tabpanel-${index}`}
+      aria-labelledby={`admin-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+};
+
 const handleEdit = (user) => {
   alert(`Edit functionality for user ${user.name} (ID: ${user.id}) is not yet implemented.`);
 };
@@ -21,6 +38,11 @@ const AdminDashboardPage = () => {
   const [isAnalyticsRunning, setIsAnalyticsRunning] = useState(false);
   const { user: adminUser, logout } = useUserAuth();
   const navigate = useNavigate();
+  const [tabValue, setTabValue] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -42,8 +64,10 @@ const AdminDashboardPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (tabValue === 0) {
+      fetchUsers();
+    }
+  }, [fetchUsers, tabValue]);
 
   const handleDelete = async (id, name) => {
     if (window.confirm(`Are you sure you want to delete the user "${name}"? This action cannot be undone.`)) {
@@ -52,7 +76,7 @@ const AdminDashboardPage = () => {
         const data = await res.json();
         if (res.ok) {
           toast.success(data.message || 'User deleted successfully.');
-          fetchUsers(); // Refresh the list
+          fetchUsers();
         } else {
           toast.error(data.error || 'Failed to delete user.');
         }
@@ -122,7 +146,6 @@ const AdminDashboardPage = () => {
           <IconButton
             onClick={() => handleDelete(params.row.id, params.row.name)}
             aria-label="delete"
-            // Disable deleting the currently logged-in admin
             disabled={params.row.id === adminUser.sub}
           >
             <DeleteIcon />
@@ -134,13 +157,52 @@ const AdminDashboardPage = () => {
 
   return (
     <Container maxWidth="lg">
-      <Paper sx={{ my: 4, p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h4" component="h1">Admin Dashboard</Typography>
-          <Box>
+      <Paper sx={{ my: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h4" component="h1">Administração</Typography>
+          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+        </Box>
+        <AppBar position="static" color="default">
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="inherit"
+            variant="fullWidth"
+            aria-label="admin dashboard tabs"
+          >
+            <Tab label="Usuários" id="admin-tab-0" aria-controls="admin-tabpanel-0" />
+            <Tab label="Jobs" id="admin-tab-1" aria-controls="admin-tabpanel-1" />
+            <Tab label="Mídias" id="admin-tab-2" aria-controls="admin-tabpanel-2" />
+          </Tabs>
+        </AppBar>
+
+        <TabPanel value={tabValue} index={0}>
+          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>User Management</Typography>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>
+          ) : error ? (
+            <Alert severity="error">{error}</Alert>
+          ) : (
+            <Box sx={{ width: '100%' }}>
+              <DataGrid
+                rows={users}
+                columns={columns}
+                autoHeight
+                pageSize={10}
+                rowsPerPageOptions={[10, 25, 50]}
+                checkboxSelection
+                disableSelectionOnClick
+              />
+            </Box>
+          )}
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={1}>
+          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Manual Job Triggers</Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
             <Button
               variant="contained"
-              sx={{ mr: 2 }}
               onClick={handleRunScheduler}
               disabled={isSchedulerRunning}
               startIcon={isSchedulerRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
@@ -150,38 +212,18 @@ const AdminDashboardPage = () => {
             <Button
               variant="contained"
               color="secondary"
-              sx={{ mr: 2 }}
               onClick={handleRunAnalytics}
               disabled={isAnalyticsRunning}
               startIcon={isAnalyticsRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
               {isAnalyticsRunning ? 'Running...' : 'Run Analytics'}
             </Button>
-            <Button variant="outlined" onClick={handleLogout}>Logout</Button>
           </Box>
-        </Box>
-        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>User Management</Typography>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
-        ) : (
-          <Box sx={{ width: '100%' }}>
-            <DataGrid
-              rows={users}
-              columns={columns}
-              autoHeight
-              pageSize={10}
-              rowsPerPageOptions={[10, 25, 50]}
-              checkboxSelection
-              disableSelectionOnClick
-            />
-          </Box>
-        )}
-      </Paper>
-      <Paper sx={{ my: 4, p: 3 }}>
-        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Vercel Blob Management</Typography>
-        <VercelBlobAdmin />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          <VercelBlobAdmin />
+        </TabPanel>
       </Paper>
     </Container>
   );

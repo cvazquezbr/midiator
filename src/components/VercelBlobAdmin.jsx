@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -14,6 +14,9 @@ import {
   IconButton,
   Checkbox,
   Tooltip,
+  Tabs,
+  Tab,
+  AppBar,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -22,18 +25,36 @@ import {
 import { toast } from 'sonner';
 import BlobStorageCharts from './BlobStorageCharts';
 
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`media-tabpanel-${index}`}
+      aria-labelledby={`media-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+    </div>
+  );
+};
+
 const VercelBlobAdmin = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState(new Set());
+  const [tabValue, setTabValue] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/blob/admin');
-      if (!response.ok) {
-        throw new Error('Failed to fetch blob data');
-      }
+      if (!response.ok) throw new Error('Failed to fetch blob data');
       const result = await response.json();
       setData(result);
     } catch (error) {
@@ -43,14 +64,15 @@ const VercelBlobAdmin = () => {
     }
   }, []);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   const handleFileSelect = (url) => {
     setSelectedFiles(prev => {
       const newSelection = new Set(prev);
-      if (newSelection.has(url)) {
-        newSelection.delete(url);
-      } else {
-        newSelection.add(url);
-      }
+      if (newSelection.has(url)) newSelection.delete(url);
+      else newSelection.add(url);
       return newSelection;
     });
   };
@@ -61,24 +83,20 @@ const VercelBlobAdmin = () => {
       toast.info('No files selected for deletion.');
       return;
     }
-
     const toastId = toast.loading(`Deleting ${urlsToDelete.length} files...`);
-
     try {
       const response = await fetch('/api/blob/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: urlsToDelete }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete files.');
       }
-
       toast.success('Files deleted successfully.', { id: toastId });
       setSelectedFiles(new Set());
-      fetchData(); // Refresh data
+      fetchData();
     } catch (error) {
       toast.error(error.message, { id: toastId });
     }
@@ -98,99 +116,100 @@ const VercelBlobAdmin = () => {
       <Typography variant="h6" gutterBottom>
         Vercel Blob Storage Management
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
         <Button
           variant="contained"
           onClick={fetchData}
           disabled={loading}
           startIcon={loading ? <CircularProgress size={20} /> : <CloudSync />}
         >
-          {loading ? 'Loading...' : 'Sync & Analyze'}
+          {loading ? 'Sincronizando...' : 'Sincronizar e Analisar'}
         </Button>
         {selectedFiles.size > 0 && (
           <Tooltip title="Delete selected files">
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={handleDelete}
-              startIcon={<DeleteIcon />}
-            >
+            <Button variant="outlined" color="error" onClick={handleDelete} startIcon={<DeleteIcon />}>
               Delete ({selectedFiles.size})
             </Button>
           </Tooltip>
         )}
       </Box>
 
-      {data && (
-        <Box>
-          <BlobStorageCharts data={data} />
-          <Typography variant="h6" sx={{ mt: 4 }}>Campaign Storage Usage</Typography>
-          <TableContainer component={Paper} sx={{ mb: 4 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Campaign ID</TableCell>
-                  <TableCell align="right">File Count</TableCell>
-                  <TableCell align="right">Total Size</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {Object.entries(data.campaignUsage).map(([campaignId, usage]) => (
-                  <TableRow key={campaignId}>
-                    <TableCell>{campaignId}</TableCell>
-                    <TableCell align="right">{usage.count}</TableCell>
-                    <TableCell align="right">{formatBytes(usage.size)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+      {loading && !data && <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>}
 
-          <Typography variant="h6">Orphaned Files ({data.orphanedFiles.length})</Typography>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      indeterminate={selectedFiles.size > 0 && selectedFiles.size < data.orphanedFiles.length}
-                      checked={data.orphanedFiles.length > 0 && selectedFiles.size === data.orphanedFiles.length}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedFiles(new Set(data.orphanedFiles.map(f => f.url)));
-                        } else {
-                          setSelectedFiles(new Set());
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>Pathname</TableCell>
-                  <TableCell align="right">Size</TableCell>
-                  <TableCell align="right">Uploaded At</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.orphanedFiles.map((file) => (
-                  <TableRow key={file.url} hover>
+      {data && (
+        <Paper elevation={0} variant="outlined">
+          <AppBar position="static" color="default" elevation={0}>
+            <Tabs value={tabValue} onChange={handleTabChange} indicatorColor="secondary" textColor="inherit" variant="fullWidth">
+              <Tab label="Gráficos" id="media-tab-0" aria-controls="media-tabpanel-0" />
+              <Tab label="Grids" id="media-tab-1" aria-controls="media-tabpanel-1" />
+            </Tabs>
+          </AppBar>
+
+          <TabPanel value={tabValue} index={0}>
+            <BlobStorageCharts data={data} />
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={1}>
+            <Typography variant="h6" sx={{ mt: 2 }}>Campaign Storage Usage</Typography>
+            <TableContainer component={Paper} sx={{ mb: 4, mt: 1 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Campaign ID</TableCell>
+                    <TableCell align="right">File Count</TableCell>
+                    <TableCell align="right">Total Size</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Object.entries(data.campaignUsage).map(([campaignId, usage]) => (
+                    <TableRow key={campaignId}>
+                      <TableCell>{campaignId}</TableCell>
+                      <TableCell align="right">{usage.count}</TableCell>
+                      <TableCell align="right">{formatBytes(usage.size)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Typography variant="h6">Orphaned Files ({data.orphanedFiles.length})</Typography>
+            <TableContainer component={Paper} sx={{ mt: 1 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
                     <TableCell padding="checkbox">
                       <Checkbox
-                        checked={selectedFiles.has(file.url)}
-                        onChange={() => handleFileSelect(file.url)}
+                        indeterminate={selectedFiles.size > 0 && selectedFiles.size < data.orphanedFiles.length}
+                        checked={data.orphanedFiles.length > 0 && selectedFiles.size === data.orphanedFiles.length}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedFiles(new Set(data.orphanedFiles.map(f => f.url)));
+                          else setSelectedFiles(new Set());
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
-                      <a href={file.url} target="_blank" rel="noopener noreferrer">
-                        {file.pathname}
-                      </a>
-                    </TableCell>
-                    <TableCell align="right">{formatBytes(file.size)}</TableCell>
-                    <TableCell align="right">{new Date(file.uploadedAt).toLocaleString()}</TableCell>
+                    <TableCell>Pathname</TableCell>
+                    <TableCell align="right">Size</TableCell>
+                    <TableCell align="right">Uploaded At</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+                </TableHead>
+                <TableBody>
+                  {data.orphanedFiles.map((file) => (
+                    <TableRow key={file.url} hover>
+                      <TableCell padding="checkbox">
+                        <Checkbox checked={selectedFiles.has(file.url)} onChange={() => handleFileSelect(file.url)} />
+                      </TableCell>
+                      <TableCell>
+                        <a href={file.url} target="_blank" rel="noopener noreferrer">{file.pathname}</a>
+                      </TableCell>
+                      <TableCell align="right">{formatBytes(file.size)}</TableCell>
+                      <TableCell align="right">{new Date(file.uploadedAt).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+        </Paper>
       )}
     </Box>
   );
