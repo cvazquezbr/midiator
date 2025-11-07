@@ -1,4 +1,4 @@
-import { withAuth } from '../middleware/auth.js';
+import { withAdminAuth } from '../middleware/auth.js';
 import { list } from '@vercel/blob';
 import { db } from '../db.js';
 
@@ -11,14 +11,21 @@ const handler = async (req, res) => {
     // 1. List all blobs
     const { blobs } = await list();
 
-    // 2. Fetch all campaign data
-    const { rows: campaigns } = await db.query('SELECT id, campaign_data FROM campaigns WHERE user_id = $1', [req.user.sub]);
+    // 2. Fetch all campaign data for all users
+    const { rows: campaigns } = await db.query('SELECT id, campaign_data FROM campaigns');
 
     // 3. Extract all asset URLs from campaigns
     const activeUrls = new Set();
     campaigns.forEach(campaign => {
-      const campaignData = JSON.parse(campaign.campaign_data);
-      extractAssetUrls(campaignData, activeUrls);
+      // It's possible for campaign_data to be null or invalid JSON
+      if (campaign.campaign_data) {
+        try {
+          const campaignData = JSON.parse(campaign.campaign_data);
+          extractAssetUrls(campaignData, activeUrls);
+        } catch (e) {
+          console.warn(`Could not parse campaign_data for campaign ${campaign.id}:`, e);
+        }
+      }
     });
 
     // 4. Identify orphaned files and calculate storage usage
@@ -26,6 +33,7 @@ const handler = async (req, res) => {
     const campaignUsage = {};
 
     for (const blob of blobs) {
+      // Pathname format is expected to be "campaignId/..."
       const campaignId = blob.pathname.split('/')[0];
       if (!campaignUsage[campaignId]) {
         campaignUsage[campaignId] = { size: 0, count: 0 };
@@ -63,4 +71,4 @@ function extractAssetUrls(data, urlSet) {
   }
 }
 
-export default withAuth(handler);
+export default withAdminAuth(handler);

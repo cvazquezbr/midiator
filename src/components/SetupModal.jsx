@@ -28,7 +28,6 @@ import {
   DriveFolderUpload,
   Language,
   AccountCircle,
-  Storage,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 
@@ -37,7 +36,6 @@ import GeminiAuthSetup from './GeminiAuthSetup';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
-import VercelBlobAdmin from './VercelBlobAdmin';
 
 // The old file-based manager is replaced with the new DB-based one.
 import { useSettings } from '../context/SettingsContext';
@@ -182,7 +180,6 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
           <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
           <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
           <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
-          <Tab icon={<Storage />} iconPosition="start" label="Blob Storage" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
         </Tabs>
         <TabPanel value={value} index={0}>
           <GeneralSettings />
@@ -198,9 +195,6 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
         </TabPanel>
         <TabPanel value={value} index={4}>
           <LinkedinAuthSetup onBeforeRedirect={handleSaveForRedirect} />
-        </TabPanel>
-        <TabPanel value={value} index={5}>
-          <VercelBlobAdmin />
         </TabPanel>
       </DialogContent>
       <DialogActions>
