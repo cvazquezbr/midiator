@@ -36,7 +36,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import { Language, Publish, LinkedIn, Delete, Edit, Visibility, Replay } from '@mui/icons-material';
+import { Language, Publish, LinkedIn, Delete, Edit, Visibility, Replay, ExpandLess, ExpandMore } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker, DateTimePicker } from '@mui/x-date-pickers';
@@ -112,12 +112,17 @@ const Publisher = ({
   const [selectedVideos, setSelectedVideos] = useState({});
 
   const [tabValue, setTabValue] = React.useState(0);
-  const [mySchedules, setMySchedules] = useState([]);
+  const [groupedSchedules, setGroupedSchedules] = useState({});
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [viewingSchedule, setViewingSchedule] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [openItems, setOpenItems] = useState({});
+
+  const handleItemClick = (id) => {
+    setOpenItems(prev => ({ ...prev, [id]: !prev[id] }));
+  };
   const [linkedinProfiles, setLinkedinProfiles] = useState({ personal: null, organizations: [] });
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profileError, setProfileError] = useState('');
@@ -132,6 +137,32 @@ const Publisher = ({
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
 
   const characterLimit = 3000;
+
+  const groupSchedules = (schedules, profiles) => {
+    const mainPosts = schedules.filter(s => !s.parent_id);
+    const followUpPosts = schedules.filter(s => s.parent_id);
+
+    for (const post of mainPosts) {
+        post.followUps = followUpPosts
+            .filter(fp => fp.parent_id === post.id)
+            .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+    }
+
+    const groupedByAuthor = mainPosts.reduce((acc, post) => {
+        const authorUrn = post.post_content.authorUrn;
+        if (!acc[authorUrn]) {
+            const profile = profiles.find(p => `urn:li:${p.type}:${p.id}` === authorUrn);
+            acc[authorUrn] = {
+                profileName: profile ? profile.name : 'Unknown Profile',
+                posts: []
+            };
+        }
+        acc[authorUrn].posts.push(post);
+        return acc;
+    }, {});
+
+    return groupedByAuthor;
+  };
   
   const uploadPendingAssets = async (imageUrls) => {
     const urlMap = {};
@@ -275,7 +306,15 @@ const Publisher = ({
       await updateSchedule(editingSchedule.id, utcDate.toISOString());
       toast.success("Schedule updated successfully!");
       setEditingSchedule(null);
-      fetchSchedules();
+      // Re-fetch and group schedules
+      fetchSchedules().then(({ schedules, assets }) => {
+        const allProfiles = getPublishingTargets();
+        const grouped = groupSchedules(schedules, allProfiles);
+        setGroupedSchedules(grouped);
+        if (assets && Object.keys(assets).length > 0) {
+          setPendingAssets(prevAssets => ({ ...prevAssets, ...assets }));
+        }
+      });
     } catch (error) {
       toast.error(`Failed to update schedule: ${error.message}`);
     } finally {
@@ -290,14 +329,31 @@ const Publisher = ({
   const confirmDeleteSchedule = async () => {
     if (!scheduleToDelete) return;
     try {
-      await deleteSchedule(scheduleToDelete);
-      setMySchedules(prevSchedules => prevSchedules.filter(s => s.id !== scheduleToDelete));
-      toast.success("Agendamento excluído com sucesso!");
+        await deleteSchedule(scheduleToDelete);
+
+        // Update the state to reflect the deletion
+        setGroupedSchedules(prevGrouped => {
+            const newGrouped = { ...prevGrouped };
+            for (const authorUrn in newGrouped) {
+                newGrouped[authorUrn].posts = newGrouped[authorUrn].posts.filter(p => p.id !== scheduleToDelete);
+                // Also remove from followUps if it exists there (though UI might not allow deleting followups directly)
+                for (const post of newGrouped[authorUrn].posts) {
+                    post.followUps = post.followUps.filter(fp => fp.id !== scheduleToDelete);
+                }
+                // If an author group becomes empty, remove it
+                if (newGrouped[authorUrn].posts.length === 0) {
+                    delete newGrouped[authorUrn];
+                }
+            }
+            return newGrouped;
+        });
+
+        toast.success("Agendamento excluído com sucesso!");
     } catch (error) {
-      console.error("Failed to delete schedule:", error);
-      toast.error(`Falha ao excluir agendamento: ${error.message}`);
+        console.error("Failed to delete schedule:", error);
+        toast.error(`Falha ao excluir agendamento: ${error.message}`);
     } finally {
-      setScheduleToDelete(null);
+        setScheduleToDelete(null);
     }
   };
 
@@ -308,13 +364,15 @@ const Publisher = ({
   useEffect(() => {
     if (tabValue === 2) {
       fetchSchedules().then(({ schedules, assets }) => {
-        setMySchedules(schedules);
+        const allProfiles = getPublishingTargets();
+        const grouped = groupSchedules(schedules, allProfiles);
+        setGroupedSchedules(grouped);
         if (assets && Object.keys(assets).length > 0) {
           setPendingAssets(prevAssets => ({ ...prevAssets, ...assets }));
         }
       });
     }
-  }, [tabValue, fetchSchedules, setPendingAssets]);
+  }, [tabValue, fetchSchedules, setPendingAssets, linkedinProfiles]);
 
   const [isPublishingWp, setIsPublishingWp] = useState(false);
   const [publishingStatusWp, setPublishingStatusWp] = useState('');
@@ -1156,85 +1214,36 @@ const Publisher = ({
           <TabPanel value={tabValue} index={2}>
             <Box>
                 <Typography variant="h6" gutterBottom>Meus Agendamentos</Typography>
-                {!selectedTarget && <Alert severity="warning">Selecione um perfil na aba "LinkedIn" para ver seus agendamentos.</Alert>}
                 {isLoadingSchedules && <LinearProgress />}
-                {!isLoadingSchedules && mySchedules.length === 0 && selectedTarget && (
-                    <Typography sx={{mt: 2, textAlign: 'center'}}>Nenhum agendamento encontrado para este perfil.</Typography>
+                {!isLoadingSchedules && Object.keys(groupedSchedules).length === 0 && (
+                    <Typography sx={{mt: 2, textAlign: 'center'}}>Nenhum agendamento encontrado.</Typography>
                 )}
-                {mySchedules.length > 0 && (
-                    <TableContainer component={Paper} sx={{mt: 2}}>
-                        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Imagem</TableCell>
-                                    <TableCell>Título</TableCell>
-                                    <TableCell align="right">Data Agendada</TableCell>
-                                    <TableCell align="right">Status</TableCell>
-                                    <TableCell align="right">Link</TableCell>
-                                    <TableCell align="right">Ações</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {mySchedules.filter(row => row.post_content).map((row) => (
-                                    <TableRow key={row.id}>
-                                        <TableCell>
-                                            {row.campaign_data?.pageTemplate?.images?.[0]?.url && (
-                                                <img src={row.campaign_data?.pageTemplate?.images[0]?.url} alt="Campaign" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }} />
-                                            )}
-                                        </TableCell>
-                                        <TableCell component="th" scope="row">
-                                            {row.post_content.titulo}
-                                            {row.parent_id && row.parent_post_url && (
-                                                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                                                    Follow-up de: <MuiLink href={row.parent_post_url} target="_blank" rel="noopener">Post Principal</MuiLink>
-                                                </Typography>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            {formatInTimeZone(new Date(row.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Chip
-                                                label={row.status}
-                                                color={row.status === 'published' ? 'success' : (row.status === 'failed' ? 'error' : 'primary')}
-                                                size="small"
-                                            />
-                                            {row.status === 'failed' && row.error_message && (
-                                                <Tooltip title={row.error_message}>
-                                                    <Info fontSize="small" sx={{verticalAlign: 'middle', ml: 0.5, color: 'error.main'}}/>
-                                                </Tooltip>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            {row.status === 'published' && row.linkedin_post_url ? (
-                                                <MuiLink href={row.linkedin_post_url} target="_blank" rel="noopener">
-                                                    Ver Post
-                                                </MuiLink>
-                                            ) : '-'}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Tooltip title="View Details">
-                                                <IconButton onClick={() => handleViewDetails(row.id)} size="small">
-                                                    <Visibility />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title={row.status === 'failed' ? 'Retry' : 'Edit Schedule'}>
-                                                <IconButton onClick={() => handleOpenEditModal(row)} size="small">
-                                                    {row.status === 'failed' ? <Replay /> : <Edit />}
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete Schedule">
-                                                <IconButton onClick={() => handleDeleteSchedule(row.id)} size="small">
-                                                    <Delete />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
+                <List component="nav" sx={{ width: '100%' }}>
+                    {Object.entries(groupedSchedules).map(([authorUrn, { profileName, posts }]) => (
+                        <React.Fragment key={authorUrn}>
+                            <ListItem button onClick={() => handleItemClick(authorUrn)}>
+                                <ListItemText primary={profileName} primaryTypographyProps={{ fontWeight: 'bold' }} />
+                                {openItems[authorUrn] ? <ExpandLess /> : <ExpandMore />}
+                            </ListItem>
+                            <Collapse in={openItems[authorUrn]} timeout="auto" unmountOnExit>
+                                <List component="div" disablePadding>
+                                    {posts.map(post => (
+                                        <PostListItem
+                                            key={post.id}
+                                            post={post}
+                                            level={1}
+                                            openItems={openItems}
+                                            handleItemClick={handleItemClick}
+                                            handleViewDetails={handleViewDetails}
+                                            handleOpenEditModal={handleOpenEditModal}
+                                            handleDeleteSchedule={handleDeleteSchedule}
+                                        />
+                                    ))}
+                                </List>
+                            </Collapse>
+                        </React.Fragment>
+                    ))}
+                </List>
             </Box>
           </TabPanel>
         </Box>
@@ -1305,5 +1314,89 @@ const Publisher = ({
     </Card>
   );
 };
+
+const PostListItem = ({ post, level, openItems, handleItemClick, handleViewDetails, handleOpenEditModal, handleDeleteSchedule }) => {
+    const postImage = post.post_content?.images?.[0] || post.campaign_data?.pageTemplate?.images?.[0]?.url;
+
+    return (
+        <React.Fragment>
+            <ListItem sx={{ pl: 2 + level * 2, borderLeft: '2px solid', borderBottom: '1px solid', borderColor: 'divider', bgcolor: level === 1 ? 'action.hover' : 'background.paper' }}>
+                <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={6} md={5} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {postImage && (
+                            <Box
+                                component="img"
+                                src={postImage}
+                                alt="Post image"
+                                sx={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 1, display: { xs: 'none', sm: 'block' } }}
+                            />
+                        )}
+                        <ListItemText
+                            primary={post.post_content.titulo || (level > 1 ? 'Follow-up' : 'Post Agendado')}
+                            secondary={formatInTimeZone(new Date(post.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            primaryTypographyProps={{ fontWeight: 'bold' }}
+                        />
+                    </Grid>
+                    <Grid item xs={6} sm={3} md={2}>
+                        <Chip
+                            label={post.status}
+                            color={post.status === 'published' ? 'success' : (post.status === 'failed' ? 'error' : 'primary')}
+                            size="small"
+                        />
+                        {post.status === 'failed' && post.error_message && (
+                            <Tooltip title={post.error_message}>
+                                <Info fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5, color: 'error.main' }} />
+                            </Tooltip>
+                        )}
+                    </Grid>
+                    <Grid item xs={6} sm={3} md={2} sx={{ textAlign: 'center' }}>
+                        {post.status === 'published' && post.linkedin_post_url ? (
+                            <MuiLink href={post.linkedin_post_url} target="_blank" rel="noopener">Ver Post</MuiLink>
+                        ) : '-'}
+                    </Grid>
+                    <Grid item xs={12} sm={12} md={3} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 0.5, mt: { xs: 1, md: 0 } }}>
+                        {post.followUps && post.followUps.length > 0 && (
+                            <Tooltip title={openItems[post.id] ? "Recolher follow-ups" : "Expandir follow-ups"}>
+                                <IconButton onClick={() => handleItemClick(post.id)} size="small">
+                                    {openItems[post.id] ? <ExpandLess /> : <ExpandMore />}
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        <Tooltip title="Ver Detalhes">
+                            <IconButton onClick={() => handleViewDetails(post.id)} size="small"><Visibility /></IconButton>
+                        </Tooltip>
+                        <Tooltip title={post.status === 'failed' ? 'Tentar Novamente' : 'Editar Agendamento'}>
+                            <IconButton onClick={() => handleOpenEditModal(post)} size="small">
+                                {post.status === 'failed' ? <Replay /> : <Edit />}
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Excluir Agendamento">
+                            <IconButton onClick={() => handleDeleteSchedule(post.id)} size="small"><Delete /></IconButton>
+                        </Tooltip>
+                    </Grid>
+                </Grid>
+            </ListItem>
+            {post.followUps && post.followUps.length > 0 && (
+                <Collapse in={openItems[post.id]} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                        {post.followUps.map(followUp => (
+                            <PostListItem
+                                key={followUp.id}
+                                post={followUp}
+                                level={level + 1}
+                                openItems={openItems}
+                                handleItemClick={handleItemClick}
+                                handleViewDetails={handleViewDetails}
+                                handleOpenEditModal={handleOpenEditModal}
+                                handleDeleteSchedule={handleDeleteSchedule}
+                            />
+                        ))}
+                    </List>
+                </Collapse>
+            )}
+        </React.Fragment>
+    );
+};
+
 
 export default Publisher;
