@@ -22,18 +22,43 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    const processAuthorBatch = async (authorUrn, posts, token) => {
-        const shareUrns = posts.map(p => p.urn);
-        console.log(`[Analytics] Processing batch of ${shareUrns.length} posts for author ${authorUrn}`);
-        const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
-        return [res]; // Return as an array to keep the structure consistent
+    const processAuthor = async (authorUrn, posts, token) => {
+        if (authorUrn.includes(':organization:')) {
+            const urns = posts.map(p => p.urn);
+            // Return a single promise that resolves to the response
+            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
+        } else {
+            const results = [];
+            for (const post of posts) {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 90);
+
+                const payload = {
+                    ugcPostUrn: post.urn,
+                    queryType: 'TOTAL',
+                    aggregation: 'TOTAL',
+                    dateRange: {
+                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+                    }
+                };
+                const res = await callProxy('getMemberPostStatistics', payload, token);
+                results.push(res);
+                await delay(500); // Stagger requests
+            }
+            return results;
+        }
     };
 
     let allResults = [];
     let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
-        let responses = await processAuthorBatch(authorUrn, posts, currentAccessToken);
+        let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
+
+        const isSingleResponse = !Array.isArray(responseOrResponses);
+        const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
 
         const needsRefresh = responses.some(res => res.status === 401);
 
@@ -52,15 +77,16 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
             currentAccessToken = newAccessToken;
-            console.log(`Token refreshed for user ${userId}. Retrying stat collection for author ${authorUrn}...`);
+            console.log(`Token refreshed for user ${userId}. Retrying stat collection for ${authorUrn}...`);
             await delay(1000);
 
-            responses = await processAuthorBatch(authorUrn, posts, newAccessToken);
+            responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
         }
 
-        allResults.push(...responses);
+        allResults.push(responseOrResponses);
     }
-    return allResults;
+
+    return allResults.flat();
 }
 
 
@@ -117,16 +143,26 @@ export async function handleRunAnalyticsCollector(request, response) {
                     }
 
                     const data = await res.json();
-                    // The batch API response is always an object with an 'elements' array.
-                    const statsList = data.elements || [];
+                    const statsList = data.elements || [data];
 
                     for (const stat of statsList) {
-                        // In the new API, the URN is directly available in the 'share' or 'ugcPost' field.
-                        const urn = stat.share || stat.ugcPost;
-                        const statsData = stat.totalShareStatistics;
+                        const urn = stat.share || stat.ugcPost || stat.post || data.urn;
+                        let statsData = stat.totalShareStatistics;
+
+                        // Handle the different structure from member analytics
+                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
+                            statsData = {
+                                impressionCount: stat.totalImpressions?.count || stat.impressionCount || 0,
+                                likeCount: stat.reactionSummaries?.LIKE || 0,
+                                commentCount: stat.totalComments?.count || stat.commentCount || 0,
+                                shareCount: stat.totalReshares?.count || stat.shareCount || 0,
+                                clickCount: stat.totalClicks?.count || stat.clickCount || 0,
+                                engagement: stat.engagementRate?.rate || stat.engagement || 0,
+                            };
+                        }
 
                         if (!urn || !statsData) {
-                            console.warn('Skipping stat object without URN or statistics:', stat);
+                             console.warn('Skipping stat object without URN or statistics:', stat);
                             continue;
                         }
 

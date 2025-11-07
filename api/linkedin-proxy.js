@@ -676,6 +676,47 @@ async function handleGetShareStatistics(request, response) {
 }
 
 
+async function handleGetMemberPostStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
+
+    if (!accessToken || !ugcPostUrn || !queryType || !aggregation || !dateRange) {
+        return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
+    }
+
+    // The correct format for the entity parameter is `(ugc:<urn>)`.
+    const encodedEntity = encodeURIComponent(`(ugc:${ugcPostUrn})`);
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+
+    try {
+        const linkedinResponse = await fetchWithRetry(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202507'
+            },
+        });
+
+        const data = await linkedinResponse.json();
+         if (linkedinResponse.ok) {
+            // Add urn to the response for mapping, as this API doesn't return it.
+            data.urn = ugcPostUrn;
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Member Post Stats API responded with status ${linkedinResponse.status} for post ${ugcPostUrn}:`, data);
+            return response.status(linkedinResponse.status).json(data);
+        }
+    } catch (error) {
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to ${url}`,
+            details: error.message,
+        });
+    }
+}
+
+
 // Handler for requests coming from the cron scheduler, authenticated with a secret.
 const internalRequestHandler = async (request, response) => {
     const { action } = request.body;
@@ -687,6 +728,8 @@ const internalRequestHandler = async (request, response) => {
             return handleCreatePost(request, response);
         case 'getShareStatistics':
             return handleGetShareStatistics(request, response); 
+        case 'getMemberPostStatistics':
+            return handleGetMemberPostStatistics(request, response);
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }
