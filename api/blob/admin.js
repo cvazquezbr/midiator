@@ -8,16 +8,17 @@ const handler = async (req, res) => {
   }
 
   try {
-    // 1. List all blobs
     const { blobs } = await list();
+    const { rows: campaigns } = await db.query(`
+      SELECT c.id, c.campaign_data, u.name as user_name
+      FROM campaigns c
+      JOIN users u ON c.user_id = u.id
+    `);
 
-    // 2. Fetch all campaign data for all users
-    const { rows: campaigns } = await db.query('SELECT id, campaign_data FROM campaigns');
-
-    // 3. Extract all asset URLs from campaigns
     const activeUrls = new Set();
+    const campaignUserMap = {};
     campaigns.forEach(campaign => {
-      // It's possible for campaign_data to be null or invalid JSON
+      campaignUserMap[campaign.id] = campaign.user_name;
       if (campaign.campaign_data) {
         try {
           const campaignData = JSON.parse(campaign.campaign_data);
@@ -28,32 +29,61 @@ const handler = async (req, res) => {
       }
     });
 
-    // 4. Identify orphaned files and calculate storage usage
     const orphanedFiles = [];
     const campaignUsage = {};
+    const userUsage = {};
+    let totalOrphanedSize = 0;
+    let totalActiveSize = 0;
+    let totalSize = 0;
 
     for (const blob of blobs) {
-      // Pathname format is expected to be "campaignId/..."
       const campaignId = blob.pathname.split('/')[0];
+      const userName = campaignUserMap[campaignId] || 'Unknown';
+
+      totalSize += blob.size;
+
+      // Campaign Usage
       if (!campaignUsage[campaignId]) {
-        campaignUsage[campaignId] = { size: 0, count: 0 };
+        campaignUsage[campaignId] = { size: 0, count: 0, user: userName };
       }
       campaignUsage[campaignId].size += blob.size;
       campaignUsage[campaignId].count++;
 
+      // User Usage
+      if (!userUsage[userName]) {
+        userUsage[userName] = { size: 0, count: 0 };
+      }
+      userUsage[userName].size += blob.size;
+      userUsage[userName].count++;
+
       if (!activeUrls.has(blob.url)) {
         orphanedFiles.push(blob);
+        totalOrphanedSize += blob.size;
+      } else {
+        totalActiveSize += blob.size;
       }
     }
 
-    return res.status(200).json({ orphanedFiles, campaignUsage });
+    return res.status(200).json({
+      orphanedFiles,
+      campaignUsage,
+      userUsage,
+      orphanAnalysis: {
+        orphanedSize: totalOrphanedSize,
+        activeSize: totalActiveSize,
+        totalSize: totalSize,
+        orphanedCount: orphanedFiles.length,
+        activeCount: blobs.length - orphanedFiles.length,
+        totalCount: blobs.length,
+      },
+    });
+
   } catch (error) {
     console.error('Error in Vercel Blob admin handler:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// Helper function to recursively extract asset URLs from campaign data
 function extractAssetUrls(data, urlSet) {
   if (typeof data === 'string' && data.startsWith('https://')) {
     try {
