@@ -4,8 +4,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const PROXY_API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
 
 // Fetches stats for a given set of posts, handling token refresh internally.
-// Fetches stats for a given set of posts, handling token refresh internally.
-// NOTA: Esta função pressupõe que as variáveis 'query', 'delay' e 'PROXY_API_BASE_URL' estão definidas no escopo.
+// NOTA: Esta função pressupõe que 'query', 'delay' e 'PROXY_API_BASE_URL' estão definidos no escopo ou importados.
 async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByAuthor) {
     const internalApiHeaders = {
         'Content-Type': 'application/json',
@@ -30,7 +29,6 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         if (authorUrn.includes(':organization:')) {
             const urns = posts.map(p => p.urn);
             // Organização: Chamada única em lote (organizationalEntityShareStatistics)
-            // 'getShareStatistics' deve mapear para o endpoint correto no proxy
             return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
         } else {
             // Membro (Pessoa): Múltiplas chamadas (memberCreatorPostAnalytics)
@@ -64,6 +62,7 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             });
 
             // Executa todas as chamadas de membro em paralelo
+            // Promise.all retorna as respostas (que precisam ser tratadas para 401)
             return Promise.all(fetchPromises);
         }
     };
@@ -71,6 +70,7 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     let allResults = [];
     let currentAccessToken = initialAccessToken;
 
+    // AQUI OCORRE A ITERAÇÃO CHAVE: Uma chamada por autor (organização ou pessoa)
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
         let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
 
@@ -124,6 +124,7 @@ export async function handleRunAnalyticsCollector(request, response) {
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
         const { rows: posts } = await query(
+            // Garantindo que 'author_urn' (URN do autor, pessoal ou organização) é trazido da coluna post_content
             `SELECT ls.id, ls.linkedin_post_id AS urn, ls.user_id, ls.post_content->>'authorUrn' as author_urn, u.linkedin_access_token
              FROM linkedin_schedules ls
              JOIN users u ON ls.user_id = u.id
@@ -139,6 +140,7 @@ export async function handleRunAnalyticsCollector(request, response) {
             if (!acc[post.user_id]) {
                 acc[post.user_id] = { accessToken: post.linkedin_access_token, posts: [] };
             }
+            // Inclui author_urn no array de posts para ser usado no próximo reduce
             acc[post.user_id].posts.push({ id: post.id, urn: post.urn, author_urn: post.author_urn });
             return acc;
         }, {});
@@ -147,6 +149,8 @@ export async function handleRunAnalyticsCollector(request, response) {
 
         for (const [userId, userData] of Object.entries(postsByUser)) {
             try {
+                // ESTE REDUCE AGRUPA AS POSTAGENS PELO SEU URN DE AUTOR
+                // Isso garante que posts de ORG e PERSON não sejam misturados no mesmo batch.
                 const postsByAuthor = userData.posts.reduce((acc, post) => {
                     if (post.author_urn && post.urn) {
                         if (!acc[post.author_urn]) acc[post.author_urn] = [];
@@ -155,12 +159,14 @@ export async function handleRunAnalyticsCollector(request, response) {
                     return acc;
                 }, {});
 
+                // fetchStatsWithRefresh ITERA sobre 'postsByAuthor' (uma chamada por autor)
                 const statResponses = await fetchStatsWithRefresh(fetch, userId, userData.accessToken, postsByAuthor);
 
                 for (const res of statResponses) {
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
                         console.error(`Failed to fetch stats for a batch. Status: ${res.status}, Body: ${JSON.stringify(errorData)}`);
+                        // O erro 404/RESOURCE_NOT_FOUND (Batch Failed) ocorre aqui, mas é tratado como um erro de lote.
                         continue;
                     }
 
@@ -208,13 +214,13 @@ export async function handleRunAnalyticsCollector(request, response) {
                              (publication_id, snapshot_date, impression_count, click_count, like_count, comment_count, share_count, engagement)
                              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                              ON CONFLICT (publication_id, snapshot_date) DO UPDATE SET
-                                impression_count = EXCLUDED.impression_count,
-                                click_count = EXCLUDED.click_count,
-                                like_count = EXCLUDED.like_count,
-                                comment_count = EXCLUDED.comment_count,
-                                share_count = EXCLUDED.share_count,
-                                engagement = EXCLUDED.engagement,
-                                updated_at = NOW()`,
+                                 impression_count = EXCLUDED.impression_count,
+                                 click_count = EXCLUDED.click_count,
+                                 like_count = EXCLUDED.like_count,
+                                 comment_count = EXCLUDED.comment_count,
+                                 share_count = EXCLUDED.share_count,
+                                 engagement = EXCLUDED.engagement,
+                                 updated_at = NOW()`,
                             [post.id, snapshotDate, impressionCount, clickCount, likeCount, commentCount, shareCount, engagement]
                         );
                         processedCount++;
@@ -235,6 +241,7 @@ export async function handleRunAnalyticsCollector(request, response) {
         return response.status(500).json({ error: 'Internal Server Error during analytics collector run' });
     }
 }
+
 
 // Main handler for the cron job endpoint
 export default async function handler(request, response) {
