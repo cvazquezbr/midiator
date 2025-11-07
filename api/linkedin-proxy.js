@@ -51,6 +51,12 @@ async function handleTokenExchange(request, response) {
             WHERE id = $4`,
                 [access_token, expiryDate, refresh_token, userId]
             );
+
+            // 🛑 CORREÇÃO DE SEGURANÇA AQUI: Retorna apenas o que o cliente precisa.
+            return response.status(200).json({
+                access_token: access_token,
+                expires_in: expires_in
+            });
         }
 
         return response.status(linkedinResponse.status).json(data);
@@ -68,17 +74,17 @@ async function handleInitializeVideoUpload(request, response) {
 
     const initializeUrl = 'https://api.linkedin.com/rest/videos?action=initializeUpload';
 
-  try {
-    const linkedinResponse = await fetch(initializeUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202411'
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+        const linkedinResponse = await fetch(initializeUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202411'
+            },
+            body: JSON.stringify(payload),
+        });
 
         const data = await linkedinResponse.json();
         if (!linkedinResponse.ok) {
@@ -227,17 +233,17 @@ async function handleRegisterUpload(request, response) {
 
     const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
 
-  try {
-    const linkedinResponse = await fetch(registerUploadUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202411'
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+        const linkedinResponse = await fetch(registerUploadUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202411'
+            },
+            body: JSON.stringify(payload),
+        });
 
         const data = await linkedinResponse.json();
 
@@ -425,12 +431,12 @@ async function handleGetProfiles(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
     }
 
-  const headers = {
-    'Authorization': `Bearer ${accessToken}`,
-    'Content-Type': 'application/json',
-    'X-Restli-Protocol-Version': '2.0.0',
-    'LinkedIn-Version': '202411'
-  };
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202411'
+    };
 
     try {
         const [personalResponse, orgAclsResponse] = await Promise.all([
@@ -562,27 +568,27 @@ export async function handleGetProfileForTest(req, res) {
 }
 
 async function fetchWithRetry(url, options, retries = 5, initialBackoff = 3000) {
-  let backoff = initialBackoff;
-  for (let i = 0; i < retries; i++) {
-    const response = await fetch(url, options);
-    // Retry on rate limit or server errors
-    if (response.status === 429 || response.status >= 500) {
-      const isRateLimit = response.status === 429;
-      const retryAfterHeader = response.headers.get('Retry-After');
-      // Use Retry-After header if present (for 429), otherwise use exponential backoff
-      const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
-      const jitter = Math.random() * 1000;
+    let backoff = initialBackoff;
+    for (let i = 0; i < retries; i++) {
+        const response = await fetch(url, options);
+        // Retry on rate limit or server errors
+        if (response.status === 429 || response.status >= 500) {
+            const isRateLimit = response.status === 429;
+            const retryAfterHeader = response.headers.get('Retry-After');
+            // Use Retry-After header if present (for 429), otherwise use exponential backoff
+            const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+            const jitter = Math.random() * 1000;
 
-      const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
-      console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
-      await delay(retryAfter + jitter);
+            const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
+            console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter) / 1000)}s... (Attempt ${i + 1}/${retries})`);
+            await delay(retryAfter + jitter);
 
-      backoff *= 2;
-      continue;
+            backoff *= 2;
+            continue;
+        }
+        return response;
     }
-    return response;
-  }
-  throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
+    throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
 }
 
 async function handleGetShareStatistics(request, response) {
@@ -666,7 +672,7 @@ async function handleGetMemberPostStatistics(request, response) {
         });
 
         const data = await linkedinResponse.json();
-         if (linkedinResponse.ok) {
+        if (linkedinResponse.ok) {
             // Add urn to the response for mapping, as this API doesn't return it.
             data.urn = ugcPostUrn;
             return response.status(200).json(data);
@@ -688,15 +694,17 @@ async function handleGetMemberPostStatistics(request, response) {
 const internalRequestHandler = async (request, response) => {
     const { action } = request.body;
     switch (action) {
-        case 'uploadImage': // Legacy action, alias to the new one for robustness.
+        case 'uploadImage':
         case 'uploadAndCheckImage':
             return handleUploadAndCheckImage(request, response);
         case 'createPost':
             return handleCreatePost(request, response);
         case 'getShareStatistics':
-            return handleGetShareStatistics(request, response); 
+            return handleGetShareStatistics(request, response);
         case 'getMemberPostStatistics':
             return handleGetMemberPostStatistics(request, response);
+        case 'refreshTokenInternal': // <-- NOVO CASE NECESSÁRIO!
+            return handleRefreshToken(request, response); // Usa a função existente
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }
