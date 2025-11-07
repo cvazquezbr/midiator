@@ -594,111 +594,126 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
-async function getSinglePostAnalytics(accessToken, postUrn) {
-    const postType = postUrn.includes(':share:') ? 'share' : 'ugcPost';
-    const entityUrn = `(${postType}:${postUrn})`;
-    const encodedEntityParam = encodeURIComponent(entityUrn);
-    const statsUrl = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntityParam}`;
-    console.log(`[Analytics] Fetching stats for ${postUrn} using URL: ${statsUrl}`);
+async function fetchWithRetry(url, options, retries = 5, initialBackoff = 3000) {
+  let backoff = initialBackoff;
+  for (let i = 0; i < retries; i++) {
+    const response = await fetch(url, options);
+    // Retry on rate limit or server errors
+    if (response.status === 429 || response.status >= 500) {
+      const isRateLimit = response.status === 429;
+      const retryAfterHeader = response.headers.get('Retry-After');
+      // Use Retry-After header if present (for 429), otherwise use exponential backoff
+      const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+      const jitter = Math.random() * 1000;
+
+      const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
+      console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
+      await delay(retryAfter + jitter);
+
+      backoff *= 2;
+      continue;
+    }
+    return response;
+  }
+  throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
+}
+
+async function handleGetShareStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    const { authorUrn, shareUrns } = payload;
+
+    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
+        return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
+    }
+
+    // Separate URNs by type.
+    const shares = shareUrns.filter(u => u.includes(':share:'));
+    const ugcPosts = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
+
+    let url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
+    const queryParams = [];
+
+    // Use the standard List() format for both parameter types.
+    if (shares.length > 0) {
+        queryParams.push(`shares=List(${shares.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+    if (ugcPosts.length > 0) {
+        queryParams.push(`ugcPosts=List(${ugcPosts.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+
+    if (queryParams.length === 0) {
+        return response.status(200).json({ elements: [] }); // Nothing to fetch.
+    }
+
+    url += `&${queryParams.join('&')}`;
 
     try {
-        const linkedinResponse = await fetch(statsUrl, {
+        const res = await fetchWithRetry(url, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202507'
+            }
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Stats API responded with status ${res.status} for author ${authorUrn}:`, data);
+            return response.status(res.status).json(data);
+        }
+
+    } catch (error) {
+        console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to organizationalEntityShareStatistics`,
+            details: error.message,
+        });
+    }
+}
+
+
+async function handleGetMemberPostStatistics(request, response) {
+    const { accessToken, payload } = request.body;
+    const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
+
+    if (!accessToken || !ugcPostUrn || !queryType || !aggregation || !dateRange) {
+        return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
+    }
+
+    // The correct format for the entity parameter is `(ugc:<urn>)`.
+    const encodedEntity = encodeURIComponent(`(ugc:${ugcPostUrn})`);
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+
+    try {
+        const linkedinResponse = await fetchWithRetry(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
                 'LinkedIn-Version': '202507'
             },
         });
 
         const data = await linkedinResponse.json();
-        if (linkedinResponse.ok) {
-            data.urn = postUrn; // Add urn to the response for mapping
-        }
-        return {
-            status: linkedinResponse.status,
-            data
-        };
-    } catch (error) {
-        console.error(`[Analytics] Error fetching stats for ${postUrn}:`, error);
-        return {
-            status: 500,
-            data: {
-                error: `Internal Server Error while fetching analytics for ${postUrn}`,
-                urn: postUrn
-            }
-        };
-    }
-}
-
-
-// Handler for a batch of share statistics for an author (organization or person)
-async function handleGetShareStatistics(request, response) {
-    const { accessToken, payload } = request.body;
-    let { authorUrn, shareUrns } = payload; // APLICAÇÃO DO PATCH: 'let' e não 'const'
-
-    // APLICAÇÃO DO PATCH: Remoção de '|| !Array.isArray(shareUrns)'
-    if (!accessToken || !authorUrn || !shareUrns) {
-        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
-    }
-
-    // APLICAÇÃO DO PATCH: Garante que shareUrns seja sempre um array para consistência no processamento.
-    if (!Array.isArray(shareUrns)) {
-        shareUrns = [shareUrns];
-    }
-
-    console.log(`[Analytics] Starting batch fetch for ${shareUrns.length} organization shares for author ${authorUrn}.`);
-
-    const promises = shareUrns.map(urn => getSinglePostAnalytics(accessToken, urn));
-    const results = await Promise.all(promises);
-
-    const successfulResults = [];
-    let firstErrorStatus = null;
-    
-    // Process results to separate success from error
-    results.forEach(result => {
-        if (result.status >= 200 && result.status < 300) {
-            // Success: analytics data is in data.elements[0]
-            const analyticsData = result.data.elements?.[0];
-            if (analyticsData) {
-                // Ensure postUrn is included in the final result object
-                analyticsData.postUrn = result.data.urn;
-                successfulResults.push(analyticsData);
-            }
+         if (linkedinResponse.ok) {
+            // Add urn to the response for mapping, as this API doesn't return it.
+            data.urn = ugcPostUrn;
+            return response.status(200).json(data);
         } else {
-            // Failure
-            if (!firstErrorStatus) {
-                firstErrorStatus = result.status;
-            }
-            console.error(`[Analytics] Failed to fetch stats for ${result.data.urn}. Status: ${result.status}`, result.data);
+            console.error(`[ERROR] LinkedIn Member Post Stats API responded with status ${linkedinResponse.status} for post ${ugcPostUrn}:`, data);
+            return response.status(linkedinResponse.status).json(data);
         }
-    });
-
-    // If any error occurred, return the first one encountered.
-    if (firstErrorStatus) {
-        // Return 200 even with errors if we have partial data, or the first error status if no data was retrieved.
-        const finalStatus = successfulResults.length > 0 ? 207 : firstErrorStatus;
-        return response.status(finalStatus).json({
-            error: `Partial success. ${successfulResults.length} succeeded. First error status: ${firstErrorStatus}.`,
-            successfulResults
+    } catch (error) {
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to ${url}`,
+            details: error.message,
         });
     }
-
-    return response.status(200).json(successfulResults);
-}
-
-
-// A unified handler for getting stats for any single post URN.
-async function handleGetPostStatistics(request, response) {
-    const { accessToken, payload } = request.body;
-    const { postUrn } = payload;
-
-    if (!accessToken || !postUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or postUrn for getPostStatistics.' });
-    }
-
-    const result = await getSinglePostAnalytics(accessToken, postUrn);
-    return response.status(result.status).json(result.data);
 }
 
 
@@ -711,10 +726,10 @@ const internalRequestHandler = async (request, response) => {
             return handleUploadAndCheckImage(request, response);
         case 'createPost':
             return handleCreatePost(request, response);
-        case 'getPostStatistics':
-            return handleGetPostStatistics(request, response);
-        case 'getShareStatistics': // APLICAÇÃO DO PATCH: Adiciona o handler ao internal handler.
+        case 'getShareStatistics':
             return handleGetShareStatistics(request, response); 
+        case 'getMemberPostStatistics':
+            return handleGetMemberPostStatistics(request, response);
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }
@@ -745,8 +760,6 @@ const protectedHandler = async (request, response) => {
             return handleFinalizeVideoUpload(request, response);
         case 'checkVideoStatus':
             return handleCheckVideoStatus(request, response);
-        case 'getShareStatistics': // APLICAÇÃO DO PATCH: Adiciona o handler ao protected handler.
-            return handleGetShareStatistics(request, response);
         case 'getClientId':
              return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
         default:

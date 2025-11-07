@@ -10,7 +10,6 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         'X-Internal-Secret': process.env.INTERNAL_API_SECRET,
     };
 
-    // This function now takes the token explicitly to avoid closure issues.
     const callProxy = (action, payload, token) => {
         return fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
             method: 'POST',
@@ -23,25 +22,43 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    // This function now takes the token explicitly and processes all posts individually.
     const processAuthor = async (authorUrn, posts, token) => {
-        const results = [];
-        console.log(`[Analytics] Processing ${posts.length} total posts for author ${authorUrn}`);
+        if (authorUrn.includes(':organization:')) {
+            const urns = posts.map(p => p.urn);
+            // Return a single promise that resolves to the response
+            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
+        } else {
+            const results = [];
+            for (const post of posts) {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 90);
 
-        for (const post of posts) {
-            const res = await callProxy('getPostStatistics', { postUrn: post.urn }, token);
-            results.push(res);
-            await delay(500); // Stagger requests to be kind to the API
+                const payload = {
+                    ugcPostUrn: post.urn,
+                    queryType: 'TOTAL',
+                    aggregation: 'TOTAL',
+                    dateRange: {
+                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+                    }
+                };
+                const res = await callProxy('getMemberPostStatistics', payload, token);
+                results.push(res);
+                await delay(500); // Stagger requests
+            }
+            return results;
         }
-        return results;
     };
 
     let allResults = [];
     let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
-        // Initial attempt
-        let responses = await processAuthor(authorUrn, posts, currentAccessToken);
+        let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
+
+        const isSingleResponse = !Array.isArray(responseOrResponses);
+        const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
 
         const needsRefresh = responses.some(res => res.status === 401);
 
@@ -55,21 +72,21 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
             if (!refreshResponse.ok) {
                 console.warn(`Could not refresh token for user ${userId}, they may have revoked access. Skipping their posts.`);
-                continue; // Skip this author and move to the next.
+                continue;
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken; // Update token for subsequent authors for this user.
-            console.log(`Token refreshed for user ${userId}. Retrying stat collection for author ${authorUrn}...`);
+            currentAccessToken = newAccessToken;
+            console.log(`Token refreshed for user ${userId}. Retrying stat collection for ${authorUrn}...`);
             await delay(1000);
 
-            // Retry the API calls for the current author with the new token.
-            responses = await processAuthor(authorUrn, posts, newAccessToken);
+            responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
         }
 
-        allResults.push(...responses);
+        allResults.push(responseOrResponses);
     }
-    return allResults;
+
+    return allResults.flat();
 }
 
 
@@ -126,13 +143,13 @@ export async function handleRunAnalyticsCollector(request, response) {
                     }
 
                     const data = await res.json();
-                    const statsList = data.elements || [data]; // Handle both single and multi-element responses
+                    const statsList = data.elements || [data];
 
                     for (const stat of statsList) {
                         const urn = stat.share || stat.ugcPost || stat.post || data.urn;
-                        // For member stats, the data is in the 'elements' array, but the stats are nested differently.
-                        // For share stats (organizations), the data is in `totalShareStatistics`.
                         let statsData = stat.totalShareStatistics;
+
+                        // Handle the different structure from member analytics
                         if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
                             statsData = {
                                 impressionCount: stat.totalImpressions?.count || stat.impressionCount || 0,
@@ -144,7 +161,10 @@ export async function handleRunAnalyticsCollector(request, response) {
                             };
                         }
 
-                        if (!statsData) continue;
+                        if (!urn || !statsData) {
+                             console.warn('Skipping stat object without URN or statistics:', stat);
+                            continue;
+                        }
 
                         const post = userData.posts.find(p => p.urn === urn);
                         if (!post) {
