@@ -684,8 +684,8 @@ async function handleGetMemberPostStatistics(request, response) {
         return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
     }
 
-    // The correct format for the entity parameter is `(ugc:<urn>)`.
-    const encodedEntity = encodeURIComponent(`(ugc:${ugcPostUrn})`);
+    // The correct format for the entity parameter is `(ugcPost:<urn>)`.
+    const encodedEntity = encodeURIComponent(`(ugcPost:${ugcPostUrn})`);
     const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
 
     try {
