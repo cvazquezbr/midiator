@@ -1,6 +1,6 @@
 import { withAdminAuth } from '../middleware/auth.js';
 import { list } from '@vercel/blob';
-import { db } from '../db.js';
+import * as db from '../db.js';
 
 const handler = async (req, res) => {
   if (req.method !== 'GET') {
