@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Typography,
   Box,
@@ -45,7 +45,62 @@ const ImageStepUI = ({
     imageColorPalette,
     initialFieldStyles,
     templateFieldStyles,
+    aspectRatio,
   } = campaignState;
+
+  const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
+  const previewContainerRef = useRef(null);
+
+  useEffect(() => {
+    const updatePreviewSize = () => {
+      if (!previewContainerRef.current || !aspectRatio) {
+        return;
+      }
+
+      const container = previewContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      const ratioStr = aspectRatio.toString().replace(/\s/g, '');
+      const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
+
+      if (!w || !h) {
+        return;
+      }
+
+      const targetRatio = w / h;
+      const widthBasedHeight = containerWidth / targetRatio;
+      const heightBasedWidth = containerHeight * targetRatio;
+
+      let finalWidth, finalHeight;
+
+      if (widthBasedHeight <= containerHeight) {
+        finalWidth = containerWidth;
+        finalHeight = widthBasedHeight;
+      } else {
+        finalWidth = heightBasedWidth;
+        finalHeight = containerHeight;
+      }
+
+      setPreviewSize({
+        width: `${finalWidth}px`,
+        height: `${finalHeight}px`
+      });
+    };
+
+    const timeoutId = setTimeout(updatePreviewSize, 100);
+    const resizeObserver = new ResizeObserver(updatePreviewSize);
+
+    if (previewContainerRef.current) {
+      resizeObserver.observe(previewContainerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [aspectRatio]);
+
 
   // This is the CRITICAL FIX:
   // We assemble the `editorState` object that the refactored child components (`FieldPositioner`, `FormattingPanel`) now expect.
@@ -106,18 +161,41 @@ const ImageStepUI = ({
         </Typography>
         {csvData && csvData.length > 0 && pageTemplate && fieldPositions && fieldStyles ? (
           <>
-            <Box sx={{ flexGrow: 1, display: 'grid', placeItems: 'center', p: 1, minWidth: 0, minHeight: 0, overflow: 'auto', '& > div': { width: '100%', height: '100%' } }}>
-              <FieldPositioner
-                editorState={editorState}
-                setEditorState={handleEditorStateChange} // Pass the translator function
-                selectedField={selectedField}
-                setSelectedField={(value) => setCampaignState({ selectedField: value })}
-                originalImageSize={originalImageSize}
-                onOpenHtmlEditor={onOpenHtmlEditor}
-                currentPreviewIndex={currentPreviewIndex}
-                onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-                isCropping={isCropping}
-              />
+            <Box
+              ref={previewContainerRef}
+              sx={{
+                flexGrow: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 0,
+                minHeight: 0,
+                overflow: 'hidden',
+                position: 'relative',
+                padding: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  aspectRatio: aspectRatio || '1 / 1',
+                  width: previewSize.width,
+                  height: previewSize.height,
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                }}
+              >
+                <FieldPositioner
+                  editorState={editorState}
+                  setEditorState={handleEditorStateChange} // Pass the translator function
+                  selectedField={selectedField}
+                  setSelectedField={(value) => setCampaignState({ selectedField: value })}
+                  originalImageSize={originalImageSize}
+                  onOpenHtmlEditor={onOpenHtmlEditor}
+                  currentPreviewIndex={currentPreviewIndex}
+                  onImageDisplayedSizeChange={onImageDisplayedSizeChange}
+                  isCropping={isCropping}
+                />
+              </Box>
             </Box>
             {csvData && csvData.length > 1 && (
               <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0, mt: 2 }} flexWrap="wrap">
