@@ -20,6 +20,7 @@ import {
   CloudSync,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
+import BlobStorageCharts from './BlobStorageCharts';
 
 const VercelBlobAdmin = () => {
   const [data, setData] = useState(null);
@@ -122,6 +123,7 @@ const VercelBlobAdmin = () => {
 
       {data && (
         <Box>
+          <BlobStorageCharts data={data} />
           <Typography variant="h6" sx={{ mt: 4 }}>Campaign Storage Usage</Typography>
           <TableContainer component={Paper} sx={{ mb: 4 }}>
             <Table>
