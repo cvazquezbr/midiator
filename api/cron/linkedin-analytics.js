@@ -25,10 +25,15 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     const processAuthor = async (authorUrn, posts, token) => {
         if (authorUrn.includes(':organization:')) {
             const urns = posts.map(p => p.urn);
-            // Organização: Chamada única em lote (organizationalEntityShareStatistics)
-            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
+            // 🎯 ORGANIZAÇÃO: Retorna o array de posts junto com a promessa para manter o contexto de falha de lote
+            const response = await callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
+            // Retorna um objeto que contém a resposta e a lista de posts do lote
+            return [{
+                postsInBatch: posts, // Lista de {id, urn} do lote
+                response: response
+            }];
         } else {
-            // Membro (Pessoa): Múltiplas chamadas (memberCreatorPostAnalytics)
+            // 🎯 MEMBRO: Múltiplas chamadas. Retorna o ID/URN junto com a promessa
             const fetchPromises = posts.map(post => {
                 const endDate = new Date();
                 const startDate = new Date();
@@ -39,21 +44,22 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
                     queryType: 'TOTAL',
                     aggregation: 'TOTAL',
                     dateRange: {
-                        start: {
-                            day: startDate.getUTCDate(),
-                            month: startDate.getUTCMonth() + 1,
-                            year: startDate.getUTCFullYear()
-                        },
-                        end: {
-                            day: endDate.getUTCDate(),
-                            month: endDate.getUTCMonth() + 1,
-                            year: endDate.getUTCFullYear()
-                        }
+                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
                     }
                 };
-                return callProxy('getMemberPostStatistics', payload, token);
+                
+                // Retorna um objeto com o contexto (ID, URN) e a promessa
+                return { id: post.id, urn: post.urn, promise: callProxy('getMemberPostStatistics', payload, token) };
             });
-            return Promise.all(fetchPromises);
+            
+            // Aguarda todas as promessas e anexa a resposta ao objeto de contexto
+            const results = await Promise.all(fetchPromises.map(p => p.promise));
+            return results.map((res, index) => ({
+                id: fetchPromises[index].id,
+                urn: fetchPromises[index].urn,
+                response: res
+            }));
         }
     };
 
@@ -61,13 +67,13 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
-        // Aqui guardamos o contexto de qual authorUrn (e quais posts) estamos tentando
-        let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
+        // posts agora é um array de objetos que contêm {id, urn, response} ou {postsInBatch, response}
+        let responsesWithContext = await processAuthor(authorUrn, posts, currentAccessToken);
 
-        const isSingleResponse = !Array.isArray(responseOrResponses);
-        const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
+        // responsesToCheck verifica se precisamos de refresh, pegando o objeto Response de dentro
+        const responsesToCheck = responsesWithContext.map(item => item.response);
 
-        const needsRefresh = responses.some(res => res.status === 401);
+        const needsRefresh = responsesToCheck.some(res => res.status === 401);
 
         if (needsRefresh) {
             console.log(`Token expired for user ${userId}. Refreshing...`);
@@ -87,20 +93,15 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             console.log(`Token refreshed for user ${userId}. Retrying stat collection for ${authorUrn}...`);
             await delay(1000);
 
-            responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
+            // Tenta novamente
+            responsesWithContext = await processAuthor(authorUrn, posts, newAccessToken);
         }
-
-        // Se a resposta for um único objeto (Organização), adicionamos os posts para rastreamento de falhas.
-        if (isSingleResponse) {
-            allResults.push({ authorUrn: authorUrn, posts: posts, response: responseOrResponses });
-        } else {
-            // Se for um array de respostas (Membro), adicionamos o array para tratamento.
-            allResults.push(responseOrResponses);
-        }
+        
+        // allResults é agora uma lista de objetos que contêm o contexto (ID/URN) e a resposta
+        allResults.push(...responsesWithContext);
     }
 
-    // Retornamos o array com o contexto de falha incluído para o loop principal
-    return allResults.flat();
+    return allResults;
 }
 
 
@@ -111,6 +112,7 @@ export async function handleRunAnalyticsCollector(request, response) {
     let processedCount = 0;
     let failedCount = 0;
     let apiFailedCount = 0;
+    let failingUrns = []; // Array para armazenar os URNs que falham
 
     try {
         const threeMonthsAgo = new Date();
@@ -148,32 +150,39 @@ export async function handleRunAnalyticsCollector(request, response) {
                     return acc;
                 }, {});
 
-                const statResponses = await fetchStatsWithRefresh(fetch, userId, userData.accessToken, postsByAuthor);
+                const statResponsesWithContext = await fetchStatsWithRefresh(fetch, userId, userData.accessToken, postsByAuthor);
 
-                for (const item of statResponses) {
-                    const res = item.response || item;
-                    const isOrganizationBatch = item.authorUrn && item.posts && item.authorUrn.includes(':organization:');
-
+                // ITERAÇÃO FINAL: Cada "item" tem agora {id, urn, response} (para Membro) ou {postsInBatch, response} (para Organização)
+                for (const item of statResponsesWithContext) {
+                    const res = item.response;
+                    const isOrganizationBatch = !!item.postsInBatch; // É um objeto de lote de organização
+                    
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        apiFailedCount++;
-
-                        // 🎯 AJUSTE DE LOGGING PARA IDENTIFICAR URNs FALHOS
+                        apiFailedCount++; 
+                        
+                        // 🎯 LOGGING FINAL PARA IDENTIFICAR URNs FALHOS
                         if (isOrganizationBatch) {
-                            const failedUrns = item.posts.map(p => p.urn);
-                            console.error(`--- FALHA DE LOTE DA ORGANIZAÇÃO (404) ---`);
-                            console.error(`Status: ${res.status}, Autor URN: ${item.authorUrn}`);
+                            // Se o LOTE falhar, assumimos que TODOS os URNs daquele lote estão falhando permanentemente.
+                            const failedBatchUrns = item.postsInBatch.map(p => p.urn);
+                            failingUrns.push(...failedBatchUrns);
+                            console.error(`--- FALHA DE LOTE DE ORGANIZAÇÃO (404/Batch Failed) ---`);
+                            console.error(`Status: ${res.status}, URNs no Lote: ${failedBatchUrns.join(', ')}`);
                             console.error(`Corpo: ${JSON.stringify(errorData)}`);
-                            console.error(`POSSÍVEIS URNs FALHOS NO LOTE: ${failedUrns.join(', ')}`);
-                            console.error(`--------------------------------------`);
+                            console.error(`-----------------------------------------------------`);
                         } else {
-                            // Se for falha de Membro, o item.urn/item.id virá da lógica do Promise.all em fetchStatsWithRefresh (que precisa ser ajustada, mas por enquanto logamos o erro genérico)
-                            console.error(`Falha individual. Status: ${res.status}, Corpo: ${JSON.stringify(errorData)}`);
+                            // Falha individual (Membro)
+                            failingUrns.push(item.urn);
+                            console.error(`--- FALHA INDIVIDUAL (404/Resource Not Found) ---`);
+                            console.error(`Status: ${res.status}, URN Falho: ${item.urn}, ID no DB: ${item.id}`);
+                            console.error(`Corpo: ${JSON.stringify(errorData)}`);
+                            console.error(`-----------------------------------------------`);
                         }
 
                         continue;
                     }
 
+                    // Processamento de sucesso (o mesmo de antes)
                     const data = await res.json();
                     const statsList = data.elements || [data];
 
@@ -184,47 +193,28 @@ export async function handleRunAnalyticsCollector(request, response) {
                         // Lógica para lidar com diferentes estruturas de analytics
                         if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
                             statsData = {
-                                impressionCount: stat.totalImpressions?.count || 0,
-                                likeCount: stat.reactionSummaries?.LIKE || 0,
-                                commentCount: stat.totalComments?.count || 0,
-                                shareCount: stat.totalReshares?.count || 0,
-                                clickCount: stat.totalClicks?.count || 0,
-                                engagement: stat.engagementRate?.rate || 0,
+                                impressionCount: stat.totalImpressions?.count || 0, likeCount: stat.reactionSummaries?.LIKE || 0,
+                                commentCount: stat.totalComments?.count || 0, shareCount: stat.totalReshares?.count || 0,
+                                clickCount: stat.totalClicks?.count || 0, engagement: stat.engagementRate?.rate || 0,
                             };
                         }
 
-                        if (!urn || !statsData) {
-                            console.warn('Skipping stat object without URN or statistics:', stat);
-                            continue;
-                        }
+                        if (!urn || !statsData) { console.warn('Skipping stat object without URN or statistics:', stat); continue; }
 
-                        const post = userData.posts.find(p => p.urn === urn);
-                        if (!post) {
-                            console.warn(`Could not find matching post in our DB for URN: ${urn}`);
-                            continue;
-                        }
+                        // Para post de Organização (lote), precisamos encontrar o post pelo URN no DB
+                        const post = userData.posts.find(p => p.urn === urn); 
+                        if (!post) { console.warn(`Could not find matching post in our DB for URN: ${urn}`); continue; }
 
-                        const {
-                            impressionCount = 0,
-                            likeCount = 0,
-                            commentCount = 0,
-                            shareCount = 0,
-                            clickCount = 0,
-                            engagement = 0
-                        } = statsData;
+                        const { impressionCount = 0, likeCount = 0, commentCount = 0, shareCount = 0, clickCount = 0, engagement = 0 } = statsData;
 
                         await query(
                             `INSERT INTO linkedin_post_analytics
-                                (publication_id, snapshot_date, impression_count, click_count, like_count, comment_count, share_count, engagement)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                             (publication_id, snapshot_date, impression_count, click_count, like_count, comment_count, share_count, engagement)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                              ON CONFLICT (publication_id, snapshot_date) DO UPDATE SET
-                                 impression_count = EXCLUDED.impression_count,
-                                 click_count = EXCLUDED.click_count,
-                                 like_count = EXCLUDED.like_count,
-                                 comment_count = EXCLUDED.comment_count,
-                                 share_count = EXCLUDED.share_count,
-                                 engagement = EXCLUDED.engagement,
-                                 updated_at = NOW()`,
+                                 impression_count = EXCLUDED.impression_count, click_count = EXCLUDED.click_count,
+                                 like_count = EXCLUDED.like_count, comment_count = EXCLUDED.comment_count,
+                                 share_count = EXCLUDED.share_count, engagement = EXCLUDED.engagement, updated_at = NOW()`,
                             [post.id, snapshotDate, impressionCount, clickCount, likeCount, commentCount, shareCount, engagement]
                         );
                         processedCount++;
@@ -238,6 +228,15 @@ export async function handleRunAnalyticsCollector(request, response) {
 
         const summary = `Analytics collector finished. Processed: ${processedCount}, Failed Batches: ${failedCount}. Individual API Failures: ${apiFailedCount}.`;
         console.log(summary);
+        
+        // RESULTADO FINAL: Lista de todos os URNs que falharam nesta rodada (9 URNs)
+        if (failingUrns.length > 0) {
+            console.log("-----------------------------------------------");
+            console.log(`LISTA FINAL DE URNs COM FALHA PERMANENTE (404):`);
+            console.log(failingUrns.join(',\n'));
+            console.log("-----------------------------------------------");
+        }
+        
         return response.status(200).json({ message: summary });
 
     } catch (error) {
