@@ -25,39 +25,30 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
     // This function now takes the token explicitly.
     const processAuthor = async (authorUrn, posts, token) => {
-        const results = [];
-        const isOrganization = authorUrn.includes(':organization:');
+        if (authorUrn.includes(':organization:')) {
+            const urns = posts.map(p => p.urn);
+            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
+        } else {
+            const results = [];
+            for (const post of posts) {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 90);
 
-        const shareUrns = posts.filter(p => p.urn.includes(':share:')).map(p => p.urn);
-        const ugcPostUrns = posts.filter(p => p.urn.includes(':ugcPost:')).map(p => p.urn);
-
-        // 1. Handle Organization Share URNs in a batch
-        if (isOrganization && shareUrns.length > 0) {
-            console.log(`[Analytics] Processing ${shareUrns.length} share URNs in a batch for organization ${authorUrn}`);
-            const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
-            results.push(res);
-        }
-
-        // 2. Handle Personal Share URNs individually
-        if (!isOrganization && shareUrns.length > 0) {
-            console.log(`[Analytics] Processing ${shareUrns.length} personal share URNs individually for author ${authorUrn}`);
-            for (const urn of shareUrns) {
-                const res = await callProxy('getPersonalShareStatistics', { shareUrn: urn }, token);
+                const payload = {
+                    ugcPostUrn: post.urn,
+                    queryType: 'TOTAL',
+                    aggregation: 'TOTAL',
+                    dateRange: {
+                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+                    }
+                };
+                const res = await callProxy('getMemberPostStatistics', payload, token);
                 results.push(res);
-                await delay(500);
             }
+            return results;
         }
-
-        // 3. Handle all ugcPost URNs individually
-        if (ugcPostUrns.length > 0) {
-            console.log(`[Analytics] Processing ${ugcPostUrns.length} ugcPost URNs individually for author ${authorUrn}`);
-            for (const urn of ugcPostUrns) {
-                const res = await callProxy('getMemberPostStatistics', { ugcPostUrn: urn }, token);
-                results.push(res);
-                await delay(500);
-            }
-        }
-        return results;
     };
 
     let allResults = [];
@@ -153,21 +144,21 @@ export async function handleRunAnalyticsCollector(request, response) {
                     }
 
                     const data = await res.json();
-                    const statsList = data.elements || [data]; // Handle both single and multi-element responses
+                    const statsList = data.elements || [];
 
                     for (const stat of statsList) {
                         const urn = stat.share || stat.ugcPost || stat.post || data.urn;
                         // For member stats, the data is in the 'elements' array, but the stats are nested differently.
                         // For share stats (organizations), the data is in `totalShareStatistics`.
                         let statsData = stat.totalShareStatistics;
-                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
+                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries)) {
                             statsData = {
-                                impressionCount: stat.totalImpressions?.count || stat.impressionCount || 0,
+                                impressionCount: stat.totalImpressions?.count || 0,
                                 likeCount: stat.reactionSummaries?.LIKE || 0,
-                                commentCount: stat.totalComments?.count || stat.commentCount || 0,
-                                shareCount: stat.totalReshares?.count || stat.shareCount || 0,
-                                clickCount: stat.totalClicks?.count || stat.clickCount || 0,
-                                engagement: stat.engagementRate?.rate || stat.engagement || 0,
+                                commentCount: stat.totalComments?.count || 0,
+                                shareCount: stat.totalReshares?.count || 0,
+                                clickCount: stat.totalClicks?.count || 0,
+                                engagement: stat.engagementRate?.rate || 0,
                             };
                         }
 
