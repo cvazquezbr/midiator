@@ -166,10 +166,11 @@ const AdminDashboardPage = () => {
         ) : error ? (
           <Alert severity="error">{error}</Alert>
         ) : (
-          <Box sx={{ height: '70vh', width: '100%' }}>
+          <Box sx={{ width: '100%' }}>
             <DataGrid
               rows={users}
               columns={columns}
+              autoHeight
               pageSize={10}
               rowsPerPageOptions={[10, 25, 50]}
               checkboxSelection
