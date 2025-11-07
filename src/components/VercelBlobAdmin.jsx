@@ -27,6 +27,7 @@ const VercelBlobAdmin = () => {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
 
   const fetchData = useCallback(async () => {
+    toast.info('Sync & Analyze button clicked. Fetching data...');
     setLoading(true);
     try {
       const response = await fetch('/api/blob/admin');
