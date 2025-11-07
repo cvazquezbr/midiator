@@ -2,7 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { DataGrid } from '@mui/x-data-grid';
-import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton, Tabs, Tab, AppBar } from '@mui/material';
+import {
+  Box, Button, Container, Typography, Paper, CircularProgress, Alert,
+  IconButton, Tabs, Tab, AppBar, Card, CardContent, CardActions, useMediaQuery
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Delete as DeleteIcon, Edit as EditIcon, PlayCircleOutline as PlayCircleOutlineIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import VercelBlobAdmin from '../components/VercelBlobAdmin';
@@ -39,6 +43,8 @@ const AdminDashboardPage = () => {
   const { user: adminUser, logout } = useUserAuth();
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -185,15 +191,42 @@ const AdminDashboardPage = () => {
             <Alert severity="error">{error}</Alert>
           ) : (
             <Box sx={{ width: '100%' }}>
-              <DataGrid
-                rows={users}
-                columns={columns}
-                autoHeight
-                pageSize={10}
-                rowsPerPageOptions={[10, 25, 50]}
-                checkboxSelection
-                disableSelectionOnClick
-              />
+              {isMobile ? (
+                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+                  {users.map((user) => (
+                    <Card key={user.id} variant="outlined">
+                      <CardContent>
+                        <Typography variant="h6" component="div" noWrap>{user.name}</Typography>
+                        <Typography sx={{ mb: 1.5 }} color="text.secondary" noWrap>{user.email}</Typography>
+                        <Typography variant="body2">ID: {user.id}</Typography>
+                        <Typography variant="body2">Role: {user.role}</Typography>
+                      </CardContent>
+                      <CardActions>
+                        <IconButton onClick={() => handleEdit(user)} aria-label="edit">
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handleDelete(user.id, user.name)}
+                          aria-label="delete"
+                          disabled={user.id === adminUser.sub}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </CardActions>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <DataGrid
+                  rows={users}
+                  columns={columns}
+                  autoHeight
+                  pageSize={10}
+                  rowsPerPageOptions={[10, 25, 50]}
+                  checkboxSelection
+                  disableSelectionOnClick
+                />
+              )}
             </Box>
           )}
         </TabPanel>
