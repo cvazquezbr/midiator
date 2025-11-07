@@ -45,10 +45,10 @@ async function handleTokenExchange(request, response) {
 
             await query(
                 `UPDATE users SET
-                linkedin_access_token = $1,
-                linkedin_access_token_expiry = $2,
-                linkedin_refresh_token = $3
-            WHERE id = $4`,
+                    linkedin_access_token = $1,
+                    linkedin_access_token_expiry = $2,
+                    linkedin_refresh_token = $3
+                WHERE id = $4`,
                 [access_token, expiryDate, refresh_token, userId]
             );
 
@@ -657,9 +657,11 @@ async function handleGetMemberPostStatistics(request, response) {
         return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
     }
 
-    // The entity parameter should be the complete URN, URL-encoded
-    const encodedEntity = encodeURIComponent(ugcPostUrn);
-    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+    // A URN do post (ugcPostUrn) deve ser usada como o parâmetro 'ugcPost' na query string.
+    const encodedUgcPost = encodeURIComponent(ugcPostUrn);
+
+    // 🛑 CORREÇÃO: Usar 'q=ugcPost' e o parâmetro 'ugcPost' na URL.
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=ugcPost&ugcPost=${encodedUgcPost}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
 
     try {
         const linkedinResponse = await fetchWithRetry(url, {
