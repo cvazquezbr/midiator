@@ -60,19 +60,20 @@ export const UserAuthContextProvider = ({ children, initialUser = null, initialT
       });
       const data = await res.json();
       if (res.ok) {
+        toast.success('Login successful!');
+        setLoading(false); // Update loading state before user state
         setUser(data.user);
         setGoogleAccessToken(data.user.googleAccessToken);
-        toast.success('Login successful!');
         return true;
       } else {
         toast.error(data.error || 'Login failed.');
+        setLoading(false);
         return false;
       }
     } catch (error) {
       toast.error('An error occurred during login.');
-      return false;
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
@@ -110,19 +111,20 @@ export const UserAuthContextProvider = ({ children, initialUser = null, initialT
       });
       const data = await res.json();
       if (res.ok) {
+        toast.success('Successfully signed in with Google!');
+        setLoading(false); // Update loading state before user state
         setUser(data.user);
         setGoogleAccessToken(data.user.googleAccessToken);
-        toast.success('Successfully signed in with Google!');
         return true;
       } else {
         toast.error(data.error || 'Google Sign-In failed.');
+        setLoading(false);
         return false;
       }
     } catch (error) {
       toast.error('An error occurred during Google Sign-In.');
-      return false;
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
