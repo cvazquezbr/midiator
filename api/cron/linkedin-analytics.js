@@ -37,7 +37,7 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             const fetchPromises = posts.map(post => {
                 const endDate = new Date();
                 const startDate = new Date();
-                startDate.setDate(endDate.getDate() - 90);
+                startDate.setDate(endDate.getDate() - 35);
 
                 const payload = {
                     ugcPostUrn: post.urn,
@@ -48,11 +48,11 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
                         end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
                     }
                 };
-                
+
                 // Retorna um objeto com o contexto (ID, URN) e a promessa
                 return { id: post.id, urn: post.urn, promise: callProxy('getMemberPostStatistics', payload, token) };
             });
-            
+
             // Aguarda todas as promessas e anexa a resposta ao objeto de contexto
             const results = await Promise.all(fetchPromises.map(p => p.promise));
             return results.map((res, index) => ({
@@ -96,7 +96,7 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             // Tenta novamente
             responsesWithContext = await processAuthor(authorUrn, posts, newAccessToken);
         }
-        
+
         // allResults é agora uma lista de objetos que contêm o contexto (ID/URN) e a resposta
         allResults.push(...responsesWithContext);
     }
@@ -115,19 +115,20 @@ export async function handleRunAnalyticsCollector(request, response) {
     let failingUrns = []; // Array para armazenar os URNs que falham
 
     try {
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         const { rows: posts } = await query(
             `SELECT ls.id, ls.linkedin_post_id AS urn, ls.user_id, ls.post_content->>'authorUrn' as author_urn, u.linkedin_access_token
              FROM linkedin_schedules ls
              JOIN users u ON ls.user_id = u.id
              WHERE ls.status = 'published' AND ls.scheduled_at >= $1 AND ls.linkedin_post_id IS NOT NULL AND u.linkedin_access_token IS NOT NULL`,
-            [threeMonthsAgo]
+            [thirtyDaysAgo]
         );
 
         if (posts.length === 0) {
-            return response.status(200).json({ message: 'No published posts in the last 3 months to analyze.' });
+            return response.status(200).json({ message: 'No published posts in the last 30 days to analyze.' });
         }
 
         const postsByUser = posts.reduce((acc, post) => {
@@ -156,11 +157,11 @@ export async function handleRunAnalyticsCollector(request, response) {
                 for (const item of statResponsesWithContext) {
                     const res = item.response;
                     const isOrganizationBatch = !!item.postsInBatch; // É um objeto de lote de organização
-                    
+
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        apiFailedCount++; 
-                        
+                        apiFailedCount++;
+
                         // 🎯 LOGGING FINAL PARA IDENTIFICAR URNs FALHOS
                         if (isOrganizationBatch) {
                             // Se o LOTE falhar, assumimos que TODOS os URNs daquele lote estão falhando permanentemente.
@@ -202,7 +203,7 @@ export async function handleRunAnalyticsCollector(request, response) {
                         if (!urn || !statsData) { console.warn('Skipping stat object without URN or statistics:', stat); continue; }
 
                         // Para post de Organização (lote), precisamos encontrar o post pelo URN no DB
-                        const post = userData.posts.find(p => p.urn === urn); 
+                        const post = userData.posts.find(p => p.urn === urn);
                         if (!post) { console.warn(`Could not find matching post in our DB for URN: ${urn}`); continue; }
 
                         const { impressionCount = 0, likeCount = 0, commentCount = 0, shareCount = 0, clickCount = 0, engagement = 0 } = statsData;
@@ -228,7 +229,7 @@ export async function handleRunAnalyticsCollector(request, response) {
 
         const summary = `Analytics collector finished. Processed: ${processedCount}, Failed Batches: ${failedCount}. Individual API Failures: ${apiFailedCount}.`;
         console.log(summary);
-        
+
         // RESULTADO FINAL: Lista de todos os URNs que falharam nesta rodada (9 URNs)
         if (failingUrns.length > 0) {
             console.log("-----------------------------------------------");
@@ -236,7 +237,7 @@ export async function handleRunAnalyticsCollector(request, response) {
             console.log(failingUrns.join(',\n'));
             console.log("-----------------------------------------------");
         }
-        
+
         return response.status(200).json({ message: summary });
 
     } catch (error) {

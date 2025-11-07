@@ -311,7 +311,7 @@ export const getLinkedInMemberPostStatistics = async (linkedinConfig, ugcPostUrn
 
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 90);
+    startDate.setDate(endDate.getDate() - 35);
 
     const payload = {
         ugcPostUrn,
