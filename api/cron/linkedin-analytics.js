@@ -10,7 +10,6 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         'X-Internal-Secret': process.env.INTERNAL_API_SECRET,
     };
 
-    // This function now takes the token explicitly to avoid closure issues.
     const callProxy = (action, payload, token) => {
         return fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
             method: 'POST',
@@ -23,25 +22,18 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         });
     };
 
-    // This function now takes the token explicitly and processes all posts individually.
-    const processAuthor = async (authorUrn, posts, token) => {
-        const results = [];
-        console.log(`[Analytics] Processing ${posts.length} total posts for author ${authorUrn}`);
-
-        for (const post of posts) {
-            const res = await callProxy('getPostStatistics', { postUrn: post.urn }, token);
-            results.push(res);
-            await delay(500); // Stagger requests to be kind to the API
-        }
-        return results;
+    const processAuthorBatch = async (authorUrn, posts, token) => {
+        const shareUrns = posts.map(p => p.urn);
+        console.log(`[Analytics] Processing batch of ${shareUrns.length} posts for author ${authorUrn}`);
+        const res = await callProxy('getShareStatistics', { authorUrn, shareUrns }, token);
+        return [res]; // Return as an array to keep the structure consistent
     };
 
     let allResults = [];
     let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
-        // Initial attempt
-        let responses = await processAuthor(authorUrn, posts, currentAccessToken);
+        let responses = await processAuthorBatch(authorUrn, posts, currentAccessToken);
 
         const needsRefresh = responses.some(res => res.status === 401);
 
@@ -55,16 +47,15 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
 
             if (!refreshResponse.ok) {
                 console.warn(`Could not refresh token for user ${userId}, they may have revoked access. Skipping their posts.`);
-                continue; // Skip this author and move to the next.
+                continue;
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken; // Update token for subsequent authors for this user.
+            currentAccessToken = newAccessToken;
             console.log(`Token refreshed for user ${userId}. Retrying stat collection for author ${authorUrn}...`);
             await delay(1000);
 
-            // Retry the API calls for the current author with the new token.
-            responses = await processAuthor(authorUrn, posts, newAccessToken);
+            responses = await processAuthorBatch(authorUrn, posts, newAccessToken);
         }
 
         allResults.push(...responses);
@@ -126,25 +117,18 @@ export async function handleRunAnalyticsCollector(request, response) {
                     }
 
                     const data = await res.json();
-                    const statsList = data.elements || [data]; // Handle both single and multi-element responses
+                    // The batch API response is always an object with an 'elements' array.
+                    const statsList = data.elements || [];
 
                     for (const stat of statsList) {
-                        const urn = stat.share || stat.ugcPost || stat.post || data.urn;
-                        // For member stats, the data is in the 'elements' array, but the stats are nested differently.
-                        // For share stats (organizations), the data is in `totalShareStatistics`.
-                        let statsData = stat.totalShareStatistics;
-                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
-                            statsData = {
-                                impressionCount: stat.totalImpressions?.count || stat.impressionCount || 0,
-                                likeCount: stat.reactionSummaries?.LIKE || 0,
-                                commentCount: stat.totalComments?.count || stat.commentCount || 0,
-                                shareCount: stat.totalReshares?.count || stat.shareCount || 0,
-                                clickCount: stat.totalClicks?.count || stat.clickCount || 0,
-                                engagement: stat.engagementRate?.rate || stat.engagement || 0,
-                            };
-                        }
+                        // In the new API, the URN is directly available in the 'share' or 'ugcPost' field.
+                        const urn = stat.share || stat.ugcPost;
+                        const statsData = stat.totalShareStatistics;
 
-                        if (!statsData) continue;
+                        if (!urn || !statsData) {
+                            console.warn('Skipping stat object without URN or statistics:', stat);
+                            continue;
+                        }
 
                         const post = userData.posts.find(p => p.urn === urn);
                         if (!post) {
