@@ -68,17 +68,17 @@ async function handleInitializeVideoUpload(request, response) {
 
     const initializeUrl = 'https://api.linkedin.com/rest/videos?action=initializeUpload';
 
-    try {
-        const linkedinResponse = await fetch(initializeUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
-            },
-            body: JSON.stringify(payload),
-        });
+  try {
+    const linkedinResponse = await fetch(initializeUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202411'
+      },
+      body: JSON.stringify(payload),
+    });
 
         const data = await linkedinResponse.json();
         if (!linkedinResponse.ok) {
@@ -145,7 +145,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload)
         });
@@ -176,7 +176,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             }
         });
         if (!linkedinResponse.ok) {
@@ -206,7 +206,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
         });
         const data = await linkedinResponse.json();
@@ -227,17 +227,17 @@ async function handleRegisterUpload(request, response) {
 
     const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
 
-    try {
-        const linkedinResponse = await fetch(registerUploadUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
-            },
-            body: JSON.stringify(payload),
-        });
+  try {
+    const linkedinResponse = await fetch(registerUploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202411'
+      },
+      body: JSON.stringify(payload),
+    });
 
         const data = await linkedinResponse.json();
 
@@ -267,7 +267,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202507'
+        'LinkedIn-Version': '202411'
     };
 
     // Step 1: Register Upload (using the modern /rest/images endpoint)
@@ -388,7 +388,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -425,12 +425,12 @@ async function handleGetProfiles(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
     }
 
-    const headers = {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202507'
-    };
+  const headers = {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+    'X-Restli-Protocol-Version': '2.0.0',
+    'LinkedIn-Version': '202411'
+  };
 
     try {
         const [personalResponse, orgAclsResponse] = await Promise.all([
@@ -561,98 +561,125 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
+async function fetchWithRetry(url, options, retries = 5, initialBackoff = 3000) {
+  let backoff = initialBackoff;
+  for (let i = 0; i < retries; i++) {
+    const response = await fetch(url, options);
+    // Retry on rate limit or server errors
+    if (response.status === 429 || response.status >= 500) {
+      const isRateLimit = response.status === 429;
+      const retryAfterHeader = response.headers.get('Retry-After');
+      // Use Retry-After header if present (for 429), otherwise use exponential backoff
+      const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+      const jitter = Math.random() * 1000;
+
+      const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
+      console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
+      await delay(retryAfter + jitter);
+
+      backoff *= 2;
+      continue;
+    }
+    return response;
+  }
+  throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
+}
+
 async function handleGetShareStatistics(request, response) {
     const { accessToken, payload } = request.body;
     const { authorUrn, shareUrns } = payload;
 
     if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
-        return response.status(400).json({ error: 'Missing accessToken or valid payload for getShareStatistics.' });
+        return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
     }
 
-    console.log(`[Proxy] Fetching batch share statistics for author ${authorUrn} with ${shareUrns.length} shares.`);
-    const sharesListString = `List(${shareUrns.join(',')})`;
-    // A codificação dupla estava causando o erro 400. A API espera o formato List(...) sem codificação de URL.
-    const statsUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&ugcPosts=${sharesListString}`;
+    // Separate URNs by type.
+    const shares = shareUrns.filter(u => u.includes(':share:'));
+    const ugcPosts = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
+
+    let url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
+    const queryParams = [];
+
+    // Use the standard List() format for both parameter types.
+    if (shares.length > 0) {
+        queryParams.push(`shares=List(${shares.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+    if (ugcPosts.length > 0) {
+        queryParams.push(`ugcPosts=List(${ugcPosts.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+
+    if (queryParams.length === 0) {
+        return response.status(200).json({ elements: [] }); // Nothing to fetch.
+    }
+
+    url += `&${queryParams.join('&')}`;
 
     try {
-        const linkedinResponse = await fetch(statsUrl, {
+        const res = await fetchWithRetry(url, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
-            },
+                'LinkedIn-Version': '202411'
+            }
         });
 
-        const data = await linkedinResponse.json();
-        return response.status(linkedinResponse.status).json(data);
+        const data = await res.json();
+
+        if (res.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Stats API responded with status ${res.status} for author ${authorUrn}:`, data);
+            return response.status(res.status).json(data);
+        }
+
     } catch (error) {
-        console.error('Error during proxied getShareStatistics:', error);
-        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+        console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to organizationalEntityShareStatistics`,
+            details: error.message,
+        });
     }
 }
+
 
 async function handleGetMemberPostStatistics(request, response) {
     const { accessToken, payload } = request.body;
-    const { ugcPostUrn } = payload;
+    const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
 
-    if (!accessToken || !ugcPostUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or ugcPostUrn for getMemberPostStatistics.' });
+    if (!accessToken || !ugcPostUrn || !queryType || !aggregation || !dateRange) {
+        return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
     }
 
-    console.log(`[Proxy] Fetching member post statistics for ugcPostUrn: ${ugcPostUrn}`);
-    const statsUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(ugcPostUrn)}/analytics`;
+    // The entity parameter should be the complete URN, URL-encoded
+    const encodedEntity = encodeURIComponent(ugcPostUrn);
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
 
     try {
-        const linkedinResponse = await fetch(statsUrl, {
+        const linkedinResponse = await fetchWithRetry(url, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
+                'LinkedIn-Version': '202411'
             },
         });
 
         const data = await linkedinResponse.json();
-        if (linkedinResponse.ok) {
+         if (linkedinResponse.ok) {
+            // Add urn to the response for mapping, as this API doesn't return it.
             data.urn = ugcPostUrn;
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Member Post Stats API responded with status ${linkedinResponse.status} for post ${ugcPostUrn}:`, data);
+            return response.status(linkedinResponse.status).json(data);
         }
-        return response.status(linkedinResponse.status).json(data);
     } catch (error) {
-        console.error('Error during proxied getMemberPostStatistics:', error);
-        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
-    }
-}
-
-async function handleGetPersonalShareStatistics(request, response) {
-    const { accessToken, payload } = request.body;
-    const { shareUrn } = payload;
-
-    if (!accessToken || !shareUrn) {
-        return response.status(400).json({ error: 'Missing accessToken or shareUrn for getPersonalShareStatistics.' });
-    }
-
-    console.log(`[Proxy] Fetching personal share statistics for shareUrn: ${shareUrn}`);
-    const statsUrl = `https://api.linkedin.com/rest/shares/${encodeURIComponent(shareUrn)}/analytics`;
-
-    try {
-        const linkedinResponse = await fetch(statsUrl, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202507'
-            },
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to ${url}`,
+            details: error.message,
         });
-
-        const data = await linkedinResponse.json();
-        if (linkedinResponse.ok) {
-            data.urn = shareUrn;
-        }
-        return response.status(linkedinResponse.status).json(data);
-    } catch (error) {
-        console.error('Error during proxied getPersonalShareStatistics:', error);
-        return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
     }
 }
 
@@ -667,13 +694,9 @@ const internalRequestHandler = async (request, response) => {
         case 'createPost':
             return handleCreatePost(request, response);
         case 'getShareStatistics':
-            return handleGetShareStatistics(request, response);
+            return handleGetShareStatistics(request, response); 
         case 'getMemberPostStatistics':
             return handleGetMemberPostStatistics(request, response);
-        case 'getPersonalShareStatistics':
-            return handleGetPersonalShareStatistics(request, response);
-        case 'refreshTokenInternal': // <-- NOVO: Adicione o caso 'refreshTokenInternal'
-            return handleRefreshToken(request, response); // <-- Chama a função de refresh existente
         default:
             return response.status(400).json({ error: `Invalid internal action: ${action}` });
     }
