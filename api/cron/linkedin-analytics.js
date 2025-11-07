@@ -4,16 +4,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const PROXY_API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
 
 // Fetches stats for a given set of posts, handling token refresh internally.
-// NOTA: Esta função pressupõe que 'query', 'delay' e 'PROXY_API_BASE_URL' estão definidos no escopo ou importados.
 async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByAuthor) {
     const internalApiHeaders = {
         'Content-Type': 'application/json',
-        // Assumindo que 'INTERNAL_API_SECRET' é usado para autenticar no seu proxy interno
         'X-Internal-Secret': process.env.INTERNAL_API_SECRET,
     };
 
     const callProxy = (action, payload, token) => {
-        // PROXY_API_BASE_URL deve estar definido externamente
         return fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
             method: 'POST',
             headers: internalApiHeaders,
@@ -32,19 +29,16 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
         } else {
             // Membro (Pessoa): Múltiplas chamadas (memberCreatorPostAnalytics)
-            // Corrigido para rodar em paralelo usando Promise.all para otimização
             const fetchPromises = posts.map(post => {
                 const endDate = new Date();
                 const startDate = new Date();
                 startDate.setDate(endDate.getDate() - 90);
 
-                // Payload para analytics de membro (um post por chamada)
                 const payload = {
                     ugcPostUrn: post.urn,
                     queryType: 'TOTAL',
                     aggregation: 'TOTAL',
                     dateRange: {
-                        // Usando métodos UTC e corrigindo o mês (+1)
                         start: {
                             day: startDate.getUTCDate(),
                             month: startDate.getUTCMonth() + 1,
@@ -57,12 +51,8 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
                         }
                     }
                 };
-                // 'getMemberPostStatistics' deve mapear para o endpoint correto no proxy
                 return callProxy('getMemberPostStatistics', payload, token);
             });
-
-            // Executa todas as chamadas de membro em paralelo
-            // Promise.all retorna as respostas (que precisam ser tratadas para 401)
             return Promise.all(fetchPromises);
         }
     };
@@ -70,15 +60,13 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
     let allResults = [];
     let currentAccessToken = initialAccessToken;
 
-    // AQUI OCORRE A ITERAÇÃO CHAVE: Uma chamada por autor (organização ou pessoa)
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
+        // Aqui guardamos o contexto de qual authorUrn (e quais posts) estamos tentando
         let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
 
-        // Padroniza a resposta para verificação de 401
         const isSingleResponse = !Array.isArray(responseOrResponses);
         const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
 
-        // Verifica se o token expirou (401 Unauthorized)
         const needsRefresh = responses.some(res => res.status === 401);
 
         if (needsRefresh) {
@@ -86,7 +74,6 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             const refreshResponse = await fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
                 method: 'POST',
                 headers: internalApiHeaders,
-                // 'refreshTokenInternal' deve buscar o refresh_token no DB, renovar o token e atualizar o DB
                 body: JSON.stringify({ action: 'refreshTokenInternal', userId }),
             });
 
@@ -96,18 +83,23 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken; // Atualiza o token para futuras chamadas
+            currentAccessToken = newAccessToken;
             console.log(`Token refreshed for user ${userId}. Retrying stat collection for ${authorUrn}...`);
-            await delay(1000); // Pequeno delay antes de tentar novamente
+            await delay(1000);
 
-            // Tenta novamente a coleta com o novo token
             responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
         }
 
-        allResults.push(responseOrResponses);
+        // Se a resposta for um único objeto (Organização), adicionamos os posts para rastreamento de falhas.
+        if (isSingleResponse) {
+            allResults.push({ authorUrn: authorUrn, posts: posts, response: responseOrResponses });
+        } else {
+            // Se for um array de respostas (Membro), adicionamos o array para tratamento.
+            allResults.push(responseOrResponses);
+        }
     }
 
-    // Achata o array de respostas para retornar uma lista linear
+    // Retornamos o array com o contexto de falha incluído para o loop principal
     return allResults.flat();
 }
 
@@ -118,13 +110,13 @@ export async function handleRunAnalyticsCollector(request, response) {
     console.log('Analytics collector run initiated...');
     let processedCount = 0;
     let failedCount = 0;
+    let apiFailedCount = 0;
 
     try {
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
         const { rows: posts } = await query(
-            // Garantindo que 'author_urn' (URN do autor, pessoal ou organização) é trazido da coluna post_content
             `SELECT ls.id, ls.linkedin_post_id AS urn, ls.user_id, ls.post_content->>'authorUrn' as author_urn, u.linkedin_access_token
              FROM linkedin_schedules ls
              JOIN users u ON ls.user_id = u.id
@@ -140,7 +132,6 @@ export async function handleRunAnalyticsCollector(request, response) {
             if (!acc[post.user_id]) {
                 acc[post.user_id] = { accessToken: post.linkedin_access_token, posts: [] };
             }
-            // Inclui author_urn no array de posts para ser usado no próximo reduce
             acc[post.user_id].posts.push({ id: post.id, urn: post.urn, author_urn: post.author_urn });
             return acc;
         }, {});
@@ -149,8 +140,6 @@ export async function handleRunAnalyticsCollector(request, response) {
 
         for (const [userId, userData] of Object.entries(postsByUser)) {
             try {
-                // ESTE REDUCE AGRUPA AS POSTAGENS PELO SEU URN DE AUTOR
-                // Isso garante que posts de ORG e PERSON não sejam misturados no mesmo batch.
                 const postsByAuthor = userData.posts.reduce((acc, post) => {
                     if (post.author_urn && post.urn) {
                         if (!acc[post.author_urn]) acc[post.author_urn] = [];
@@ -159,14 +148,29 @@ export async function handleRunAnalyticsCollector(request, response) {
                     return acc;
                 }, {});
 
-                // fetchStatsWithRefresh ITERA sobre 'postsByAuthor' (uma chamada por autor)
                 const statResponses = await fetchStatsWithRefresh(fetch, userId, userData.accessToken, postsByAuthor);
 
-                for (const res of statResponses) {
+                for (const item of statResponses) {
+                    const res = item.response || item;
+                    const isOrganizationBatch = item.authorUrn && item.posts && item.authorUrn.includes(':organization:');
+
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        console.error(`Failed to fetch stats for a batch. Status: ${res.status}, Body: ${JSON.stringify(errorData)}`);
-                        // O erro 404/RESOURCE_NOT_FOUND (Batch Failed) ocorre aqui, mas é tratado como um erro de lote.
+                        apiFailedCount++;
+
+                        // 🎯 AJUSTE DE LOGGING PARA IDENTIFICAR URNs FALHOS
+                        if (isOrganizationBatch) {
+                            const failedUrns = item.posts.map(p => p.urn);
+                            console.error(`--- FALHA DE LOTE DA ORGANIZAÇÃO (404) ---`);
+                            console.error(`Status: ${res.status}, Autor URN: ${item.authorUrn}`);
+                            console.error(`Corpo: ${JSON.stringify(errorData)}`);
+                            console.error(`POSSÍVEIS URNs FALHOS NO LOTE: ${failedUrns.join(', ')}`);
+                            console.error(`--------------------------------------`);
+                        } else {
+                            // Se for falha de Membro, o item.urn/item.id virá da lógica do Promise.all em fetchStatsWithRefresh (que precisa ser ajustada, mas por enquanto logamos o erro genérico)
+                            console.error(`Falha individual. Status: ${res.status}, Corpo: ${JSON.stringify(errorData)}`);
+                        }
+
                         continue;
                     }
 
@@ -177,7 +181,7 @@ export async function handleRunAnalyticsCollector(request, response) {
                         const urn = stat.share || stat.ugcPost || stat.post || data.urn;
                         let statsData = stat.totalShareStatistics;
 
-                        // Handle the different structure from member analytics
+                        // Lógica para lidar com diferentes estruturas de analytics
                         if (!statsData && (stat.totalImpressions || stat.reactionSummaries || stat.clicks)) {
                             statsData = {
                                 impressionCount: stat.totalImpressions?.count || 0,
@@ -211,8 +215,8 @@ export async function handleRunAnalyticsCollector(request, response) {
 
                         await query(
                             `INSERT INTO linkedin_post_analytics
-                             (publication_id, snapshot_date, impression_count, click_count, like_count, comment_count, share_count, engagement)
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                                (publication_id, snapshot_date, impression_count, click_count, like_count, comment_count, share_count, engagement)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                              ON CONFLICT (publication_id, snapshot_date) DO UPDATE SET
                                  impression_count = EXCLUDED.impression_count,
                                  click_count = EXCLUDED.click_count,
@@ -232,7 +236,7 @@ export async function handleRunAnalyticsCollector(request, response) {
             }
         }
 
-        const summary = `Analytics collector finished. Processed: ${processedCount}, Failed Batches: ${failedCount}.`;
+        const summary = `Analytics collector finished. Processed: ${processedCount}, Failed Batches: ${failedCount}. Individual API Failures: ${apiFailedCount}.`;
         console.log(summary);
         return response.status(200).json({ message: summary });
 
