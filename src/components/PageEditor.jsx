@@ -260,14 +260,14 @@ const PageEditor = ({
           <Box
             sx={{
               flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 0,
-              minHeight: 0,
+              display: 'grid',
+              placeItems: 'center',
               overflow: 'hidden',
-              position: 'relative',
-              padding: 2,
+              p: 2,
+              '& > div': {
+                width: '100%',
+                height: '100%',
+              },
             }}
           >
             <Box
