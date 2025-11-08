@@ -61,6 +61,7 @@ const FieldPositioner = ({
   }, [csvData]);
 
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
+  const [dynamicSize, setDynamicSize] = useState({ width: 0, height: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
@@ -68,6 +69,8 @@ const FieldPositioner = ({
   const { aspectRatio: aspectRatioFromContext, pendingAssets } = campaignState;
 
   const effectiveImageSize = originalImageSize;
+
+  const aspectRatio = aspectRatioFromContext ? String(aspectRatioFromContext).replace(':', ' / ') : '1 / 1';
 
   const handleContentChange = useCallback((field, newText) => {
     setEditorState(prevState => {
@@ -95,12 +98,23 @@ const FieldPositioner = ({
     if (!container) return;
 
     const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const { width, height } = entry.contentRect;
-        setRenderedImageMetrics({ width, height, x: 0, y: 0 });
+      if (entries && entries.length > 0) {
+        const { width: containerWidth, height: containerHeight } = entries[0].contentRect;
+        const [aspectWidth, aspectHeight] = aspectRatio.split(' / ').map(Number);
+
+        let newWidth = containerWidth;
+        let newHeight = newWidth / (aspectWidth / aspectHeight);
+
+        if (newHeight > containerHeight) {
+          newHeight = containerHeight;
+          newWidth = newHeight * (aspectWidth / aspectHeight);
+        }
+
+        setDynamicSize({ width: newWidth, height: newHeight });
+        setRenderedImageMetrics({ width: newWidth, height: newHeight, x: 0, y: 0 });
 
         if (onImageDisplayedSizeChange) {
-          onImageDisplayedSizeChange({ width, height });
+          onImageDisplayedSizeChange({ width: newWidth, height: newHeight });
         }
       }
     });
@@ -108,7 +122,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange]);
+  }, [onImageDisplayedSizeChange, aspectRatio]);
 
   const handlePositionChange = useCallback((id, newPosition) => {
     setEditorState(prevState => {
@@ -209,8 +223,6 @@ const FieldPositioner = ({
   const handleContainerTouchEnd = () => {
     setIsInteracting(false);
   };
-
-  const aspectRatio = aspectRatioFromContext ? String(aspectRatioFromContext).replace(':', ' / ') : '1 / 1';
 
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
@@ -363,70 +375,78 @@ const FieldPositioner = ({
   return (
     <Box
       ref={containerRef}
-      className="text-container"
       sx={{
-        position: 'relative',
-        background: backgroundValue,
-        aspectRatio: aspectRatio,
-        maxWidth: '100%',
-        maxHeight: '100%',
-        border: '2px solid #ddd',
-        borderRadius: 2,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         overflow: 'hidden',
-        display: 'block',
-        objectFit: 'contain',
-        margin: 'auto',
       }}
-
-      onTouchStart={handleContainerTouchStart}
-      onTouchEnd={handleContainerTouchEnd}
     >
       <Box
-        className="elements-wrapper"
+        className="text-container"
         sx={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: '100%',
-          height: '100%',
+          position: 'relative',
+          background: backgroundValue,
+          width: dynamicSize.width,
+          height: dynamicSize.height,
+          border: '2px solid #ddd',
+          borderRadius: 2,
+          overflow: 'hidden',
+          display: 'block',
+          margin: 'auto',
         }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setSelectedField('__page_background__');
-          }
-        }}
-        onTouchStart={(e) => {
-          if (e.target === e.currentTarget) {
-            setSelectedField('__page_background__');
-          }
-        }}
+        onTouchStart={handleContainerTouchStart}
+        onTouchEnd={handleContainerTouchEnd}
       >
-        {renderableElements.map(element => (
-          <DraggableElement
-            key={element.id}
-            element={{ ...element.position, type: element.type, id: element.id }}
-            position={element.position}
-            style={element.style}
-            content={element.content}
-            isSelected={selectedField === element.id}
-            onSelect={setSelectedField}
-            onPositionChange={handlePositionChange}
-            onSizeChange={handleSizeChange}
-            containerSize={renderedImageMetrics}
-            onContentChange={element.type === 'text' ? handleContentChange : undefined}
-            onDoubleClick={() => {
-              if (element.type === 'text' && isHtmlField(element.id)) {
-                onOpenHtmlEditor(element.id);
-              }
-            }}
-            rotation={element.rotation}
-            originalImageSize={effectiveImageSize}
-            fontScale={element.fontScale}
-            enableHtmlRendering={element.enableHtmlRendering}
-            darkMode={darkMode}
-            pendingAssets={pendingAssets}
-          />
-        ))}
+        <Box
+          className="elements-wrapper"
+          sx={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: '100%',
+            height: '100%',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedField('__page_background__');
+            }
+          }}
+          onTouchStart={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedField('__page_background__');
+            }
+          }}
+        >
+          {renderableElements.map(element => (
+            <DraggableElement
+              key={element.id}
+              element={{ ...element.position, type: element.type, id: element.id }}
+              position={element.position}
+              style={element.style}
+              content={element.content}
+              isSelected={selectedField === element.id}
+              onSelect={setSelectedField}
+              onPositionChange={handlePositionChange}
+              onSizeChange={handleSizeChange}
+              containerSize={renderedImageMetrics}
+              onContentChange={element.type === 'text' ? handleContentChange : undefined}
+              onDoubleClick={() => {
+                if (element.type === 'text' && isHtmlField(element.id)) {
+                  onOpenHtmlEditor(element.id);
+                }
+              }}
+              rotation={element.rotation}
+              originalImageSize={effectiveImageSize}
+              fontScale={element.fontScale}
+              enableHtmlRendering={element.enableHtmlRendering}
+              darkMode={darkMode}
+              pendingAssets={pendingAssets}
+            />
+          ))}
+        </Box>
       </Box>
     </Box>
   );
