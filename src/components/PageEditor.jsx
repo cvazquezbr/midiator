@@ -126,6 +126,90 @@ const PageEditor = ({
     prevImagesRef.current = currentImages;
   }, [editorState?.pageTemplate?.images]);
 
+  const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
+  const previewContainerRef = useRef(null);
+
+  // No PageEditor.jsx, atualize o useEffect:
+
+  useEffect(() => {
+    console.log('%c[PREVIEW SIZE] useEffect triggered', 'color: blue; font-weight: bold', { aspectRatio, open });
+
+    const updatePreviewSize = () => {
+      if (!previewContainerRef.current || !aspectRatio) {
+        console.log('%c[PREVIEW SIZE] Skipped - no ref or aspectRatio', 'color: orange', {
+          hasRef: !!previewContainerRef.current,
+          aspectRatio
+        });
+        return;
+      }
+
+      const container = previewContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      console.log('%c[PREVIEW SIZE] Container dimensions:', 'color: green', {
+        containerWidth,
+        containerHeight
+      });
+
+      const ratioStr = aspectRatio.toString().replace(/\s/g, '');
+      const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
+
+      if (!w || !h) {
+        console.error('[PREVIEW SIZE] Invalid aspect ratio:', aspectRatio);
+        return;
+      }
+
+      const targetRatio = w / h;
+
+      // Calcula ambas as possibilidades
+      const widthBasedHeight = containerWidth / targetRatio;
+      const heightBasedWidth = containerHeight * targetRatio;
+
+      let finalWidth, finalHeight;
+
+      // Escolhe o que cabe melhor
+      if (widthBasedHeight <= containerHeight) {
+        // Cabe limitando pela largura
+        finalWidth = containerWidth;
+        finalHeight = widthBasedHeight;
+        console.log('%c[PREVIEW SIZE] Limited by WIDTH', 'color: blue; font-weight: bold');
+      } else {
+        // Não cabe pela largura, limita pela altura
+        finalWidth = heightBasedWidth;
+        finalHeight = containerHeight;
+        console.log('%c[PREVIEW SIZE] Limited by HEIGHT', 'color: red; font-weight: bold');
+      }
+
+      console.log('%c[PREVIEW SIZE] Final dimensions:', 'color: green; font-weight: bold', {
+        width: `${finalWidth}px`,
+        height: `${finalHeight}px`,
+        ratio: finalWidth / finalHeight,
+        targetRatio
+      });
+
+      setPreviewSize({
+        width: `${finalWidth}px`,
+        height: `${finalHeight}px`
+      });
+    };
+
+    const timeoutId = setTimeout(updatePreviewSize, 100);
+    const resizeObserver = new ResizeObserver(() => {
+      console.log('%c[PREVIEW SIZE] ResizeObserver triggered', 'color: cyan');
+      updatePreviewSize();
+    });
+
+    if (previewContainerRef.current) {
+      resizeObserver.observe(previewContainerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [aspectRatio, open]);
+
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
 
@@ -258,24 +342,28 @@ const PageEditor = ({
         >
           {/* --- Preview central --- */}
           <Box
+            ref={previewContainerRef}
             sx={{
               flex: 1,
-              display: 'grid',
-              placeItems: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 0,
+              minHeight: 0,
               overflow: 'hidden',
-              p: 2,
-              '& > div': {
-                width: '100%',
-                height: '100%',
-              },
+              position: 'relative',
+              padding: 2,
             }}
           >
             <Box
               sx={{
                 aspectRatio: aspectRatio || '1 / 1',
+                width: previewSize.width,
+                height: previewSize.height,
                 maxWidth: '100%',
                 maxHeight: '100%',
               }}
+              onClick={() => console.log('Current preview size:', previewSize, 'Aspect ratio:', aspectRatio)}
             >
               <FieldPositioner
                 editorState={editorState}
