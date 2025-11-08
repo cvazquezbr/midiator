@@ -58,7 +58,6 @@ const PageSetEditor = ({
     const newPage = {
       index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
       record: { Título: `Nova Página ${pages.length + 1}` },
-      url: null, // No initial image
       customPageTemplate: {
         backgroundColor: '#FFFFFF',
         elements: [],
@@ -215,9 +214,9 @@ const PageSetEditor = ({
                           overflow: 'hidden',
                         }}
                       >
-                        {page.url ? (
+                        {page.customPageTemplate?.images && page.customPageTemplate.images.length > 0 ? (
                           <img
-                            src={page.url}
+                            src={page.customPageTemplate.images[0].url}
                             alt={`Preview ${page.index}`}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
