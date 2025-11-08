@@ -1,8 +1,8 @@
 import React, {
-  useState, useEffect, useCallback, useMemo,
+  useState, useEffect, useMemo,
 } from 'react';
 import {
-  Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, CircularProgress, Alert, FormControl, InputLabel, Select, MenuItem,
+  Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Alert, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -16,6 +16,9 @@ import imagesLoaded from 'imagesloaded';
 import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
 import PageEditor from './PageEditor';
+import { getDimensionsFromAspectRatio } from '../utils/imageComposer';
+
+const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
 const PageSetEditor = ({
   pageSet,
@@ -34,6 +37,8 @@ const PageSetEditor = ({
 
   const pages = useMemo(() => pageSet?.page_set_data?.pages || [], [pageSet]);
   const aspectRatio = useMemo(() => pageSet?.page_set_data?.aspectRatio || '1:1', [pageSet]);
+
+  const imageSize = useMemo(() => getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE, [aspectRatio]);
 
   useEffect(() => {
     if (gridRef.current && pages.length > 0) {
@@ -127,6 +132,7 @@ const PageSetEditor = ({
       ...pageSet,
       page_set_data: {
         ...pageSet.page_set_data,
+        pages: pageSet?.page_set_data?.pages || [],
         aspectRatio: newAspectRatio,
       },
     });
@@ -255,7 +261,7 @@ const PageSetEditor = ({
           }}
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
-          originalImageSize={campaignState.originalImageSize}
+          originalImageSize={imageSize}
           onOpenImageGallery={() => onOpenImageGallery(editingPage.index)}
           addPendingAsset={addPendingAsset}
         />
