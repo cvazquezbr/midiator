@@ -43,6 +43,7 @@ const FieldPositioner = ({
   currentPreviewIndex,
   onFontScaleChange,
   isCropping,
+  mockRecordForPreview,
 }) => {
   const {
     fieldPositions,
@@ -313,7 +314,7 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
+        const record = mockRecordForPreview || (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {

@@ -123,3 +123,65 @@ export function extractAssetUrls(data) {
   traverse(data);
   return Array.from(urls);
 }
+
+/**
+ * Imports a PageSet into a new campaign state.
+ * It performs a deep copy of the page set data and re-downloads all assets,
+ * preparing them as pending assets for the new campaign.
+ * @param {object} pageSet - The full PageSet object to import.
+ * @returns {Promise<{campaign_data: object, pendingAssets: object}>} - An object containing the new campaign data and the map of pending assets.
+ */
+export async function importPageSetToCampaign(pageSet) {
+  if (!pageSet || !pageSet.page_set_data) {
+    throw new Error('Invalid PageSet provided for import.');
+  }
+
+  // Deep copy the page set data to ensure the campaign is independent.
+  const campaign_data = JSON.parse(JSON.stringify(pageSet.page_set_data));
+  const pendingAssets = {};
+
+  // Extract all asset URLs from the copied data.
+  const assetUrls = extractAssetUrls(campaign_data);
+
+  // Asynchronously download each asset.
+  const downloadPromises = assetUrls.map(async (url) => {
+    try {
+      // Use fetch to get the asset from its permanent URL.
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to download asset: ${url} (status: ${response.status})`);
+      }
+      const blob = await response.blob();
+
+      // Create a new File object, which is what the upload process expects.
+      const filename = url.split('/').pop().split('?')[0] || `imported_asset_${Date.now()}`;
+      const file = new File([blob], filename, { type: blob.type });
+
+      // Create a local blob URL for immediate use in the UI.
+      const localBlobUrl = URL.createObjectURL(file);
+
+      // Return the mapping from the original URL to the new local data.
+      return { originalUrl: url, localBlobUrl, file };
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+      return null; // Return null on failure to filter out later.
+    }
+  });
+
+  const downloadedAssets = (await Promise.all(downloadPromises)).filter(Boolean);
+
+  // Create the new pendingAssets map and replace old URLs with new local blob URLs.
+  downloadedAssets.forEach(({ originalUrl, localBlobUrl, file }) => {
+    pendingAssets[localBlobUrl] = file;
+
+    // Traverse the campaign data again to replace the permanent URL with the new local one.
+    traverseState(campaign_data, (key, value, owner) => {
+        if (value === originalUrl) {
+            owner[key] = localBlobUrl;
+        }
+    });
+  });
+
+  return { campaign_data, pendingAssets };
+}

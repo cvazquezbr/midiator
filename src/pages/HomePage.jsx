@@ -28,6 +28,7 @@ import SharedCampaignsStep from '../components/SharedCampaignsStep';
 import PersonasPage from './PersonasPage';
 import AutoresPage from './AutoresPage';
 import PalettesPage from './PalettesPage';
+import PageSetsPage from './PageSetsPage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import PageGeneratorFrontendOnly from '../components/PageGeneratorFrontendOnly';
@@ -122,6 +123,7 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
+  const [pageSetDrawerOpen, setPageSetDrawerOpen] = useState(!isMobile);
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
@@ -944,6 +946,7 @@ function HomePage() {
             onShowPersonas: () => handleNavigation(() => setCurrentView('personas')),
             onShowAutores: () => handleNavigation(() => setCurrentView('autores')),
             onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')),
+            onShowPageSets: () => handleNavigation(() => setCurrentView('pageSets')),
             onShowCampaigns: () => handleNavigation(() => { setCurrentView('campaigns'); setCampaignsView('my-campaigns'); }),
             onShowSharedCampaigns: () => { setCurrentView('campaigns'); setCampaignsView('shared-campaigns'); },
             onShowMonitor: () => handleNavigation(() => setCurrentView('monitor')),
@@ -952,7 +955,8 @@ function HomePage() {
             onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen),
             onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen),
             onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen),
-            isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen,
+            onPageSetMenuClick: () => setPageSetDrawerOpen(!pageSetDrawerOpen),
+            isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : currentView === 'pageSets' ? pageSetDrawerOpen : sidebarOpen,
             onShowMemorial: () => setShowMemorialDescritivoModal(true),
             isCampaignOpen: currentCampaign !== null
           }}
@@ -1025,6 +1029,7 @@ function HomePage() {
           {currentView === 'personas' && <PersonasPage {...{ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected: () => setPersonaDrawerOpen(true), onUpdate: fetchPersonasForCampaign, startInCreateMode: startPersonasInCreate, onPersonaCreated: handlePersonaCreated, onCreationCancelled: () => handleCreationDone('personas') }} />}
           {currentView === 'autores' && <AutoresPage {...{ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected: () => setAutorDrawerOpen(true), onUpdate: fetchAutoresForCampaign, startInCreateMode: startAutoresInCreate, onAutorCreated: handleAutorCreated, onCreationCancelled: () => handleCreationDone('autores') }} />}
           {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true) }} />}
+          {currentView === 'pageSets' && <PageSetsPage drawerOpen={pageSetDrawerOpen} setDrawerOpen={setPageSetDrawerOpen} onSwitchView={setCurrentView} />}
           {currentView === 'monitor' && <Monitor {...{ currentCampaign }} />}
         </Box>
       </Box>

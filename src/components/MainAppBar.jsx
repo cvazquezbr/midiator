@@ -37,6 +37,7 @@ const MainAppBar = ({
   onShowPersonas,
   onShowAutores,
   onShowPalettes,
+  onShowPageSets,
   onShowCampaigns,
   onShowSharedCampaigns,
   onShowMonitor,
@@ -48,6 +49,7 @@ const MainAppBar = ({
   onPersonaMenuClick,
   onAutorMenuClick,
   onPaletteMenuClick,
+  onPageSetMenuClick,
   isDrawerOpen,
   onShowMemorial,
   isCampaignOpen,
@@ -77,6 +79,8 @@ const MainAppBar = ({
       onAutorMenuClick();
     } else if (currentView === 'palettes') {
       onPaletteMenuClick();
+    } else if (currentView === 'pageSets') {
+      onPageSetMenuClick();
     } else {
       onMenuClick();
     }
@@ -90,6 +94,8 @@ const MainAppBar = ({
         return 'Autores';
       case 'palettes':
         return 'Paletas de Cores';
+      case 'pageSets':
+        return 'Conjunto de Páginas';
       case 'monitor':
         return 'Monitorar';
       default:
@@ -191,6 +197,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowPalettes(); }}>
             <Palette sx={{ mr: 1 }} />
             Paletas
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowPageSets(); }}>
+            <ArticleIcon sx={{ mr: 1 }} />
+            Conjunto de Páginas
           </MenuItem>
           <MenuItem onClick={() => { handleUserMenuClose(); onShowMonitor(); }}>
             <BarChart sx={{ mr: 1 }} />
