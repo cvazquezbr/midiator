@@ -17,8 +17,8 @@ import { useCampaign } from '../context/CampaignContext';
 
 
 const emptyPageSetData = {
-  // O `name` agora é gerenciado no objeto principal do pageSet
-  pages: [], // A estrutura de dados principal é agora um array de páginas
+  pages: [],
+  aspectRatio: '1:1',
 };
 
 const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
@@ -217,15 +217,14 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
           {selectedPageSet ? (
             <Paper elevation={2} sx={{ p: 3 }}>
               <PageSetEditor
-                name={selectedPageSet.name}
-                onNameChange={(newName) => setSelectedPageSet(prev => ({ ...prev, name: newName }))}
-                pageSetData={selectedPageSet.page_set_data}
-                onPageSetDataChange={(newData) => setSelectedPageSet(prev => ({ ...prev, page_set_data: newData }))}
+                pageSet={selectedPageSet}
+                onPageSetChange={setSelectedPageSet}
                 pendingAssets={pendingAssets}
                 onPendingAssetsChange={setPendingAssets}
+                isSaving={loading}
               />
                <Box sx={{mt: 2, display: 'flex', justifyContent: 'space-between'}}>
-                <Button onClick={handleSave} variant="contained">Salvar Alterações</Button>
+                <Button onClick={handleSave} variant="contained" disabled={!isDirty || loading}>Salvar Alterações</Button>
                 <Button onClick={handleImport} variant="outlined" startIcon={<CampaignIcon />} disabled={!selectedPageSet.id || isDirty}>Criar Campanha a partir deste Conjunto</Button>
                </Box>
             </Paper>
