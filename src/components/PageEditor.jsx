@@ -84,7 +84,7 @@ const PageEditor = ({
       </DialogTitle>
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-          <Box sx={{ width: '100%', height: '100%', aspectRatio: aspectRatio || '1 / 1' }}>
+          <Box sx={{ width: '100%', aspectRatio: aspectRatio ? String(aspectRatio).replace(':', ' / ') : '1 / 1' }}>
             <FieldPositioner
               editorState={editorState}
               setEditorState={setEditorState}
