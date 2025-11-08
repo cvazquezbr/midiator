@@ -110,14 +110,12 @@ const ImageStepUI = ({
             <Box
               sx={{
                 flexGrow: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: 'grid',
+                placeItems: 'center',
                 minWidth: 0,
                 minHeight: 0,
                 overflow: 'hidden',
-                position: 'relative',
-                padding: 2,
+                p: 2,
               }}
             >
               <Box
