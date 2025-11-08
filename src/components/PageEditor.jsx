@@ -22,6 +22,7 @@ const PageEditor = ({
   aspectRatio,
   originalImageSize,
   addPendingAsset,
+  onOpenImageGallery,
 }) => {
 
   const { campaignState } = useCampaign();
@@ -34,6 +35,41 @@ const PageEditor = ({
   const [imageSwatches, setImageSwatches] = useState([]);
   const isMobile = useIsMobile();
   const prevImagesRef = useRef();
+  const containerRef = useRef(null);
+  const [dynamicSize, setDynamicSize] = useState({ width: 0, height: 0 });
+
+
+  useEffect(() => {
+    const observer = new ResizeObserver(entries => {
+      if (entries && entries.length > 0) {
+        const { width: containerWidth, height: containerHeight } = entries[0].contentRect;
+        if (containerWidth === 0 || containerHeight === 0) return;
+
+        const [aspectW, aspectH] = String(aspectRatio).split(':').map(Number);
+
+        let newWidth = containerWidth;
+        let newHeight = newWidth / (aspectW / aspectH);
+
+        if (newHeight > containerHeight) {
+          newHeight = containerHeight;
+          newWidth = newHeight * (aspectW / aspectH);
+        }
+
+        setDynamicSize({ width: newWidth, height: newHeight });
+      }
+    });
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (containerRef.current) {
+        observer.unobserve(containerRef.current);
+      }
+    };
+  }, [aspectRatio, open]);
+
 
   // Initialize and synchronize state when the editor opens or pageData changes.
   useEffect(() => {
@@ -55,6 +91,32 @@ const PageEditor = ({
       setEditorState(null);
     }
   }, [open, pageData, baseTemplate]);
+
+  const handleImageSelected = (image) => {
+    if (!image || !image.url) {
+      toast.error('A imagem selecionada é inválida.');
+      return;
+    }
+    const newImage = createNewImageElement(image.url, originalImageSize);
+    setEditorState((prev) => {
+      const images = [...(prev.pageTemplate.images || []), newImage];
+      return {
+        ...prev,
+        pageTemplate: {
+          ...prev.pageTemplate,
+          images,
+        },
+      };
+    });
+  };
+
+  const handleOpenGalleryAndSelect = () => {
+    if (onOpenImageGallery) {
+      onOpenImageGallery(handleImageSelected);
+    } else {
+      toast.error('Image gallery handler not provided.');
+    }
+  };
 
   // Handle saving the changes
   const handleSave = () => {
@@ -83,8 +145,8 @@ const PageEditor = ({
         <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}><Close /></IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-          <Box sx={{ width: '100%', aspectRatio: aspectRatio ? String(aspectRatio).replace(':', ' / ') : '1 / 1' }}>
+        <Box ref={containerRef} sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, overflow: 'hidden' }}>
+          <Box sx={{ width: dynamicSize.width, height: dynamicSize.height }}>
             <FieldPositioner
               editorState={editorState}
               setEditorState={setEditorState}
@@ -103,6 +165,7 @@ const PageEditor = ({
               setEditorState={setEditorState}
               selectedField={selectedField}
               setSelectedField={setSelectedField}
+              onOpenImageGallery={handleOpenGalleryAndSelect}
               // ... outras props
             />
           </Box>
