@@ -45,6 +45,7 @@ import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
+import { traverseState } from '../utils/stateTraversal';
 import '../App.css';
 import LoadingDialog from '../components/LoadingDialog';
 import TextEditorDialog from '../components/TextEditorDialog';
@@ -159,6 +160,26 @@ function HomePage() {
   const imageInputRef = useRef(null);
   const campaignContentRef = useRef(campaignState.campaignContent);
   campaignContentRef.current = campaignState.campaignContent;
+
+  const handleAssetUploaded = (tempUrl, permanentUrl) => {
+    console.log(`[HomePage] Asset uploaded. Replacing ${tempUrl} with ${permanentUrl}`);
+
+    // Create a deep copy to modify safely
+    const newState = JSON.parse(JSON.stringify(campaignState));
+
+    // Use traverseState to find and replace the URL everywhere
+    traverseState(newState, (key, value, owner) => {
+      if (value === tempUrl) {
+        owner[key] = permanentUrl;
+      }
+    });
+
+    // Update the campaign state with the permanent URL
+    setCampaignState(newState);
+
+    // Remove the asset from pendingAssets since it's now uploaded
+    removePendingAsset(tempUrl);
+  };
 
   const handleNavigation = (targetAction) => targetAction();
   const handleDialogClose = () => { setShowUnsavedDialog(false); setNavigationTarget(null); };
@@ -991,6 +1012,7 @@ function HomePage() {
                   currentCampaign={currentCampaign}
                   pendingAssets={pendingAssets}
                   setPendingAssets={handleSetPendingAssets}
+                  onAssetUploaded={handleAssetUploaded}
                 />
               )}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >

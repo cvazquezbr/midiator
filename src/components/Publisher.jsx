@@ -104,6 +104,7 @@ const Publisher = ({
   currentCampaign,
   pendingAssets,
   setPendingAssets,
+  onAssetUploaded,
 }) => {
   // Internal state management for scheduling and media selection
   const [isScheduled, setIsScheduled] = useState(false);
@@ -172,10 +173,23 @@ const Publisher = ({
     // Find which of the selected URLs are blob URLs that need uploading.
     for (const [index, url] of imageUrls.entries()) {
       if (url.startsWith('blob:') && pendingAssets[url]) {
+        const blob = pendingAssets[url];
+        const fileExtension = blob.type.split('/')[1] || 'bin';
+        const randomSuffix = Math.random().toString(36).substring(2, 9);
+        const campaignId = currentCampaign?.id;
+
+        // A campaign ID is essential for the standardized path.
+        if (!campaignId) {
+          toast.error("Para agendar um post com novas imagens, primeiro salve a campanha.");
+          throw new Error("ID da Campanha não encontrado. Salve a campanha antes de agendar.");
+        }
+
+        const filename = `${campaignId}/asset_${Date.now()}_${randomSuffix}.${fileExtension}`;
+
         uploadsToProcess.push({
           url,
-          blob: pendingAssets[url],
-          filename: `scheduled-post-${Date.now()}-${index}`,
+          blob,
+          filename, // Standardized filename
         });
       } else {
         // If it's not a blob URL, it's already a permanent URL.
@@ -200,6 +214,11 @@ const Publisher = ({
           });
           // Map the original blob: URL to the new permanent URL
           urlMap[uploadData.url] = newBlob.url;
+
+          // Notify the parent component of the successful upload
+          if (onAssetUploaded) {
+            onAssetUploaded(uploadData.url, newBlob.url);
+          }
         })
       );
       toast.success('Upload de imagens concluído!', { id: toastId });
