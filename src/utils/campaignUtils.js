@@ -187,6 +187,7 @@ export async function importPageSetToCampaign(pageSet) {
     brandElements: pageSetDataCopy.pages[0]?.customBrandElements || [],
     csvData: pageSetDataCopy.pages.map(p => p.record),
     csvHeaders: pageSetDataCopy.pages[0]?.record ? Object.keys(pageSetDataCopy.pages[0].record) : [],
+    aspectRatio: pageSetDataCopy.aspectRatio || '1:1', // Transfer aspectRatio
     // Clear other campaign-specific fields
     campaignContent: null,
     followupPosts: [],

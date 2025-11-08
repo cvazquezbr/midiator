@@ -1,32 +1,39 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {
+  useState, useEffect, useCallback, useMemo,
+} from 'react';
 import {
-  Typography, Box, Button, Card, CardContent, Grid, IconButton,
+  Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, CircularProgress, Alert, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Image as ImageIcon,
+  DriveFileRenameOutline as DriveFileRenameOutlineIcon,
+} from '@mui/icons-material';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
-import { toast } from 'sonner';
-
-import PageEditor from './PageEditor'; // O editor de página individual
 import { useCampaign } from '../context/CampaignContext';
-import './PageGenerator.css';
+import { safeDeepClone } from '../lib/utils';
+import PageEditor from './PageEditor';
 
-const newPageTemplate = {
-  record: { 'Título': 'Nova Página' },
-  customPageTemplate: {
-    backgroundColor: '#FFFFFF',
-    images: [],
-    texts: [],
-    shapes: [],
-  },
-};
-
-const PageSetEditor = ({ name, pageSetData, onNameChange, onPageSetDataChange, pendingAssets, onPendingAssetsChange }) => {
+const PageSetEditor = ({
+  pageSet,
+  onPageSetChange,
+  onOpenImageGallery,
+  isSaving,
+}) => {
   const { campaignState, addPendingAsset } = useCampaign();
-  const [editingPageIndex, setEditingPageIndex] = useState(null);
-  const gridRef = useRef(null);
+  const [editingPage, setEditingPage] = useState(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState(null);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newName, setNewName] = useState(pageSet.name || '');
 
-  const pages = pageSetData?.pages || [];
+  const gridRef = React.useRef();
+
+  const pages = useMemo(() => pageSet?.page_set_data?.pages || [], [pageSet]);
+  const aspectRatio = useMemo(() => pageSet?.page_set_data?.aspectRatio || '1:1', [pageSet]);
 
   useEffect(() => {
     if (gridRef.current && pages.length > 0) {
@@ -35,6 +42,7 @@ const PageSetEditor = ({ name, pageSetData, onNameChange, onPageSetDataChange, p
         columnWidth: '.grid-sizer',
         percentPosition: true,
       });
+
       imagesLoaded(gridRef.current).on('progress', () => {
         msnry.layout();
       });
@@ -43,107 +51,246 @@ const PageSetEditor = ({ name, pageSetData, onNameChange, onPageSetDataChange, p
 
   const handleAddNewPage = () => {
     const newPage = {
-      ...newPageTemplate,
-      index: pages.length,
+      index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
+      record: { Título: `Nova Página ${pages.length + 1}` },
+      url: null, // No initial image
+      customPageTemplate: {
+        backgroundColor: '#FFFFFF',
+        elements: [],
+        images: [],
+      },
+      // Ensure all other custom fields are initialized
+      customBrandElements: campaignState.brandElements,
+      customFieldPositions: campaignState.fieldPositions,
+      customFieldStyles: campaignState.fieldStyles,
+      fontScale: 1,
     };
-    onPageSetDataChange({
-      ...pageSetData,
-      pages: [...pages, newPage],
-    });
-    toast.success('Nova página adicionada.');
+    setEditingPage(newPage);
+    setIsEditorOpen(true);
   };
 
-  const handleDeletePage = (indexToDelete) => {
-    if (window.confirm('Tem certeza que deseja excluir esta página?')) {
-      const updatedPages = pages.filter((_, index) => index !== indexToDelete)
-                                .map((page, index) => ({ ...page, index }));
-      onPageSetDataChange({
-        ...pageSetData,
-        pages: updatedPages,
-      });
-      toast.success('Página excluída.');
+  const handleEditPage = (page) => {
+    setEditingPage(page);
+    setIsEditorOpen(true);
+  };
+
+  const handleSavePage = (editedPageData) => {
+    const { pageTemplate: customPageTemplate, ...restOfModifiedData } = editedPageData;
+
+    const finalPageData = {
+      ...restOfModifiedData,
+      customPageTemplate,
+    };
+
+    const newPages = [...pages];
+    const existingIndex = newPages.findIndex(p => p.index === finalPageData.index);
+
+    if (existingIndex > -1) {
+      newPages[existingIndex] = finalPageData;
+    } else {
+      newPages.push(finalPageData);
     }
+
+    onPageSetChange({
+      ...pageSet,
+      page_set_data: {
+        ...pageSet.page_set_data,
+        pages: newPages,
+      },
+    });
+
+    setIsEditorOpen(false);
+    setEditingPage(null);
   };
 
-  const handleOpenEditor = (index) => {
-    setEditingPageIndex(index);
+  const handleDeletePage = () => {
+    if (pageToDelete === null) return;
+    const newPages = pages.filter(p => p.index !== pageToDelete.index);
+    onPageSetChange({
+      ...pageSet,
+      page_set_data: {
+        ...pageSet.page_set_data,
+        pages: newPages,
+      },
+    });
+    setPageToDelete(null);
   };
 
-  const handleCloseEditor = () => {
-    setEditingPageIndex(null);
+  const handleRename = () => {
+    onPageSetChange({ ...pageSet, name: newName });
+    setIsRenameDialogOpen(false);
   };
 
-  const handleSaveChangesFromEditor = (modifiedPageData) => {
-    const updatedPages = pages.map((page, index) =>
-      index === modifiedPageData.index ? modifiedPageData : page
-    );
-    onPageSetDataChange({
-      ...pageSetData,
-      pages: updatedPages,
+  const handleAspectRatioChange = (event) => {
+    const newAspectRatio = event.target.value;
+    onPageSetChange({
+      ...pageSet,
+      page_set_data: {
+        ...pageSet.page_set_data,
+        aspectRatio: newAspectRatio,
+      },
     });
   };
 
-  const pageToEdit = (editingPageIndex !== null) ? pages[editingPageIndex] : null;
-
-  // Define um template base vazio, já que PageSets são independentes
-  const baseTemplate = {
-      pageTemplate: {},
-      fieldPositions: {},
-      fieldStyles: {},
-      brandElements: []
-  };
+  if (!pageSet) {
+    return (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+            <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+            <Typography variant="h6" color="text.secondary">
+                Selecione ou crie um conjunto de páginas para começar.
+            </Typography>
+        </Box>
+    );
+  }
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">{name || 'Conjunto de Páginas'}</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleAddNewPage}>
-          Adicionar Nova Página
-        </Button>
-      </Box>
+    <Box sx={{ p: 2 }}>
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h5">
+                {pageSet.name}
+              </Typography>
+              <IconButton onClick={() => { setNewName(pageSet.name); setIsRenameDialogOpen(true); }} size="small">
+                <DriveFileRenameOutlineIcon />
+              </IconButton>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddNewPage}
+            >
+              Adicionar Página
+            </Button>
+          </Box>
 
-      {pages.length > 0 ? (
-        <div ref={gridRef} className="grid">
-          <div className="grid-sizer"></div>
-          {pages.map((page, index) => (
-            <div className="grid-item" key={index}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="body2" noWrap sx={{ mb: 1 }}>
-                    {page.record?.['Título'] || `Página ${index + 1}`}
-                  </Typography>
-                  <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', backgroundColor: '#f0f0f0' }}>
-                    <Typography sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'text.secondary' }}>
-                      Preview
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 1 }}>
-                    <IconButton size="small" onClick={() => handleOpenEditor(index)}><Edit /></IconButton>
-                    <IconButton size="small" onClick={() => handleDeletePage(index)}><Delete /></IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="aspect-ratio-label">Proporção</InputLabel>
+                <Select
+                  labelId="aspect-ratio-label"
+                  value={aspectRatio}
+                  label="Proporção"
+                  onChange={handleAspectRatioChange}
+                  disabled={isSaving}
+                >
+                  <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+                  <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+                  <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+
+          {pages.length === 0 ? (
+             <Alert severity="info" sx={{ mt: 2 }}>
+                Este conjunto de páginas está vazio. Clique em "Adicionar Página" para começar a criar.
+            </Alert>
+          ) : (
+            <div ref={gridRef} className="grid">
+              <div className="grid-sizer"></div>
+              {pages.map((page) => (
+                <div className="grid-item" key={page.index}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="body2" noWrap gutterBottom>
+                        {page.record?.Título || `Página ${page.index}`}
+                      </Typography>
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          width: '100%',
+                          aspectRatio: String(aspectRatio).replace(':', ' / '),
+                          backgroundColor: '#f0f0f0',
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {page.url ? (
+                          <img
+                            src={page.url}
+                            alt={`Preview ${page.index}`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
+                            </Box>
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                        <Tooltip title="Editar">
+                          <IconButton size="small" onClick={() => handleEditPage(page)}>
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Excluir">
+                          <IconButton size="small" onClick={() => setPageToDelete(page)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : (
-        <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-          Nenhuma página neste conjunto. Adicione uma para começar.
-        </Typography>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {pageToEdit && (
+      {isEditorOpen && (
         <PageEditor
-          open={editingPageIndex !== null}
-          onClose={handleCloseEditor}
-          pageData={pageToEdit}
-          baseTemplate={baseTemplate}
-          onSave={handleSaveChangesFromEditor}
-          aspectRatio={campaignState.aspectRatio || '1 / 1'}
-          originalImageSize={{ width: 1080, height: 1080 }}
+          open={isEditorOpen}
+          onClose={() => { setIsEditorOpen(false); setEditingPage(null); }}
+          pageData={safeDeepClone(editingPage)}
+          baseTemplate={{
+            pageTemplate: editingPage.customPageTemplate,
+            fieldPositions: editingPage.customFieldPositions,
+            fieldStyles: editingPage.customFieldStyles,
+            brandElements: editingPage.customBrandElements,
+          }}
+          onSave={handleSavePage}
+          aspectRatio={aspectRatio}
+          originalImageSize={campaignState.originalImageSize}
+          onOpenImageGallery={() => onOpenImageGallery(editingPage.index)}
           addPendingAsset={addPendingAsset}
         />
       )}
+
+      <Dialog open={!!pageToDelete} onClose={() => setPageToDelete(null)}>
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogContent>
+          <Typography>Tem certeza que deseja excluir esta página?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPageToDelete(null)}>Cancelar</Button>
+          <Button onClick={handleDeletePage} color="error">Excluir</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isRenameDialogOpen} onClose={() => setIsRenameDialogOpen(false)}>
+        <DialogTitle>Renomear Conjunto de Páginas</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Novo nome"
+            type="text"
+            fullWidth
+            variant="standard"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRenameDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={handleRename}>Renomear</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
