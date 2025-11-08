@@ -132,56 +132,65 @@ export function extractAssetUrls(data) {
  * @returns {Promise<{campaign_data: object, pendingAssets: object}>} - An object containing the new campaign data and the map of pending assets.
  */
 export async function importPageSetToCampaign(pageSet) {
-  if (!pageSet || !pageSet.page_set_data) {
+  if (!pageSet || !pageSet.page_set_data || !Array.isArray(pageSet.page_set_data.pages)) {
     throw new Error('Invalid PageSet provided for import.');
   }
 
-  // Deep copy the page set data to ensure the campaign is independent.
-  const campaign_data = JSON.parse(JSON.stringify(pageSet.page_set_data));
+  // Deep copy the entire page set data structure.
+  const pageSetDataCopy = JSON.parse(JSON.stringify(pageSet.page_set_data));
   const pendingAssets = {};
 
-  // Extract all asset URLs from the copied data.
-  const assetUrls = extractAssetUrls(campaign_data);
+  // Extract all unique asset URLs from the entire set of pages.
+  const assetUrls = extractAssetUrls(pageSetDataCopy);
 
-  // Asynchronously download each asset.
+  // Download all assets in parallel.
   const downloadPromises = assetUrls.map(async (url) => {
     try {
-      // Use fetch to get the asset from its permanent URL.
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to download asset: ${url} (status: ${response.status})`);
-      }
+      if (!response.ok) throw new Error(`Failed to download asset: ${url}`);
       const blob = await response.blob();
-
-      // Create a new File object, which is what the upload process expects.
       const filename = url.split('/').pop().split('?')[0] || `imported_asset_${Date.now()}`;
       const file = new File([blob], filename, { type: blob.type });
-
-      // Create a local blob URL for immediate use in the UI.
       const localBlobUrl = URL.createObjectURL(file);
-
-      // Return the mapping from the original URL to the new local data.
       return { originalUrl: url, localBlobUrl, file };
     } catch (error) {
       console.error(error);
-      toast.error(error.message);
-      return null; // Return null on failure to filter out later.
+      // Silently fail for individual assets, but log it. The UI will show a broken image.
+      return null;
     }
   });
 
   const downloadedAssets = (await Promise.all(downloadPromises)).filter(Boolean);
 
-  // Create the new pendingAssets map and replace old URLs with new local blob URLs.
+  // Create a map of old URLs to new local blob URLs.
+  const urlMap = new Map();
   downloadedAssets.forEach(({ originalUrl, localBlobUrl, file }) => {
     pendingAssets[localBlobUrl] = file;
-
-    // Traverse the campaign data again to replace the permanent URL with the new local one.
-    traverseState(campaign_data, (key, value, owner) => {
-        if (value === originalUrl) {
-            owner[key] = localBlobUrl;
-        }
-    });
+    urlMap.set(originalUrl, localBlobUrl);
   });
+
+  // Traverse the copied data and replace all permanent URLs with the new local ones.
+  traverseState(pageSetDataCopy, (key, value, owner) => {
+    if (typeof value === 'string' && urlMap.has(value)) {
+      owner[key] = urlMap.get(value);
+    }
+  });
+
+  // Construct the new campaign_data.
+  // The imported pages become the `generatedPagesData`.
+  // We'll use the template from the *first* page as the campaign's base template.
+  const campaign_data = {
+    generatedPagesData: pageSetDataCopy.pages,
+    pageTemplate: pageSetDataCopy.pages[0]?.customPageTemplate || {},
+    fieldPositions: pageSetDataCopy.pages[0]?.customFieldPositions || {},
+    fieldStyles: pageSetDataCopy.pages[0]?.customFieldStyles || {},
+    brandElements: pageSetDataCopy.pages[0]?.customBrandElements || [],
+    csvData: pageSetDataCopy.pages.map(p => p.record),
+    csvHeaders: pageSetDataCopy.pages[0]?.record ? Object.keys(pageSetDataCopy.pages[0].record) : [],
+    // Clear other campaign-specific fields
+    campaignContent: null,
+    followupPosts: [],
+  };
 
   return { campaign_data, pendingAssets };
 }

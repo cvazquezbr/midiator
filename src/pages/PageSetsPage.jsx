@@ -17,10 +17,8 @@ import { useCampaign } from '../context/CampaignContext';
 
 
 const emptyPageSetData = {
-  pageTemplate: { texts: [], images: [], shapes: [] },
-  fieldPositions: {},
-  fieldStyles: {},
-  brandElements: [],
+  // O `name` agora é gerenciado no objeto principal do pageSet
+  pages: [], // A estrutura de dados principal é agora um array de páginas
 };
 
 const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
