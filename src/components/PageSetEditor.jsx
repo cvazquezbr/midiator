@@ -253,10 +253,10 @@ const PageSetEditor = ({
           onClose={() => { setIsEditorOpen(false); setEditingPage(null); }}
           pageData={safeDeepClone(editingPage)}
           baseTemplate={{
-            pageTemplate: editingPage.customPageTemplate,
-            fieldPositions: editingPage.customFieldPositions,
-            fieldStyles: editingPage.customFieldStyles,
-            brandElements: editingPage.customBrandElements,
+            pageTemplate: campaignState.pageTemplate,
+            fieldPositions: campaignState.fieldPositions,
+            fieldStyles: campaignState.fieldStyles,
+            brandElements: campaignState.brandElements,
           }}
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
