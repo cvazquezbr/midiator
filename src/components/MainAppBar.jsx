@@ -50,6 +50,7 @@ const MainAppBar = ({
   onPersonaMenuClick,
   onAutorMenuClick,
   onPaletteMenuClick,
+  onPageSetMenuClick,
   isDrawerOpen,
   onShowMemorial,
   isCampaignOpen,
@@ -79,6 +80,8 @@ const MainAppBar = ({
       onAutorMenuClick();
     } else if (currentView === 'palettes') {
       onPaletteMenuClick();
+    } else if (currentView === 'pagesets') {
+      onPageSetMenuClick();
     } else {
       onMenuClick();
     }
@@ -92,6 +95,8 @@ const MainAppBar = ({
         return 'Autores';
       case 'palettes':
         return 'Paletas de Cores';
+      case 'pagesets':
+        return 'Conjunto de Páginas';
       case 'monitor':
         return 'Monitorar';
       default:
