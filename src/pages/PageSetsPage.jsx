@@ -4,7 +4,9 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Paper, Typography, Box, Button, Alert, IconButton, Divider, Drawer, List, ListItem, ListItemButton, ListItemText, CircularProgress,
 } from '@mui/material';
-import { Add, Delete as DeleteIcon, Campaign as CampaignIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import { toast } from 'sonner';
 import isEqual from 'lodash.isequal';
 import { useNavigate } from 'react-router-dom';
@@ -73,7 +75,6 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   };
 
   const handleNewPageSet = () => {
-    // Definitive fix: ensure new page sets have a valid, empty pages array.
     const newEmpty = { name: 'Novo Conjunto', page_set_data: { pages: [], aspectRatio: '1:1' } };
     setSelectedPageSet(newEmpty);
     setOriginalPageSet(JSON.parse(JSON.stringify(newEmpty)));
@@ -178,7 +179,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   const drawerContent = (
     <Box sx={{ p: 2, width: 320 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>Conjunto de Páginas</Typography>
-      <Button variant="contained" startIcon={<Add />} onClick={() => handleNavigation(handleNewPageSet)} fullWidth>Novo Conjunto</Button>
+      <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleNavigation(handleNewPageSet)} fullWidth>Novo Conjunto</Button>
       <Divider sx={{ my: 2 }} />
       {loading && <CircularProgress />}
       {error && <Alert severity="error">{error}</Alert>}

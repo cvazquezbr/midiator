@@ -619,7 +619,6 @@ const PageGeneratorFrontendOnly = ({
           open={showGeneratedPageEditor}
           onClose={handleCloseGeneratedPageEditor}
           pageData={safeDeepClone(pageToEdit)}
-          baseTemplate={{ pageTemplate, fieldPositions, fieldStyles, brandElements }}
           onSave={handleSaveIndividualModifications}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
