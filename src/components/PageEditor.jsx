@@ -74,14 +74,47 @@ const PageEditor = ({
   // Initialize and synchronize state when the editor opens or pageData changes.
   useEffect(() => {
     if (open && pageData) {
-      // The editor works with a copy, so the original is not mutated until save.
+      // Heuristic to determine if a page is new. A new page, as created by the parent,
+      // has a placeholder template but no actual elements or images.
+      const isNewPage = (
+        !pageData.customPageTemplate ||
+        (
+          (!pageData.customPageTemplate.elements || pageData.customPageTemplate.elements.length === 0) &&
+          (!pageData.customPageTemplate.images || pageData.customPageTemplate.images.length === 0)
+        )
+      );
+
+      let finalTemplate, finalPositions, finalStyles, finalBrand;
+
+      if (isNewPage) {
+        // For a NEW page, we construct its state by starting with a deep clone of the base template.
+        // This ensures all the structural elements are present for the preview.
+        finalTemplate = safeDeepClone(baseTemplate.pageTemplate);
+        finalPositions = safeDeepClone(baseTemplate.fieldPositions);
+        finalStyles = safeDeepClone(baseTemplate.fieldStyles);
+        finalBrand = safeDeepClone(baseTemplate.brandElements);
+
+        // We then clear any "content" from the template, like background images, for a clean slate.
+        finalTemplate.images = [];
+
+        // We can still respect certain overrides from the placeholder, like background color.
+        if (pageData.customPageTemplate?.backgroundColor) {
+          finalTemplate.backgroundColor = pageData.customPageTemplate.backgroundColor;
+        }
+      } else {
+        // For an EXISTING page, its own stored data is the source of truth.
+        // We still fall back to the base template for any missing top-level properties, just in case.
+        finalTemplate = safeDeepClone(pageData.customPageTemplate || baseTemplate.pageTemplate);
+        finalPositions = safeDeepClone(pageData.customFieldPositions || baseTemplate.fieldPositions);
+        finalStyles = safeDeepClone(pageData.customFieldStyles || baseTemplate.fieldStyles);
+        finalBrand = safeDeepClone(pageData.customBrandElements || baseTemplate.brandElements);
+      }
+
       const initialEditorState = {
-        // Use the page's custom data, or fall back to the base template.
-        pageTemplate: safeDeepClone(pageData.customPageTemplate || baseTemplate.pageTemplate),
-        fieldPositions: safeDeepClone(pageData.customFieldPositions || baseTemplate.fieldPositions),
-        fieldStyles: safeDeepClone(pageData.customFieldStyles || baseTemplate.fieldStyles),
-        brandElements: safeDeepClone(pageData.customBrandElements || baseTemplate.brandElements),
-        // The record is specific to this page.
+        pageTemplate: finalTemplate,
+        fieldPositions: finalPositions,
+        fieldStyles: finalStyles,
+        brandElements: finalBrand,
         csvData: pageData.record ? [safeDeepClone(pageData.record)] : [],
         csvHeaders: pageData.record ? Object.keys(pageData.record) : [],
       };
