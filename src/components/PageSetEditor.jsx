@@ -4,13 +4,11 @@ import React, {
 import {
   Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Alert, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Image as ImageIcon,
-  DriveFileRenameOutline as DriveFileRenameOutlineIcon,
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ImageIcon from '@mui/icons-material/Image';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
 import { useCampaign } from '../context/CampaignContext';
@@ -20,13 +18,24 @@ import { getDimensionsFromAspectRatio } from '../utils/imageComposer';
 
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
+const staticBaseTemplate = {
+  pageTemplate: {
+    backgroundColor: '#FFFFFF',
+    elements: [],
+    images: [],
+  },
+  fieldPositions: {},
+  fieldStyles: {},
+  brandElements: {},
+};
+
 const PageSetEditor = ({
   pageSet,
   onPageSetChange,
   onOpenImageGallery,
   isSaving,
 }) => {
-  const { campaignState, addPendingAsset } = useCampaign();
+  const { addPendingAsset } = useCampaign();
   const [editingPage, setEditingPage] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
@@ -55,27 +64,15 @@ const PageSetEditor = ({
   }, [pages]);
 
   const handleAddNewPage = () => {
-    // Start with a deep clone of the campaign's base template for a consistent structure
-    const basePageTemplate = safeDeepClone(campaignState.pageTemplate || {
-      backgroundColor: '#FFFFFF',
-      elements: [],
-      images: [],
-    });
-
-    // Clear any existing images from the template to make it a blank slate for the new page
-    basePageTemplate.images = [];
-
     const newPage = {
       index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
       record: { Título: `Nova Página ${pages.length + 1}` },
-      customPageTemplate: basePageTemplate,
-      // Ensure all other custom fields are also deep cloned to prevent reference issues
-      customBrandElements: safeDeepClone(campaignState.brandElements),
-      customFieldPositions: safeDeepClone(campaignState.fieldPositions),
-      customFieldStyles: safeDeepClone(campaignState.fieldStyles),
-      fontScale: 1,
+      customPageTemplate: {
+        backgroundColor: '#FFFFFF',
+        elements: [],
+        images: [],
+      },
     };
-
     setEditingPage(newPage);
     setIsEditorOpen(true);
   };
@@ -259,12 +256,7 @@ const PageSetEditor = ({
           open={isEditorOpen}
           onClose={() => { setIsEditorOpen(false); setEditingPage(null); }}
           pageData={safeDeepClone(editingPage)}
-          baseTemplate={{
-            pageTemplate: campaignState.pageTemplate,
-            fieldPositions: campaignState.fieldPositions,
-            fieldStyles: campaignState.fieldStyles,
-            brandElements: campaignState.brandElements,
-          }}
+          baseTemplate={staticBaseTemplate}
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
           originalImageSize={imageSize}
