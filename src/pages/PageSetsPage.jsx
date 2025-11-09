@@ -79,7 +79,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   };
 
   const handleNewPageSet = () => {
-    const newEmpty = { name: 'Novo Conjunto', page_set_data: { ...emptyPageSetData } };
+    const newEmpty = { name: 'Novo Conjunto', page_set_data: { pages: [], aspectRatio: '1:1' } };
     setSelectedPageSet(newEmpty);
     setOriginalPageSet(JSON.parse(JSON.stringify(newEmpty)));
     setPendingAssets({});
