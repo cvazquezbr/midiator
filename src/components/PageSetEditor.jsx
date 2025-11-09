@@ -134,11 +134,12 @@ const PageSetEditor = ({
 
   const handleAspectRatioChange = (event) => {
     const newAspectRatio = event.target.value;
+    const currentPages = pageSet?.page_set_data?.pages;
     onPageSetChange({
       ...pageSet,
       page_set_data: {
         ...pageSet.page_set_data,
-        pages: pageSet?.page_set_data?.pages || [],
+        pages: Array.isArray(currentPages) ? currentPages : [],
         aspectRatio: newAspectRatio,
       },
     });
