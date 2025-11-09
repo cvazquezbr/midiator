@@ -28,6 +28,7 @@ import SharedCampaignsStep from '../components/SharedCampaignsStep';
 import PersonasPage from './PersonasPage';
 import AutoresPage from './AutoresPage';
 import PalettesPage from './PalettesPage';
+import PageSetsPage from './PageSetsPage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import PageGeneratorFrontendOnly from '../components/PageGeneratorFrontendOnly';
@@ -945,6 +946,7 @@ function HomePage() {
             onShowPersonas: () => handleNavigation(() => setCurrentView('personas')),
             onShowAutores: () => handleNavigation(() => setCurrentView('autores')),
             onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')),
+            onShowPageSets: () => handleNavigation(() => setCurrentView('pagesets')),
             onShowCampaigns: () => handleNavigation(() => { setCurrentView('campaigns'); setCampaignsView('my-campaigns'); }),
             onShowSharedCampaigns: () => { setCurrentView('campaigns'); setCampaignsView('shared-campaigns'); },
             onShowMonitor: () => handleNavigation(() => setCurrentView('monitor')),
