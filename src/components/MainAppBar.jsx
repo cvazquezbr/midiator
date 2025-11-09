@@ -27,6 +27,7 @@ import {
   FolderOpen as FolderOpenIcon,
   Palette,
   BarChart,
+  Layers as LayersIcon,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ const MainAppBar = ({
   onShowPersonas,
   onShowAutores,
   onShowPalettes,
+  onShowPageSets,
   onShowCampaigns,
   onShowSharedCampaigns,
   onShowMonitor,
@@ -191,6 +193,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowPalettes(); }}>
             <Palette sx={{ mr: 1 }} />
             Paletas
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowPageSets(); }}>
+            <LayersIcon sx={{ mr: 1 }} />
+            Conjunto de Páginas
           </MenuItem>
           <MenuItem onClick={() => { handleUserMenuClose(); onShowMonitor(); }}>
             <BarChart sx={{ mr: 1 }} />
