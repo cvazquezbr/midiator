@@ -4,13 +4,11 @@ import React, {
 import {
   Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Alert, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Image as ImageIcon,
-  DriveFileRenameOutline as DriveFileRenameOutlineIcon,
-} from '@mui-icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ImageIcon from '@mui/icons-material/Image';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
 import { useCampaign } from '../context/CampaignContext';
