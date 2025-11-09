@@ -44,7 +44,10 @@ const PageSetEditor = ({
 
   const gridRef = React.useRef();
 
-  const pages = useMemo(() => pageSet?.page_set_data?.pages || [], [pageSet]);
+  const pages = useMemo(() => {
+    const pagesData = pageSet?.page_set_data?.pages;
+    return Array.isArray(pagesData) ? pagesData : [];
+  }, [pageSet]);
   const aspectRatio = useMemo(() => pageSet?.page_set_data?.aspectRatio || '1:1', [pageSet]);
 
   const imageSize = useMemo(() => getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE, [aspectRatio]);
