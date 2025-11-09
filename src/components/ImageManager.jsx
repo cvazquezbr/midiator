@@ -61,6 +61,21 @@ const ImageManager = ({ pageTemplate, setPageTemplate, setSelectedField, selecte
           </ListItem>
         ))}
       </List>
+      <Button
+        variant="contained"
+        component="label"
+        fullWidth
+        sx={{ mt: 2 }}
+        disabled={!onImageUpload}
+      >
+        Adicionar Imagem
+        <input
+          type="file"
+          accept=".png,.jpg,.jpeg"
+          hidden
+          onChange={onImageUpload}
+        />
+      </Button>
     </Box>
   );
 };

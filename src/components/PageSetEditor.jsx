@@ -44,7 +44,6 @@ const PageSetEditor = ({
 
   const gridRef = React.useRef();
 
-  // Definitive fix: ensure pages is always an array.
   const pages = useMemo(() => {
     const pagesData = pageSet?.page_set_data?.pages;
     return Array.isArray(pagesData) ? pagesData : [];
@@ -71,11 +70,6 @@ const PageSetEditor = ({
     const newPage = {
       index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
       record: { Título: `Nova Página ${pages.length + 1}` },
-      customPageTemplate: {
-        backgroundColor: '#FFFFFF',
-        elements: [],
-        images: [],
-      },
     };
     setEditingPage(newPage);
     setIsEditorOpen(true);
@@ -133,7 +127,6 @@ const PageSetEditor = ({
     setIsRenameDialogOpen(false);
   };
 
-  // Definitive fix: ensure pages is always an array when propagating changes.
   const handleAspectRatioChange = (event) => {
     const newAspectRatio = event.target.value;
     const currentPages = pageSet?.page_set_data?.pages;

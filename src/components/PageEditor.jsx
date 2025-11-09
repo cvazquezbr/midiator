@@ -25,12 +25,9 @@ const PageEditor = ({
 
   useEffect(() => {
     if (open && initialPageData) {
-      // Determine if this is a new page or an existing one
       const isNewPage = !initialPageData.customPageTemplate;
-
       const data = safeDeepClone(initialPageData);
 
-      // If it's a new page, initialize its template from the baseTemplate
       if (isNewPage) {
         data.customPageTemplate = safeDeepClone(baseTemplate.pageTemplate);
       }

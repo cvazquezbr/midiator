@@ -397,7 +397,7 @@ const FormattingPanel = ({
               selectedField={selectedField}
               onImageUpload={handleImageUpload}
             />
-            <Button sx={{mt: 2}} fullWidth variant="outlined" onClick={onOpenImageGallery}>Adicionar Imagem</Button>
+            <Button sx={{mt: 2}} fullWidth variant="outlined" onClick={() => setSelectedField('__page_background__')}>Editar Fundo da Página</Button>
           </AccordionDetails>
         </Accordion>
 
