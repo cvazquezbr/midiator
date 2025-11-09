@@ -44,6 +44,7 @@ const PageSetEditor = ({
 
   const gridRef = React.useRef();
 
+  // Definitive fix: ensure pages is always an array.
   const pages = useMemo(() => {
     const pagesData = pageSet?.page_set_data?.pages;
     return Array.isArray(pagesData) ? pagesData : [];
@@ -132,6 +133,7 @@ const PageSetEditor = ({
     setIsRenameDialogOpen(false);
   };
 
+  // Definitive fix: ensure pages is always an array when propagating changes.
   const handleAspectRatioChange = (event) => {
     const newAspectRatio = event.target.value;
     const currentPages = pageSet?.page_set_data?.pages;

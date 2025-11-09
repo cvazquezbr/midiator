@@ -15,12 +15,6 @@ import PageSetEditor from '../components/PageSetEditor';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { useCampaign } from '../context/CampaignContext';
 
-
-const emptyPageSetData = {
-  pages: [],
-  aspectRatio: '1:1',
-};
-
 const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -67,7 +61,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
     if (!ps || !ps.id) return;
     try {
         const fullPageSet = await loadPageSet(ps.id);
-        const pageSetWithData = { ...fullPageSet, page_set_data: fullPageSet.page_set_data || emptyPageSetData };
+        const pageSetWithData = { ...fullPageSet, page_set_data: fullPageSet.page_set_data || { pages: [], aspectRatio: '1:1' } };
         setSelectedPageSet(pageSetWithData);
         setOriginalPageSet(JSON.parse(JSON.stringify(pageSetWithData)));
         setPendingAssets(fullPageSet.pendingAssets || {});
@@ -79,6 +73,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   };
 
   const handleNewPageSet = () => {
+    // Definitive fix: ensure new page sets have a valid, empty pages array.
     const newEmpty = { name: 'Novo Conjunto', page_set_data: { pages: [], aspectRatio: '1:1' } };
     setSelectedPageSet(newEmpty);
     setOriginalPageSet(JSON.parse(JSON.stringify(newEmpty)));
@@ -103,7 +98,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       toast.success("Salvo com sucesso!");
       await fetchPageSets();
 
-      const pageSetWithData = { ...saved, page_set_data: saved.page_set_data || emptyPageSetData };
+      const pageSetWithData = { ...saved, page_set_data: saved.page_set_data || { pages: [], aspectRatio: '1:1' } };
       setSelectedPageSet(pageSetWithData);
       setOriginalPageSet(JSON.parse(JSON.stringify(pageSetWithData)));
       setPendingAssets(result.pendingAssets || {});
@@ -129,7 +124,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
         loading: 'Importando assets do PageSet...',
         success: (result) => {
             const newCampaignState = {
-                name: selectedPageSet.name, // Carry over the name
+                name: selectedPageSet.name,
                 campaign_data: result.campaign_data,
                 pendingAssets: result.pendingAssets,
             };
