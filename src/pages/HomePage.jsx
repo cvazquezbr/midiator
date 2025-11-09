@@ -122,6 +122,7 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
+  const [pageSetDrawerOpen, setPageSetDrawerOpen] = useState(!isMobile);
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
@@ -952,7 +953,8 @@ function HomePage() {
             onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen),
             onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen),
             onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen),
-            isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen,
+            onPageSetMenuClick: () => setPageSetDrawerOpen(!pageSetDrawerOpen),
+            isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : currentView === 'pagesets' ? pageSetDrawerOpen : sidebarOpen,
             onShowMemorial: () => setShowMemorialDescritivoModal(true),
             isCampaignOpen: currentCampaign !== null
           }}
@@ -1025,6 +1027,7 @@ function HomePage() {
           {currentView === 'personas' && <PersonasPage {...{ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected: () => setPersonaDrawerOpen(true), onUpdate: fetchPersonasForCampaign, startInCreateMode: startPersonasInCreate, onPersonaCreated: handlePersonaCreated, onCreationCancelled: () => handleCreationDone('personas') }} />}
           {currentView === 'autores' && <AutoresPage {...{ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected: () => setAutorDrawerOpen(true), onUpdate: fetchAutoresForCampaign, startInCreateMode: startAutoresInCreate, onAutorCreated: handleAutorCreated, onCreationCancelled: () => handleCreationDone('autores') }} />}
           {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true) }} />}
+          {currentView === 'pagesets' && <PageSetsPage drawerOpen={pageSetDrawerOpen} setDrawerOpen={setPageSetDrawerOpen} onSwitchView={setCurrentView} />}
           {currentView === 'monitor' && <Monitor {...{ currentCampaign }} />}
         </Box>
       </Box>
