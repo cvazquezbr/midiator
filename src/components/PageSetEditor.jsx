@@ -55,20 +55,27 @@ const PageSetEditor = ({
   }, [pages]);
 
   const handleAddNewPage = () => {
+    // Start with a deep clone of the campaign's base template for a consistent structure
+    const basePageTemplate = safeDeepClone(campaignState.pageTemplate || {
+      backgroundColor: '#FFFFFF',
+      elements: [],
+      images: [],
+    });
+
+    // Clear any existing images from the template to make it a blank slate for the new page
+    basePageTemplate.images = [];
+
     const newPage = {
       index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
       record: { Título: `Nova Página ${pages.length + 1}` },
-      customPageTemplate: {
-        backgroundColor: '#FFFFFF',
-        elements: [],
-        images: [],
-      },
-      // Ensure all other custom fields are initialized
-      customBrandElements: campaignState.brandElements,
-      customFieldPositions: campaignState.fieldPositions,
-      customFieldStyles: campaignState.fieldStyles,
+      customPageTemplate: basePageTemplate,
+      // Ensure all other custom fields are also deep cloned to prevent reference issues
+      customBrandElements: safeDeepClone(campaignState.brandElements),
+      customFieldPositions: safeDeepClone(campaignState.fieldPositions),
+      customFieldStyles: safeDeepClone(campaignState.fieldStyles),
       fontScale: 1,
     };
+
     setEditingPage(newPage);
     setIsEditorOpen(true);
   };
