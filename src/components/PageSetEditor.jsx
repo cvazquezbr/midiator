@@ -29,8 +29,6 @@ const PageSetEditor = ({
   const [editingPage, setEditingPage] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [newName, setNewName] = useState(pageSet?.name || '');
 
   const gridRef = React.useRef();
 
@@ -110,11 +108,6 @@ const PageSetEditor = ({
     setPageToDelete(null);
   };
 
-  const handleRename = () => {
-    onPageSetChange({ ...pageSet, name: newName });
-    setIsRenameDialogOpen(false);
-  };
-
   const handleAspectRatioChange = (event) => {
     const newAspectRatio = event.target.value;
     const currentPageSetData = pageSet.page_set_data || {};
@@ -145,23 +138,26 @@ const PageSetEditor = ({
     <Box sx={{ p: 2 }}>
       <Card>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h5">
-                {pageSet.name}
-              </Typography>
-              <IconButton onClick={() => { setNewName(pageSet.name); setIsRenameDialogOpen(true); }} size="small">
-                <DriveFileRenameOutlineIcon />
-              </IconButton>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddNewPage}
-            >
-              Adicionar Página
-            </Button>
-          </Box>
+          <Grid container spacing={2} sx={{ mb: 2 }} alignItems="center">
+            <Grid item xs={12} sm={6}>
+                <TextField
+                    label="Nome do Conjunto de Páginas"
+                    value={pageSet.name || ''}
+                    onChange={(e) => onPageSetChange({ ...pageSet, name: e.target.value })}
+                    fullWidth
+                    variant="outlined"
+                />
+            </Grid>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAddNewPage}
+                >
+                Adicionar Página
+                </Button>
+            </Grid>
+          </Grid>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} sm={6}>
@@ -267,26 +263,6 @@ const PageSetEditor = ({
         <DialogActions>
           <Button onClick={() => setPageToDelete(null)}>Cancelar</Button>
           <Button onClick={handleDeletePage} color="error">Excluir</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={isRenameDialogOpen} onClose={() => setIsRenameDialogOpen(false)}>
-        <DialogTitle>Renomear Conjunto de Páginas</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Novo nome"
-            type="text"
-            fullWidth
-            variant="standard"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsRenameDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleRename}>Renomear</Button>
         </DialogActions>
       </Dialog>
     </Box>
