@@ -1,6 +1,28 @@
 import { db } from '@vercel/postgres';
 import { withAuth } from '../middleware/auth.js';
 
+// Helper to safely parse the page_set_data field
+const parsePageSetData = (pageSet) => {
+    if (!pageSet) return null;
+
+    let data = {};
+    const rawData = pageSet.page_set_data;
+
+    try {
+        if (typeof rawData === 'string') {
+            data = JSON.parse(rawData);
+        } else if (rawData) {
+            // It's already an object
+            data = rawData;
+        }
+    } catch (e) {
+        console.error(`Failed to parse page_set_data for pageSet ${pageSet.id}:`, e);
+    }
+
+    return { ...pageSet, page_set_data: data };
+};
+
+
 const handler = async (req, res) => {
     const userId = req.user.sub;
 
@@ -9,7 +31,8 @@ const handler = async (req, res) => {
 
         if (req.method === 'GET') {
             const { rows } = await client.sql`SELECT id, name, page_set_data FROM page_sets WHERE user_id = ${userId} ORDER BY name`;
-            return res.status(200).json(rows);
+            const parsedRows = rows.map(parsePageSetData);
+            return res.status(200).json(parsedRows);
         }
 
         if (req.method === 'POST') {
@@ -22,7 +45,7 @@ const handler = async (req, res) => {
                 RETURNING id, name, page_set_data;
             `;
 
-            return res.status(201).json(newPageSet);
+            return res.status(201).json(parsePageSetData(newPageSet));
         }
 
         if (req.method === 'PUT') {
@@ -37,7 +60,7 @@ const handler = async (req, res) => {
             `;
 
             if (!updatedPageSet) return res.status(404).json({ error: 'PageSet not found' });
-            return res.status(200).json(updatedPageSet);
+            return res.status(200).json(parsePageSetData(updatedPageSet));
         }
 
         if (req.method === 'DELETE') {
@@ -61,7 +84,8 @@ const handler = async (req, res) => {
             `;
 
             if (!pageSet) return res.status(404).json({ error: 'PageSet not found' });
-            return res.status(200).json(pageSet);
+
+            return res.status(200).json(parsePageSetData(pageSet));
         }
 
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']);
