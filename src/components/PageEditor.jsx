@@ -45,10 +45,11 @@ const PageEditor = ({
         fieldPositions: data.customFieldPositions || baseTemplate.fieldPositions || {},
         fieldStyles: data.customFieldStyles || baseTemplate.fieldStyles || {},
         brandElements: data.customBrandElements || baseTemplate.brandElements || [],
+        csvData: csvData, // <<< FIX: Include csvData in the editor state
       };
       setEditorState(initialState);
     }
-  }, [open, initialPageData, baseTemplate]);
+  }, [open, initialPageData, baseTemplate, csvData]);
 
   const handleRecordChange = (e) => {
     const { name, value } = e.target;
@@ -123,9 +124,7 @@ const PageEditor = ({
                 editorState={editorState}
                 setEditorState={setEditorState}
                 aspectRatio={aspectRatio}
-                record={pageData.record}
                 originalImageSize={originalImageSize}
-                csvData={csvData}
                 currentPreviewIndex={currentPreviewIndex}
               />
           </Grid>

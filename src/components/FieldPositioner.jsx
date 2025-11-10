@@ -38,9 +38,8 @@ const FieldPositioner = ({
   currentPreviewIndex,
   onFontScaleChange,
   isCropping,
-  csvData,
 }) => {
-  const { fieldPositions, fieldStyles, brandElements, pageTemplate } = editorState;
+  const { fieldPositions, fieldStyles, csvData, brandElements, pageTemplate } = editorState;
 
   // Derive csvHeaders from csvData to make the component more robust
   const csvHeaders = useMemo(() => {
@@ -303,7 +302,7 @@ const FieldPositioner = ({
         if (!position || !position.visible) return null;
 
         const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
-        const sampleData = record[header] !== undefined ? record[header] : \`[\${header}]\`;
+        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {
           id: header,
@@ -348,10 +347,10 @@ const FieldPositioner = ({
 
     if (gradient.type === 'linear') {
       const angle = gradient.angle || 90;
-      return \`linear-gradient(\${angle}deg, \${stops})\`;
+      return `linear-gradient(${angle}deg, ${stops})`;
     }
     if (gradient.type === 'radial') {
-      return \`radial-gradient(circle, \${stops})\`;
+      return `radial-gradient(circle, ${stops})`;
     }
     return 'none';
   };

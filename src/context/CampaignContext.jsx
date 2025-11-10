@@ -119,7 +119,6 @@ export const CampaignProvider = ({ children }) => {
       pendingAssets: loadedData.pendingAssets || {}, // This is the fix: Overwrite, don't merge.
       selectedAutorForCampaign: loadedData.autor_id || '',
       selectedPersonaForCampaign: loadedData.persona_id || '',
-      campaignContent: campaignData.campaignContent || null,
       // Ensure specific fields are initialized correctly to prevent app crashes
       generatedVideos: campaignData.generatedVideos || [],
       generatedAudioData: campaignData.generatedAudioData || [],

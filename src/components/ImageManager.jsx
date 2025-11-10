@@ -2,14 +2,7 @@ import React from 'react';
 import { Box, List, ListItem, ListItemText, ListItemAvatar, Avatar, IconButton, Typography, Tooltip, Button } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 
-const ImageManager = ({ pageTemplate, onPageTemplateChange: setPageTemplate, setSelectedField, selectedField, onImageUpload }) => {
-  if (!pageTemplate) {
-    return (
-      <Typography variant="body2" color="textSecondary" align="center">
-        Carregando imagens...
-      </Typography>
-    );
-  }
+const ImageManager = ({ pageTemplate, setPageTemplate, setSelectedField, selectedField, onImageUpload }) => {
   const handleSelectImage = (imageId) => {
     setSelectedField(imageId);
   };
