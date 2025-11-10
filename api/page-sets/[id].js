@@ -30,7 +30,11 @@ const handler = async (req, res) => {
       if (rows.length === 0) {
         return res.status(404).json({ error: 'PageSet not found or access denied.' });
       }
-      return res.status(200).json(rows[0]);
+      const pageSet = rows[0];
+      if (typeof pageSet.page_set_data === 'string') {
+        pageSet.page_set_data = JSON.parse(pageSet.page_set_data);
+      }
+      return res.status(200).json(pageSet);
     } catch (error) {
       console.error(`[GET /api/page-sets/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
@@ -45,7 +49,7 @@ const handler = async (req, res) => {
       }
       const { rows } = await query(
         'UPDATE page_sets SET name = $1, page_set_data = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING id, name, page_set_data, updated_at',
-        [name.trim(), JSON.stringify(page_set_data), id, userId]
+        [name.trim(), page_set_data, id, userId]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'PageSet not found or access denied.' });
@@ -59,13 +63,28 @@ const handler = async (req, res) => {
   // Handles DELETE /api/page-sets/:id
   else if (req.method === 'DELETE') {
     try {
+      // First, check if the page set is used in any campaigns for this user.
+      const campaignCheck = await query(
+        "SELECT COUNT(*) FROM campaigns WHERE user_id = $1 AND campaign_data->'pageSet'->>'id' = $2",
+        [userId, id]
+      );
+
+      if (parseInt(campaignCheck.rows[0].count, 10) > 0) {
+        return res.status(409).json({
+          error: 'Este conjunto de páginas não pode ser excluído porque está associado a uma ou mais campanhas.',
+        });
+      }
+
+      // If not used, proceed with deletion.
       const { rowCount } = await query(
         'DELETE FROM page_sets WHERE id = $1 AND user_id = $2',
         [id, userId]
       );
+
       if (rowCount === 0) {
         return res.status(404).json({ error: 'PageSet not found or access denied.' });
       }
+
       return res.status(200).json({ message: 'PageSet deleted successfully.' });
     } catch (error) {
       console.error(`[DELETE /api/page-sets/${id}] Error for user ${userId}:`, error);

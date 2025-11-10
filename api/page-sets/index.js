@@ -28,7 +28,14 @@ const handler = async (req, res) => {
         'SELECT id, name, page_set_data, updated_at FROM page_sets WHERE user_id = $1 ORDER BY updated_at DESC',
         [userId]
       );
-      return res.status(200).json(rows);
+      // Ensure page_set_data is always an object, parsing if it's a string
+      const pageSets = rows.map(ps => ({
+        ...ps,
+        page_set_data: typeof ps.page_set_data === 'string'
+          ? JSON.parse(ps.page_set_data)
+          : ps.page_set_data,
+      }));
+      return res.status(200).json(pageSets);
     } catch (error) {
       console.error(`[GET /api/page-sets] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
@@ -44,12 +51,9 @@ const handler = async (req, res) => {
       }
       const { rows } = await query(
         'INSERT INTO page_sets (user_id, name, page_set_data) VALUES ($1, $2, $3) RETURNING id, name, page_set_data, updated_at',
-        [userId, name.trim(), JSON.stringify(page_set_data)]
+        [userId, name.trim(), page_set_data]
       );
       const newPageSet = rows[0];
-      if (typeof newPageSet.page_set_data === 'string') {
-        newPageSet.page_set_data = JSON.parse(newPageSet.page_set_data);
-      }
       return res.status(201).json(newPageSet);
     } catch (error) {
       console.error(`[POST /api/page-sets] Error for user ${userId}:`, error);
