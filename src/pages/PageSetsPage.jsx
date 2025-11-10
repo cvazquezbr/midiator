@@ -97,7 +97,20 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       }
       const saved = result.pageSet;
       toast.success("Salvo com sucesso!");
-      await fetchPageSets();
+
+      // Update the list locally instead of re-fetching
+      setPageSetList(prevList => {
+        const existingIndex = prevList.findIndex(ps => ps.id === saved.id);
+        if (existingIndex > -1) {
+          // It's an update, so we replace the item in the list
+          const newList = [...prevList];
+          newList[existingIndex] = { id: saved.id, name: saved.name }; // Only store necessary data in the list
+          return newList;
+        } else {
+          // It's a new item, so we add it to the top of the list
+          return [{ id: saved.id, name: saved.name }, ...prevList];
+        }
+      });
 
       const pageSetWithData = { ...saved, page_set_data: saved.page_set_data || { pages: [], aspectRatio: '1:1' } };
       setSelectedPageSet(pageSetWithData);
