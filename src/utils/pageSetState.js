@@ -4,12 +4,10 @@ import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 import { traverseState } from './stateTraversal';
 
-// --- Utility Functions (Adapted from campaignState.js) ---
+// --- Utility Functions ---
 
 const uploadPageSetAsset = async (blob, filename, pageSetId) => {
   if (!blob) throw new Error(`Asset "${filename}" is not a valid Blob.`);
-
-  // Differentiate PageSet assets by storing them in a 'pageset/' prefixed folder.
   const fullPath = `pageset/${pageSetId}/${filename}`;
 
   try {
@@ -35,6 +33,10 @@ export const serializePageSetData = async (state, pendingAssets, pageSetId, onPr
       }
     }
   });
+
+  if (uniqueUrlsToUpload.size === 0) {
+    return workingState; // No assets to upload
+  }
 
   onProgress({ current: 0, total: uniqueUrlsToUpload.size });
   const tempToPermanentUrlMap = new Map();
@@ -71,6 +73,8 @@ export const serializePageSetData = async (state, pendingAssets, pageSetId, onPr
 };
 
 export const deserializePageSetData = async (loadedState) => {
+  if (!loadedState) return { finalState: { pages: [], aspectRatio: '1:1' }, newlyCreatedAssets: {} };
+
   const finalState = JSON.parse(JSON.stringify(loadedState));
   const newlyCreatedAssets = {};
   const isVercelUrl = (url) => typeof url === 'string' && url.includes('blob.vercel-storage.com');
@@ -81,6 +85,10 @@ export const deserializePageSetData = async (loadedState) => {
       uniqueUrlsToDownload.set(value, null);
     }
   });
+
+  if (uniqueUrlsToDownload.size === 0) {
+    return { finalState, newlyCreatedAssets };
+  }
 
   const downloadPromises = [];
   const permanentToTempUrlMap = new Map();
@@ -114,71 +122,63 @@ export const deserializePageSetData = async (loadedState) => {
   return { finalState, newlyCreatedAssets };
 };
 
-
 // --- API Functions ---
 
 export const getPageSets = async () => {
-    try {
-        // fetchWithAuth returns the parsed JSON data directly on success.
-        const data = await fetchWithAuth('/api/page-sets');
-        // Ensure we always return an array. If data is null or not an array, return [].
-        return Array.isArray(data) ? data : [];
-    } catch (error) {
-        // In case of a network error or if fetchWithAuth throws an exception,
-        // log the error and return an empty array to prevent UI crashes.
-        console.error("Failed to fetch page sets:", error);
-        toast.error("Não foi possível carregar os conjuntos de páginas.");
-        return [];
-    }
+  try {
+    const data = await fetchWithAuth('/api/page-sets');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Failed to fetch page sets:", error);
+    toast.error("Não foi possível carregar os conjuntos de páginas.");
+    return [];
+  }
 };
 
 export const loadPageSet = async (id) => {
-    const pageSet = await fetchWithAuth(`/api/page-sets?id=${id}`); // Reverted to GET
-    if (pageSet.page_set_data) {
-        const { finalState, newlyCreatedAssets } = await deserializePageSetData(pageSet.page_set_data);
-        pageSet.page_set_data = finalState;
-        pageSet.pendingAssets = newlyCreatedAssets;
-    } else {
-        pageSet.pendingAssets = {};
-    }
-    return pageSet;
+  if (!id) throw new Error("Cannot load a PageSet without an ID.");
+  const pageSet = await fetchWithAuth(`/api/page-sets/${id}`);
+  const { finalState, newlyCreatedAssets } = await deserializePageSetData(pageSet.page_set_data);
+  return { ...pageSet, page_set_data: finalState, pendingAssets: newlyCreatedAssets };
 };
 
 export const savePageSet = async (name, pageSetData, pendingAssets) => {
-    // First, save the PageSet to get an ID
-    const initialSave = await fetchWithAuth('/api/page-sets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, page_set_data: {} }), // Save with empty data first
-    });
+  // A temporary ID for asset path generation before we have the real one.
+  const tempId = `temp_${Date.now()}`;
+  const serializedState = await serializePageSetData(pageSetData, pendingAssets, tempId);
 
-    if (!initialSave) throw new Error('Failed to create initial PageSet entry.');
+  // Now, create the PageSet in one go.
+  const savedPageSet = await fetchWithAuth('/api/page-sets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, page_set_data: serializedState }),
+  });
 
-    const pageSetId = initialSave.id;
-
-    // Now, serialize and upload assets using the new ID
-    const serializedState = await serializePageSetData(pageSetData, pendingAssets, pageSetId);
-
-    // Finally, update the PageSet with the data containing permanent asset URLs
-    const updatedPageSet = await updatePageSet(pageSetId, name, serializedState, {});
-
-    // Re-deserialize to return a usable state to the frontend
-    return await loadPageSet(pageSetId);
+  // Return the complete object received from the API, deserialized for UI use.
+  const { finalState, newlyCreatedAssets } = await deserializePageSetData(savedPageSet.page_set_data);
+  return {
+    pageSet: { ...savedPageSet, page_set_data: finalState },
+    pendingAssets: newlyCreatedAssets,
+  };
 };
 
 export const updatePageSet = async (id, name, pageSetData, pendingAssets) => {
-    const serializedState = await serializePageSetData(pageSetData, pendingAssets, id);
+  const serializedState = await serializePageSetData(pageSetData, pendingAssets, id);
 
-    const pageSet = await fetchWithAuth('/api/page-sets', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name, page_set_data: serializedState }),
-    });
+  const updatedPageSet = await fetchWithAuth(`/api/page-sets/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, page_set_data: serializedState }),
+  });
 
-    // Re-deserialize for immediate use in the frontend
-    return await loadPageSet(id);
+  // Re-deserialize for immediate use in the frontend
+  const { finalState, newlyCreatedAssets } = await deserializePageSetData(updatedPageSet.page_set_data);
+  return {
+    pageSet: { ...updatedPageSet, page_set_data: finalState },
+    pendingAssets: newlyCreatedAssets,
+  };
 };
 
 export const deletePageSet = async (id) => {
-    return fetchWithAuth(`/api/page-sets?id=${id}`, { method: 'DELETE' });
+  return fetchWithAuth(`/api/page-sets/${id}`, { method: 'DELETE' });
 };
