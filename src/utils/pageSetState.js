@@ -1,7 +1,7 @@
 
 import { toast } from 'sonner';
 import { upload } from '@vercel/blob/client';
-import { fetchWithAuth } from './auth'; // Assuming auth.js exports fetchWithAuth
+import fetchWithAuth from './fetchWithAuth';
 import { traverseState } from './stateTraversal';
 
 // --- Utility Functions (Adapted from campaignState.js) ---
