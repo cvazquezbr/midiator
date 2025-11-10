@@ -1,4 +1,4 @@
-import { db } from '@vercel/postgres';
+import { query } from '../db.js';
 import { withAuth } from '../middleware/auth.js';
 
 // Helper to safely parse the page_set_data field
@@ -27,10 +27,8 @@ const handler = async (req, res) => {
     const userId = req.user.sub;
 
     try {
-        const client = await db.connect();
-
         if (req.method === 'GET') {
-            const { rows } = await client.sql`SELECT id, name, page_set_data FROM page_sets WHERE user_id = ${userId} ORDER BY name`;
+            const { rows } = await query('SELECT id, name, page_set_data FROM page_sets WHERE user_id = $1 ORDER BY name', [userId]);
             const parsedRows = rows.map(parsePageSetData);
             return res.status(200).json(parsedRows);
         }
@@ -39,11 +37,12 @@ const handler = async (req, res) => {
             const { name, page_set_data } = req.body;
             if (!name) return res.status(400).json({ error: 'Name is required' });
 
-            const { rows: [newPageSet] } = await client.sql`
-                INSERT INTO page_sets (user_id, name, page_set_data)
-                VALUES (${userId}, ${name}, ${JSON.stringify(page_set_data || {})})
-                RETURNING id, name, page_set_data;
-            `;
+            const { rows: [newPageSet] } = await query(
+                `INSERT INTO page_sets (user_id, name, page_set_data)
+                VALUES ($1, $2, $3)
+                RETURNING id, name, page_set_data;`,
+                [userId, name, JSON.stringify(page_set_data || {})]
+            );
 
             return res.status(201).json(parsePageSetData(newPageSet));
         }
@@ -52,12 +51,13 @@ const handler = async (req, res) => {
             const { id, name, page_set_data } = req.body;
             if (!id || !name) return res.status(400).json({ error: 'ID and name are required' });
 
-            const { rows: [updatedPageSet] } = await client.sql`
-                UPDATE page_sets
-                SET name = ${name}, page_set_data = ${JSON.stringify(page_set_data || {})}
-                WHERE id = ${id} AND user_id = ${userId}
-                RETURNING id, name, page_set_data;
-            `;
+            const { rows: [updatedPageSet] } = await query(
+                `UPDATE page_sets
+                SET name = $1, page_set_data = $2
+                WHERE id = $3 AND user_id = $4
+                RETURNING id, name, page_set_data;`,
+                [name, JSON.stringify(page_set_data || {}), id, userId]
+            );
 
             if (!updatedPageSet) return res.status(404).json({ error: 'PageSet not found' });
             return res.status(200).json(parsePageSetData(updatedPageSet));
@@ -67,9 +67,10 @@ const handler = async (req, res) => {
             const { id } = req.query;
             if (!id) return res.status(400).json({ error: 'ID is required' });
 
-            const result = await client.sql`
-                DELETE FROM page_sets WHERE id = ${id} AND user_id = ${userId};
-            `;
+            const result = await query(
+                'DELETE FROM page_sets WHERE id = $1 AND user_id = $2;',
+                [id, userId]
+            );
 
             if (result.rowCount === 0) return res.status(404).json({ error: 'PageSet not found' });
             return res.status(204).end();
@@ -79,9 +80,10 @@ const handler = async (req, res) => {
             const { id } = req.query;
             if (!id) return res.status(400).json({ error: 'ID is required' });
 
-            const { rows: [pageSet] } = await client.sql`
-                SELECT id, name, page_set_data FROM page_sets WHERE id = ${id} AND user_id = ${userId};
-            `;
+            const { rows: [pageSet] } = await query(
+                'SELECT id, name, page_set_data FROM page_sets WHERE id = $1 AND user_id = $2;',
+                [id, userId]
+            );
 
             if (!pageSet) return res.status(404).json({ error: 'PageSet not found' });
 
