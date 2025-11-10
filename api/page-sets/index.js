@@ -1,6 +1,18 @@
 import { query } from '../db.js';
 import { withAuth } from '../middleware/auth.js';
 
+const parseBody = async (req) => {
+  let body = '';
+  for await (const chunk of req) {
+    body += new TextDecoder().decode(chunk);
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    return {};
+  }
+};
+
 // Helper to safely parse the page_set_data field
 const parsePageSetData = (pageSet) => {
     if (!pageSet) return null;
@@ -34,7 +46,7 @@ const handler = async (req, res) => {
         }
 
         if (req.method === 'POST') {
-            const { name, page_set_data } = req.body;
+            const { name, page_set_data } = await parseBody(req);
             if (!name) return res.status(400).json({ error: 'Name is required' });
 
             const { rows: [newPageSet] } = await query(
@@ -48,7 +60,7 @@ const handler = async (req, res) => {
         }
 
         if (req.method === 'PUT') {
-            const { id, name, page_set_data } = req.body;
+            const { id, name, page_set_data } = await parseBody(req);
             if (!id || !name) return res.status(400).json({ error: 'ID and name are required' });
 
             const { rows: [updatedPageSet] } = await query(
@@ -76,18 +88,41 @@ const handler = async (req, res) => {
             return res.status(204).end();
         }
 
-        if (req.method === 'PATCH') { // For loading a single full page set
-            const { id } = req.query;
+        if (req.method === 'PATCH') {
+            const { id, name, page_set_data } = await parseBody(req);
             if (!id) return res.status(400).json({ error: 'ID is required' });
 
-            const { rows: [pageSet] } = await query(
-                'SELECT id, name, page_set_data FROM page_sets WHERE id = $1 AND user_id = $2;',
-                [id, userId]
-            );
+            // Build the query dynamically to only update provided fields
+            const fields = [];
+            const values = [];
+            let queryIndex = 1;
 
-            if (!pageSet) return res.status(404).json({ error: 'PageSet not found' });
+            if (name !== undefined) {
+                fields.push(`name = $${queryIndex++}`);
+                values.push(name);
+            }
+            if (page_set_data !== undefined) {
+                fields.push(`page_set_data = $${queryIndex++}`);
+                values.push(JSON.stringify(page_set_data));
+            }
 
-            return res.status(200).json(parsePageSetData(pageSet));
+            if (fields.length === 0) {
+                return res.status(400).json({ error: 'No fields to update' });
+            }
+
+            values.push(id, userId);
+            const queryString = `
+                UPDATE page_sets
+                SET ${fields.join(', ')}
+                WHERE id = $${queryIndex++} AND user_id = $${queryIndex++}
+                RETURNING id, name, page_set_data;
+            `;
+
+            const { rows: [updatedPageSet] } = await query(queryString, values);
+
+            if (!updatedPageSet) return res.status(404).json({ error: 'PageSet not found or user not authorized' });
+
+            return res.status(200).json(parsePageSetData(updatedPageSet));
         }
 
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']);
