@@ -83,10 +83,11 @@ const PageSetEditor = ({
       newPages.push(finalPageData);
     }
 
+    const currentPageSetData = pageSet.page_set_data || {};
     onPageSetChange({
       ...pageSet,
       page_set_data: {
-        ...pageSet.page_set_data,
+        ...currentPageSetData,
         pages: newPages,
       },
     });
@@ -98,10 +99,11 @@ const PageSetEditor = ({
   const handleDeletePage = () => {
     if (pageToDelete === null) return;
     const newPages = pages.filter(p => p.index !== pageToDelete.index);
+    const currentPageSetData = pageSet.page_set_data || {};
     onPageSetChange({
       ...pageSet,
       page_set_data: {
-        ...pageSet.page_set_data,
+        ...currentPageSetData,
         pages: newPages,
       },
     });
@@ -115,11 +117,13 @@ const PageSetEditor = ({
 
   const handleAspectRatioChange = (event) => {
     const newAspectRatio = event.target.value;
-    const currentPages = pageSet?.page_set_data?.pages;
+    const currentPageSetData = pageSet.page_set_data || {};
+    const currentPages = currentPageSetData.pages;
+
     onPageSetChange({
       ...pageSet,
       page_set_data: {
-        ...pageSet.page_set_data,
+        ...currentPageSetData,
         pages: Array.isArray(currentPages) ? currentPages : [],
         aspectRatio: newAspectRatio,
       },
