@@ -133,7 +133,7 @@ export const getPageSets = async () => {
 };
 
 export const loadPageSet = async (id) => {
-    const pageSet = await fetchWithAuth(`/api/page-sets?id=${id}`, { method: 'PATCH' });
+    const pageSet = await fetchWithAuth(`/api/page-sets?id=${id}`); // Reverted to GET
     if (pageSet.page_set_data) {
         const { finalState, newlyCreatedAssets } = await deserializePageSetData(pageSet.page_set_data);
         pageSet.page_set_data = finalState;
