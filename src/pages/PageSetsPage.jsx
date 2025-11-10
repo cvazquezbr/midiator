@@ -95,14 +95,14 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       } else {
         result = await savePageSet(name, page_set_data, pendingAssets);
       }
-      const saved = result.pageSet;
+      const saved = result;
       toast.success("Salvo com sucesso!");
       await fetchPageSets();
 
       const pageSetWithData = { ...saved, page_set_data: saved.page_set_data || { pages: [], aspectRatio: '1:1' } };
       setSelectedPageSet(pageSetWithData);
       setOriginalPageSet(JSON.parse(JSON.stringify(pageSetWithData)));
-      setPendingAssets(result.pendingAssets || {});
+      setPendingAssets(saved.pendingAssets || {});
       setIsDirty(false);
       return true;
     } catch (err) {

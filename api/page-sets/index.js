@@ -8,7 +8,7 @@ const handler = async (req, res) => {
         const client = await db.connect();
 
         if (req.method === 'GET') {
-            const { rows } = await client.sql`SELECT id, name FROM page_sets WHERE user_id = ${userId} ORDER BY name`;
+            const { rows } = await client.sql`SELECT id, name, page_set_data FROM page_sets WHERE user_id = ${userId} ORDER BY name`;
             return res.status(200).json(rows);
         }
 
