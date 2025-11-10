@@ -40,6 +40,19 @@ const handler = async (req, res) => {
 
     try {
         if (req.method === 'GET') {
+            const { id } = req.query;
+
+            // If an ID is provided, fetch a single item.
+            if (id) {
+                const { rows: [pageSet] } = await query(
+                    'SELECT id, name, page_set_data FROM page_sets WHERE id = $1 AND user_id = $2;',
+                    [id, userId]
+                );
+                if (!pageSet) return res.status(404).json({ error: 'PageSet not found' });
+                return res.status(200).json(parsePageSetData(pageSet));
+            }
+
+            // Otherwise, fetch the entire list.
             const { rows } = await query('SELECT id, name, page_set_data FROM page_sets WHERE user_id = $1 ORDER BY name', [userId]);
             const parsedRows = rows.map(parsePageSetData);
             return res.status(200).json(parsedRows);
