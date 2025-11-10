@@ -411,12 +411,12 @@ const FieldPositioner = ({
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedField('__page_background__');
+              setSelectedField('page_background');
             }
           }}
           onTouchStart={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedField('__page_background__');
+              setSelectedField('page_background');
             }
           }}
         >
