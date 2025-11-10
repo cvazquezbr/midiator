@@ -18,16 +18,6 @@ import { getDimensionsFromAspectRatio } from '../utils/imageComposer';
 
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
-const staticBaseTemplate = {
-  pageTemplate: {
-    backgroundColor: '#FFFFFF',
-    elements: [],
-    images: [],
-  },
-  fieldPositions: {},
-  fieldStyles: {},
-  brandElements: {},
-};
 
 const PageSetEditor = ({
   pageSet,
@@ -81,12 +71,8 @@ const PageSetEditor = ({
   };
 
   const handleSavePage = (editedPageData) => {
-    const { pageTemplate: customPageTemplate, ...restOfModifiedData } = editedPageData;
-
-    const finalPageData = {
-      ...restOfModifiedData,
-      customPageTemplate,
-    };
+    // editedPageData now contains all custom fields (template, positions, styles, etc.)
+    const finalPageData = editedPageData;
 
     const newPages = [...pages];
     const existingIndex = newPages.findIndex(p => p.index === finalPageData.index);
@@ -255,7 +241,12 @@ const PageSetEditor = ({
           open={isEditorOpen}
           onClose={() => { setIsEditorOpen(false); setEditingPage(null); }}
           pageData={safeDeepClone(editingPage)}
-          baseTemplate={staticBaseTemplate}
+          baseTemplate={{ // Provide a minimal, correctly typed base template
+            pageTemplate: { backgroundColor: '#FFFFFF', elements: [], images: [] },
+            fieldPositions: {},
+            fieldStyles: {},
+            brandElements: [], // Correctly typed as an array
+          }}
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
           originalImageSize={imageSize}
