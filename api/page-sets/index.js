@@ -14,17 +14,14 @@ const parseBody = async (req) => {
 };
 
 /**
- * API handler for page set collection operations.
+ * API handler for page_set collection operations.
  * All routes in this handler are protected and require authentication.
- *
- * @param {object} req - The incoming request object.
- * @param {object} res - The outgoing response object.
  */
 const handler = async (req, res) => {
   const userId = req.user.sub;
 
   // Handles GET requests to /api/page-sets
-  // Fetches all page sets belonging to the authenticated user.
+  // Fetches all page_sets belonging to the authenticated user.
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
@@ -38,19 +35,18 @@ const handler = async (req, res) => {
     }
   }
   // Handles POST requests to /api/page-sets
-  // Creates a new page set for the authenticated user.
+  // Creates a new page_set for the authenticated user.
   else if (req.method === 'POST') {
     try {
       const { name, page_set_data } = await parseBody(req);
-      if (!name || !page_set_data) {
+      if (!name || !name.trim() || !page_set_data) {
         return res.status(400).json({ error: 'PageSet name and data are required.' });
       }
       const { rows } = await query(
         'INSERT INTO page_sets (user_id, name, page_set_data) VALUES ($1, $2, $3) RETURNING id, name, page_set_data, updated_at',
-        [userId, name, JSON.stringify(page_set_data)]
+        [userId, name.trim(), JSON.stringify(page_set_data)]
       );
       const newPageSet = rows[0];
-      // Ensure page_set_data is an object before sending
       if (typeof newPageSet.page_set_data === 'string') {
         newPageSet.page_set_data = JSON.parse(newPageSet.page_set_data);
       }

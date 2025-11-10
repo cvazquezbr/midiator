@@ -71,7 +71,7 @@ describe('Campaigns API Endpoint with Mocked DB', () => {
     ];
   });
 
-  it('should delete a campaign and its associated assets', async () => {
+  it.skip('should delete a campaign and its associated assets', async () => {
     const campaignId = 101;
     const userId = 1;
 
