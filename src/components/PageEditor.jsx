@@ -18,6 +18,8 @@ const PageEditor = ({
   aspectRatio,
   originalImageSize,
   onOpenImageGallery,
+  csvData,
+  currentPreviewIndex,
 }) => {
   const [pageData, setPageData] = useState(null);
   const [editorState, setEditorState] = useState(null);
@@ -44,11 +46,11 @@ const PageEditor = ({
         fieldPositions: data.customFieldPositions || baseTemplate.fieldPositions || {},
         fieldStyles: data.customFieldStyles || baseTemplate.fieldStyles || {},
         brandElements: data.customBrandElements || baseTemplate.brandElements || [],
-        csvData: [data.record],
+        csvData: csvData, // Use the full csvData array passed in props
       };
       setEditorState(initialState);
     }
-  }, [open, initialPageData, baseTemplate]);
+  }, [open, initialPageData, baseTemplate, csvData]);
 
   const handleRecordChange = (e) => {
     const { name, value } = e.target;
@@ -127,6 +129,7 @@ const PageEditor = ({
                 originalImageSize={originalImageSize}
                 selectedField={selectedField}
                 setSelectedField={setSelectedField}
+                currentPreviewIndex={currentPreviewIndex}
               />
           </Grid>
         </Grid>
