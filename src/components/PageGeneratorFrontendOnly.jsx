@@ -630,6 +630,9 @@ const PageGeneratorFrontendOnly = ({
           originalImageSize={originalImageSize}
           onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
           addPendingAsset={addPendingAsset}
+          // Pass the full data context
+          csvData={csvData}
+          currentPreviewIndex={editingGeneratedPageIndex}
         />
       )}
       <input type="file" accept="image/*" style={{ display: 'none' }} ref={individualImageInputRef} onChange={handleIndividualImageUpload} />
