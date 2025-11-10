@@ -118,7 +118,18 @@ export const deserializePageSetData = async (loadedState) => {
 // --- API Functions ---
 
 export const getPageSets = async () => {
-    return fetchWithAuth('/api/page-sets');
+    try {
+        // fetchWithAuth returns the parsed JSON data directly on success.
+        const data = await fetchWithAuth('/api/page-sets');
+        // Ensure we always return an array. If data is null or not an array, return [].
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        // In case of a network error or if fetchWithAuth throws an exception,
+        // log the error and return an empty array to prevent UI crashes.
+        console.error("Failed to fetch page sets:", error);
+        toast.error("Não foi possível carregar os conjuntos de páginas.");
+        return [];
+    }
 };
 
 export const loadPageSet = async (id) => {
