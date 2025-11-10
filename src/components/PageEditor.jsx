@@ -21,6 +21,7 @@ const PageEditor = ({
 }) => {
   const [pageData, setPageData] = useState(null);
   const [editorState, setEditorState] = useState(null);
+  const [selectedField, setSelectedField] = useState(null);
   const { campaignSwatches } = useCampaign();
 
   useEffect(() => {
@@ -43,6 +44,7 @@ const PageEditor = ({
         fieldPositions: data.customFieldPositions || baseTemplate.fieldPositions || {},
         fieldStyles: data.customFieldStyles || baseTemplate.fieldStyles || {},
         brandElements: data.customBrandElements || baseTemplate.brandElements || [],
+        csvData: [data.record],
       };
       setEditorState(initialState);
     }
@@ -119,10 +121,12 @@ const PageEditor = ({
           <Grid item xs={12} md={8}>
              <FieldPositioner
                 editorState={editorState}
-                onEditorStateChange={setEditorState}
+                setEditorState={setEditorState}
                 aspectRatio={aspectRatio}
                 record={pageData.record}
                 originalImageSize={originalImageSize}
+                selectedField={selectedField}
+                setSelectedField={setSelectedField}
               />
           </Grid>
         </Grid>
