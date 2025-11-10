@@ -167,30 +167,21 @@ function HomePage() {
     console.log(`[HomePage] Asset uploaded. Replacing ${tempUrl} with ${permanentUrl}`);
 
     setCampaignState(currentState => {
-      // Create a shallow copy of the state
+      // Create a shallow copy. This is enough for React to trigger a re-render.
       const newState = { ...currentState };
 
-      // Deep clone only the parts of the state that might contain the asset URL.
-      // This is safer than cloning the entire state, which might contain non-serializable
-      // data like functions that `structuredClone` would remove.
-      const propertiesToUpdate = ['generatedPagesData', 'pageTemplate', 'generatedVideos', 'generatedAudioData'];
-
-      propertiesToUpdate.forEach(prop => {
-        if (newState[prop]) {
-          // structuredClone is safe here because we know these specific properties
-          // should only contain serializable data (and Blobs, which it handles).
-          newState[prop] = structuredClone(newState[prop]);
-        }
-      });
-
-      // Use traverseState to find and replace the temporary URL within the deep-cloned parts.
+      // Now, directly mutate the nested properties within this new shallow copy.
+      // This is safe because we are not mutating the original `currentState` object.
+      // This approach avoids deep cloning (`structuredClone`), which was causing issues
+      // by breaking object references that other parts of the app (like PageEditor) relied on.
       traverseState(newState, (key, value, owner) => {
         if (value === tempUrl) {
+          // Directly mutate the property on the owner object within our shallow copy.
           owner[key] = permanentUrl;
         }
       });
 
-      // Return the updated state
+      // Return the mutated shallow copy.
       return newState;
     });
 
