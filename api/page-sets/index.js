@@ -1,5 +1,5 @@
-import { query } from '../db.js';
 import { withAuth } from '../middleware/auth.js';
+import { query } from '../db.js';
 
 const parseBody = async (req) => {
   let body = '';
@@ -13,138 +13,56 @@ const parseBody = async (req) => {
   }
 };
 
-// Helper to safely parse the page_set_data field
-const parsePageSetData = (pageSet) => {
-    if (!pageSet) return null;
-
-    let data = {};
-    const rawData = pageSet.page_set_data;
-
-    try {
-        if (typeof rawData === 'string') {
-            data = JSON.parse(rawData);
-        } else if (rawData) {
-            // It's already an object
-            data = rawData;
-        }
-    } catch (e) {
-        console.error(`Failed to parse page_set_data for pageSet ${pageSet.id}:`, e);
-    }
-
-    return { ...pageSet, page_set_data: data };
-};
-
-
+/**
+ * API handler for page set collection operations.
+ * All routes in this handler are protected and require authentication.
+ *
+ * @param {object} req - The incoming request object.
+ * @param {object} res - The outgoing response object.
+ */
 const handler = async (req, res) => {
-    const userId = req.user.sub;
+  const userId = req.user.sub;
 
+  // Handles GET requests to /api/page-sets
+  // Fetches all page sets belonging to the authenticated user.
+  if (req.method === 'GET') {
     try {
-        if (req.method === 'GET') {
-            const { id } = req.query;
-
-            // If an ID is provided, fetch a single item.
-            if (id) {
-                const { rows: [pageSet] } = await query(
-                    'SELECT id, name, page_set_data FROM page_sets WHERE id = $1 AND user_id = $2;',
-                    [id, userId]
-                );
-                if (!pageSet) return res.status(404).json({ error: 'PageSet not found' });
-                return res.status(200).json(parsePageSetData(pageSet));
-            }
-
-            // Otherwise, fetch the entire list.
-            const { rows } = await query('SELECT id, name, page_set_data FROM page_sets WHERE user_id = $1 ORDER BY name', [userId]);
-            const parsedRows = rows.map(parsePageSetData);
-            return res.status(200).json(parsedRows);
-        }
-
-        if (req.method === 'POST') {
-            const { name, page_set_data } = await parseBody(req);
-            if (!name) return res.status(400).json({ error: 'Name is required' });
-
-            const { rows: [newPageSet] } = await query(
-                `INSERT INTO page_sets (user_id, name, page_set_data)
-                VALUES ($1, $2, $3)
-                RETURNING id, name, page_set_data;`,
-                [userId, name, JSON.stringify(page_set_data || {})]
-            );
-
-            return res.status(201).json(parsePageSetData(newPageSet));
-        }
-
-        if (req.method === 'PUT') {
-            const { id, name, page_set_data } = await parseBody(req);
-            if (!id || !name) return res.status(400).json({ error: 'ID and name are required' });
-
-            const { rows: [updatedPageSet] } = await query(
-                `UPDATE page_sets
-                SET name = $1, page_set_data = $2
-                WHERE id = $3 AND user_id = $4
-                RETURNING id, name, page_set_data;`,
-                [name, JSON.stringify(page_set_data || {}), id, userId]
-            );
-
-            if (!updatedPageSet) return res.status(404).json({ error: 'PageSet not found' });
-            return res.status(200).json(parsePageSetData(updatedPageSet));
-        }
-
-        if (req.method === 'DELETE') {
-            const { id } = req.query;
-            if (!id) return res.status(400).json({ error: 'ID is required' });
-
-            const result = await query(
-                'DELETE FROM page_sets WHERE id = $1 AND user_id = $2;',
-                [id, userId]
-            );
-
-            if (result.rowCount === 0) return res.status(404).json({ error: 'PageSet not found' });
-            return res.status(204).end();
-        }
-
-        if (req.method === 'PATCH') {
-            const { id, name, page_set_data } = await parseBody(req);
-            if (!id) return res.status(400).json({ error: 'ID is required' });
-
-            // Build the query dynamically to only update provided fields
-            const fields = [];
-            const values = [];
-            let queryIndex = 1;
-
-            if (name !== undefined) {
-                fields.push(`name = $${queryIndex++}`);
-                values.push(name);
-            }
-            if (page_set_data !== undefined) {
-                fields.push(`page_set_data = $${queryIndex++}`);
-                values.push(JSON.stringify(page_set_data));
-            }
-
-            if (fields.length === 0) {
-                return res.status(400).json({ error: 'No fields to update' });
-            }
-
-            values.push(id, userId);
-            const queryString = `
-                UPDATE page_sets
-                SET ${fields.join(', ')}
-                WHERE id = $${queryIndex++} AND user_id = $${queryIndex++}
-                RETURNING id, name, page_set_data;
-            `;
-
-            const { rows: [updatedPageSet] } = await query(queryString, values);
-
-            if (!updatedPageSet) return res.status(404).json({ error: 'PageSet not found or user not authorized' });
-
-            return res.status(200).json(parsePageSetData(updatedPageSet));
-        }
-
-        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']);
-        return res.status(405).end(`Method ${req.method} Not Allowed`);
-
+      const { rows } = await query(
+        'SELECT id, name FROM page_sets WHERE user_id = $1 ORDER BY updated_at DESC',
+        [userId]
+      );
+      return res.status(200).json(rows);
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+      console.error(`[GET /api/page-sets] Error for user ${userId}:`, error);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
+  }
+  // Handles POST requests to /api/page-sets
+  // Creates a new page set for the authenticated user.
+  else if (req.method === 'POST') {
+    try {
+      const { name, page_set_data } = await parseBody(req);
+      if (!name || !page_set_data) {
+        return res.status(400).json({ error: 'PageSet name and data are required.' });
+      }
+      const { rows } = await query(
+        'INSERT INTO page_sets (user_id, name, page_set_data) VALUES ($1, $2, $3) RETURNING id, name, page_set_data, updated_at',
+        [userId, name, JSON.stringify(page_set_data)]
+      );
+      const newPageSet = rows[0];
+      // Ensure page_set_data is an object before sending
+      if (typeof newPageSet.page_set_data === 'string') {
+        newPageSet.page_set_data = JSON.parse(newPageSet.page_set_data);
+      }
+      return res.status(201).json(newPageSet);
+    } catch (error) {
+      console.error(`[POST /api/page-sets] Error for user ${userId}:`, error);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  } else {
+    res.setHeader('Allow', ['GET', 'POST']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
 };
 
 export default withAuth(handler);

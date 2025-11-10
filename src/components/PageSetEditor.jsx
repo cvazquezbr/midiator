@@ -30,7 +30,7 @@ const PageSetEditor = ({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [newName, setNewName] = useState(pageSet.name || '');
+  const [newName, setNewName] = useState(pageSet?.name || '');
 
   const gridRef = React.useRef();
 
