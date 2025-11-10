@@ -25,7 +25,7 @@ const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name FROM page_sets WHERE user_id = $1 ORDER BY updated_at DESC',
+        'SELECT id, name, page_set_data, updated_at FROM page_sets WHERE user_id = $1 ORDER BY updated_at DESC',
         [userId]
       );
       return res.status(200).json(rows);
