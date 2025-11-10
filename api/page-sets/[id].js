@@ -30,16 +30,7 @@ const handler = async (req, res) => {
       if (rows.length === 0) {
         return res.status(404).json({ error: 'PageSet not found or access denied.' });
       }
-      const pageSet = rows[0];
-      if (typeof pageSet.page_set_data === 'string') {
-        try {
-          pageSet.page_set_data = JSON.parse(pageSet.page_set_data);
-        } catch (e) {
-          console.error(`[GET /api/page-sets/${id}] Error parsing page_set_data:`, e);
-          pageSet.page_set_data = {}; // Fallback to empty object on parse error
-        }
-      }
-      return res.status(200).json(pageSet);
+      return res.status(200).json(rows[0]);
     } catch (error) {
       console.error(`[GET /api/page-sets/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
@@ -59,11 +50,7 @@ const handler = async (req, res) => {
       if (rows.length === 0) {
         return res.status(404).json({ error: 'PageSet not found or access denied.' });
       }
-      const updatedPageSet = rows[0];
-      if (typeof updatedPageSet.page_set_data === 'string') {
-        updatedPageSet.page_set_data = JSON.parse(updatedPageSet.page_set_data);
-      }
-      return res.status(200).json(updatedPageSet);
+      return res.status(200).json(rows[0]);
     } catch (error) {
       console.error(`[PUT /api/page-sets/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });

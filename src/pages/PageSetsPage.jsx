@@ -59,19 +59,15 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
     }
   };
 
-  const handleSelectPageSet = async (ps) => {
+  const handleSelectPageSet = (ps) => {
+    // With the GET all API now returning the full object, we no longer need a separate load
     if (!ps || !ps.id) return;
-    try {
-        const fullPageSet = await loadPageSet(ps.id);
-        const pageSetWithData = { ...fullPageSet, page_set_data: fullPageSet.page_set_data || { pages: [], aspectRatio: '1:1' } };
-        setSelectedPageSet(pageSetWithData);
-        setOriginalPageSet(JSON.parse(JSON.stringify(pageSetWithData)));
-        setPendingAssets(fullPageSet.pendingAssets || {});
-        setIsDirty(false);
-        if (isMobile) setDrawerOpen(false);
-    } catch(err) {
-        toast.error(`Falha ao carregar PageSet: ${err.message}`);
-    }
+    const pageSetWithData = { ...ps, page_set_data: ps.page_set_data || { pages: [], aspectRatio: '1:1' } };
+    setSelectedPageSet(pageSetWithData);
+    setOriginalPageSet(JSON.parse(JSON.stringify(pageSetWithData)));
+    setPendingAssets({}); // Selecting a saved item should clear any pending assets
+    setIsDirty(false);
+    if (isMobile) setDrawerOpen(false);
   };
 
   const handleNewPageSet = () => {
@@ -102,13 +98,13 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       setPageSetList(prevList => {
         const existingIndex = prevList.findIndex(ps => ps.id === saved.id);
         if (existingIndex > -1) {
-          // It's an update, so we replace the item in the list
+          // It's an update, so we replace the item in the list with the full saved object
           const newList = [...prevList];
-          newList[existingIndex] = { id: saved.id, name: saved.name }; // Only store necessary data in the list
+          newList[existingIndex] = saved;
           return newList;
         } else {
-          // It's a new item, so we add it to the top of the list
-          return [{ id: saved.id, name: saved.name }, ...prevList];
+          // It's a new item, so we add the full saved object to the top of the list
+          return [saved, ...prevList];
         }
       });
 
