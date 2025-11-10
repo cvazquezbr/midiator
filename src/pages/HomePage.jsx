@@ -167,13 +167,23 @@ function HomePage() {
     console.log(`[HomePage] Asset uploaded. Replacing ${tempUrl} with ${permanentUrl}`);
 
     setCampaignState(currentState => {
-      // Create a deep copy of the current state to avoid direct mutation.
-      // This is a safe way to handle nested objects without losing Blobs.
-      // NOTE: For very large or complex states, a library like 'lodash.cloneDeep'
-      // or 'immer' would be more robust, but this is sufficient here.
-      const newState = structuredClone(currentState);
+      // Create a shallow copy of the state
+      const newState = { ...currentState };
 
-      // Use traverseState to find and replace the temporary URL with the permanent one.
+      // Deep clone only the parts of the state that might contain the asset URL.
+      // This is safer than cloning the entire state, which might contain non-serializable
+      // data like functions that `structuredClone` would remove.
+      const propertiesToUpdate = ['generatedPagesData', 'pageTemplate', 'generatedVideos', 'generatedAudioData'];
+
+      propertiesToUpdate.forEach(prop => {
+        if (newState[prop]) {
+          // structuredClone is safe here because we know these specific properties
+          // should only contain serializable data (and Blobs, which it handles).
+          newState[prop] = structuredClone(newState[prop]);
+        }
+      });
+
+      // Use traverseState to find and replace the temporary URL within the deep-cloned parts.
       traverseState(newState, (key, value, owner) => {
         if (value === tempUrl) {
           owner[key] = permanentUrl;
@@ -184,7 +194,7 @@ function HomePage() {
       return newState;
     });
 
-    // This can be done outside the state update, as it's a separate concern.
+    // This can be done outside the state update.
     removePendingAsset(tempUrl);
   };
 
