@@ -86,7 +86,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   const handleSave = async () => {
     if (!selectedPageSet) return false;
     const { id, name, page_set_data } = selectedPageSet;
-    if (!name) { toast.error('O nome é obrigatório.'); return false; }
+    if (!name || !name.trim()) { toast.error('O nome é obrigatório.'); return false; }
 
     try {
       let result;
@@ -175,7 +175,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       try {
         await deletePageSet(pageSetId);
         toast.success('Excluído com sucesso!');
-        fetchPageSets();
+        setPageSetList(prevList => prevList.filter(ps => ps.id !== pageSetId));
         setSelectedPageSet(null);
         setOriginalPageSet(null);
       } catch (error) {
