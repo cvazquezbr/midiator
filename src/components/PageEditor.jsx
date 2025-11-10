@@ -25,20 +25,24 @@ const PageEditor = ({
 
   useEffect(() => {
     if (open && initialPageData) {
-      const isNewPage = !initialPageData.customPageTemplate;
       const data = safeDeepClone(initialPageData);
 
-      if (isNewPage) {
+      // Ensure essential structures exist
+      if (!data.customPageTemplate) {
         data.customPageTemplate = safeDeepClone(baseTemplate.pageTemplate);
+      }
+      if (!data.record) {
+        data.record = {};
       }
 
       setPageData(data);
 
+      // Prioritize page-specific styles, fallback to base template
       const initialState = {
         pageTemplate: data.customPageTemplate,
-        fieldPositions: baseTemplate.fieldPositions || {},
-        fieldStyles: baseTemplate.fieldStyles || {},
-        brandElements: baseTemplate.brandElements || {},
+        fieldPositions: data.customFieldPositions || baseTemplate.fieldPositions || {},
+        fieldStyles: data.customFieldStyles || baseTemplate.fieldStyles || {},
+        brandElements: data.customBrandElements || baseTemplate.brandElements || [],
       };
       setEditorState(initialState);
     }
@@ -57,12 +61,17 @@ const PageEditor = ({
 
   const handleSave = () => {
     if (!editorState.pageTemplate) {
-        toast.error("Template de página não encontrado. Não é possível salvar.");
-        return;
+      toast.error("Template de página não encontrado. Não é possível salvar.");
+      return;
     }
+
+    // Save all editor state changes back to the page data object
     const finalData = {
       ...pageData,
       customPageTemplate: editorState.pageTemplate,
+      customFieldPositions: editorState.fieldPositions,
+      customFieldStyles: editorState.fieldStyles,
+      customBrandElements: editorState.brandElements,
     };
     onSave(finalData);
     onClose();
