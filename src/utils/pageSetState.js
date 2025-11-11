@@ -148,11 +148,16 @@ export const savePageSet = async (name, pageSetData, pendingAssets) => {
   const serializedState = await serializePageSetData(pageSetData, pendingAssets, tempId);
 
   // Now, create the PageSet in one go.
-  const savedPageSet = await fetchWithAuth('/api/page-sets', {
+  const response = await fetchWithAuth('/api/page-sets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, page_set_data: serializedState }),
   });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to save PageSet: ${response.status} ${errorBody}`);
+  }
+  const savedPageSet = await response.json();
 
   // Return the complete object received from the API, deserialized for UI use.
   const { finalState, newlyCreatedAssets } = await deserializePageSetData(savedPageSet.page_set_data);
@@ -165,11 +170,16 @@ export const savePageSet = async (name, pageSetData, pendingAssets) => {
 export const updatePageSet = async (id, name, pageSetData, pendingAssets) => {
   const serializedState = await serializePageSetData(pageSetData, pendingAssets, id);
 
-  const updatedPageSet = await fetchWithAuth(`/api/page-sets/${id}`, {
+  const response = await fetchWithAuth(`/api/page-sets/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, page_set_data: serializedState }),
   });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to update PageSet: ${response.status} ${errorBody}`);
+  }
+  const updatedPageSet = await response.json();
 
   // Re-deserialize for immediate use in the frontend
   const { finalState, newlyCreatedAssets } = await deserializePageSetData(updatedPageSet.page_set_data);

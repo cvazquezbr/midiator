@@ -180,13 +180,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   };
 
   const handleDeleteClick = (ps) => {
-    if (!ps || !ps.id) {
-      toast.error('Não foi possível identificar o PageSet para exclusão.');
-      return;
-    }
-    const pageSetName = ps.name && ps.name.trim() !== '' ? ps.name : 'este PageSet sem nome';
-
-    if (window.confirm(`Tem certeza que deseja excluir "${pageSetName}"?`)) {
+    if (window.confirm(`Tem certeza que deseja excluir "${ps.name}"?`)) {
         handleDelete(ps.id);
     }
   };
