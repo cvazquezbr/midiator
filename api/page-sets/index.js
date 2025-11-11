@@ -60,8 +60,6 @@ const handler = async (req, res) => {
           newPageSet.page_set_data = JSON.parse(newPageSet.page_set_data);
         } catch (parseError) {
           console.error(`[POST /api/page-sets] JSON parsing error for new PageSet ID ${newPageSet.id}:`, parseError);
-          // Decide if we should still return the object with corrupted data or an error
-          // For now, let's return it as is and let the client handle it, but log the error.
         }
       }
       return res.status(201).json(newPageSet);
