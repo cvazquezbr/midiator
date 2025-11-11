@@ -17,7 +17,7 @@ const PageSetPageEditor = ({
   pageData, // The page object from the PageSet's `pages` array
   onSave,
   aspectRatio,
-  pageSetFields, // The fields defined in the PageSet, e.g., ['Título', 'Corpo', 'Imagem1']
+  pageSetFields, // Now an array of field objects: { id, name, type, quantity, size }
 }) => {
   const [editorState, setEditorState] = useState(null);
   const [selectedField, setSelectedField] = useState(null);
@@ -33,27 +33,36 @@ const PageSetPageEditor = ({
       const fieldPositions = safeDeepClone(pageData.fieldPositions || {});
       const fieldStyles = safeDeepClone(pageData.fieldStyles || {});
 
-      // Initialize fields, create placeholders, and set default styles.
+      // Initialize fields, create placeholders based on size, and set default styles.
       (pageSetFields || []).forEach(field => {
-        // Use placeholder text for text fields
-        if (!field.toLowerCase().includes('imagem')) {
-          record[field] = pageData.record?.[field] || 'no nono nooooo no... '.repeat(5);
+        const fieldName = field.name;
+        // Use placeholder text for text fields, respecting the defined size
+        if (field.type === 'text') {
+          const placeholder = 'no nono nooooo no... ';
+          const repeatCount = Math.max(1, Math.ceil((field.size || 100) / placeholder.length));
+          record[fieldName] = pageData.record?.[fieldName] || placeholder.repeat(repeatCount);
+        } else {
+          // For images, just ensure the record key exists
+          record[fieldName] = pageData.record?.[fieldName] || null;
         }
+
         // Ensure default position and style exist for each field
-        if (!fieldPositions[field]) {
-          fieldPositions[field] = { x: 10, y: 10, width: 80, height: 10, visible: true, zIndex: 1 };
+        if (!fieldPositions[fieldName]) {
+          fieldPositions[fieldName] = { x: 10, y: 10, width: 80, height: 10, visible: true, zIndex: 1 };
         }
-        if (!fieldStyles[field]) {
-          fieldStyles[field] = { ...COMPLETE_DEFAULT_STYLE };
+        if (!fieldStyles[fieldName]) {
+          fieldStyles[fieldName] = { ...COMPLETE_DEFAULT_STYLE };
         }
       });
+
+      const expandedFieldNames = pageSetFields.map(f => f.name);
 
       const initialState = {
         fieldPositions,
         fieldStyles,
         pageTemplate: safeDeepClone(pageData.pageTemplate || { backgroundColor: '#FFFFFF', images: [] }),
         csvData: [record], // FieldPositioner expects csvData to be an array of records
-        csvHeaders: pageSetFields || [],
+        csvHeaders: expandedFieldNames,
       };
       setEditorState(initialState);
     } else if (!open && editorState) {
@@ -61,6 +70,7 @@ const PageSetPageEditor = ({
       setEditorState(null);
     }
   }, [open, pageData, pageSetFields, editorState]);
+
 
   useEffect(() => {
     const updatePreviewSize = () => {
