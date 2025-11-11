@@ -307,8 +307,14 @@ const FieldPositioner = ({
       });
     }
 
+    const imageElementIds = (pageTemplate.images || []).map(img => img.id);
+
     const textElements = (csvHeaders || [])
       .map(header => {
+        if (imageElementIds.includes(header)) {
+          return null;
+        }
+
         const position = fieldPositions ? fieldPositions[header] : undefined;
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
