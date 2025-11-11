@@ -9,64 +9,77 @@ import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
 import { safeDeepClone } from '../lib/utils';
 import { COMPLETE_DEFAULT_STYLE } from '../utils/defaultStyles';
+import { createNewImageElement } from '../utils/elementFactory';
 
-// This is the isolated editor for pages within a PageSet.
+const PLACEHOLDER_IMAGE_URL = 'https://as1.ftcdn.net/v2/jpg/07/12/27/56/1000_F_712275644_opOBN5SnauV92mW0tyELL5qUBKoucMqA.jpg';
+
 const PageSetPageEditor = ({
   open,
   onClose,
-  pageData, // The page object from the PageSet's `pages` array
+  pageData,
   onSave,
   aspectRatio,
-  pageSetFields, // Now an array of field objects: { id, name, type, quantity, size }
+  pageSetFields,
 }) => {
   const [editorState, setEditorState] = useState(null);
   const [selectedField, setSelectedField] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
   const previewContainerRef = useRef(null);
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
 
   useEffect(() => {
     if (open && pageData && !editorState) {
-      // Create the initial state in the format FieldPositioner expects.
       const record = {};
       const fieldPositions = safeDeepClone(pageData.fieldPositions || {});
       const fieldStyles = safeDeepClone(pageData.fieldStyles || {});
+      const pageTemplate = safeDeepClone(pageData.pageTemplate || { backgroundColor: '#FFFFFF', images: [] });
 
-      // Initialize fields, create placeholders based on size, and set default styles.
+      // Ensure all fields from the PageSet definition are present in the editor state
       (pageSetFields || []).forEach(field => {
         const fieldName = field.name;
-        // Use placeholder text for text fields, respecting the defined size
+
         if (field.type === 'text') {
           const placeholder = 'no nono nooooo no... ';
           const repeatCount = Math.max(1, Math.ceil((field.size || 100) / placeholder.length));
           record[fieldName] = pageData.record?.[fieldName] || placeholder.repeat(repeatCount);
         } else {
-          // For images, just ensure the record key exists
           record[fieldName] = pageData.record?.[fieldName] || null;
         }
 
-        // Ensure default position and style exist for each field
         if (!fieldPositions[fieldName]) {
           fieldPositions[fieldName] = { x: 10, y: 10, width: 80, height: 10, visible: true, zIndex: 1 };
         }
         if (!fieldStyles[fieldName]) {
           fieldStyles[fieldName] = { ...COMPLETE_DEFAULT_STYLE };
         }
+
+        // For image fields, ensure a placeholder image object exists in the pageTemplate
+        if (field.type === 'image') {
+          const imageExists = pageTemplate.images.some(img => img.id === fieldName);
+          if (!imageExists) {
+            const newImagePlaceholder = createNewImageElement(PLACEHOLDER_IMAGE_URL, fieldName);
+            newImagePlaceholder.zIndex = -1; // Default to background
+            pageTemplate.images.push(newImagePlaceholder);
+          }
+        }
       });
+
+      // Remove image objects that are no longer in the field definition
+      const imageFieldNames = pageSetFields.filter(f => f.type === 'image').map(f => f.name);
+      pageTemplate.images = pageTemplate.images.filter(img => imageFieldNames.includes(img.id));
+
 
       const expandedFieldNames = pageSetFields.map(f => f.name);
 
       const initialState = {
         fieldPositions,
         fieldStyles,
-        pageTemplate: safeDeepClone(pageData.pageTemplate || { backgroundColor: '#FFFFFF', images: [] }),
-        csvData: [record], // FieldPositioner expects csvData to be an array of records
+        pageTemplate,
+        csvData: [record],
         csvHeaders: expandedFieldNames,
       };
       setEditorState(initialState);
     } else if (!open && editorState) {
-      // Reset state when the dialog closes
       setEditorState(null);
     }
   }, [open, pageData, pageSetFields, editorState]);
@@ -109,13 +122,12 @@ const PageSetPageEditor = ({
   }
 
   const handleSave = () => {
-    // Save the data back in the simplified PageSet page format
     onSave({
-      ...pageData, // Preserve index
+      ...pageData,
       fieldPositions: editorState.fieldPositions,
       fieldStyles: editorState.fieldStyles,
       pageTemplate: editorState.pageTemplate,
-      record: editorState.csvData[0], // Save the actual text content
+      record: editorState.csvData[0],
     });
     onClose();
   };
@@ -140,7 +152,7 @@ const PageSetPageEditor = ({
                 setEditorState={setEditorState}
                 selectedField={selectedField}
                 setSelectedField={setSelectedField}
-                originalImageSize={{ width: 1080, height: 1080 }} // Standard size
+                originalImageSize={{ width: 1080, height: 1080 }}
                 currentPreviewIndex={0}
               />
             </Box>
@@ -152,7 +164,7 @@ const PageSetPageEditor = ({
                 setEditorState={setEditorState}
                 selectedField={selectedField}
                 setSelectedField={setSelectedField}
-                showImageLoaders={false} // IMPORTANT: No image uploads for PageSets
+                showImageLoaders={false}
               />
             </Box>
           )}
@@ -164,22 +176,6 @@ const PageSetPageEditor = ({
         <Button onClick={handleSave} color="primary" variant="contained">Salvar Página</Button>
       </DialogActions>
 
-      {isMobile && (
-        <>
-          <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}>
-            <Edit />
-          </Fab>
-          <FormattingDrawer
-            open={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            editorState={editorState}
-            setEditorState={setEditorState}
-            selectedField={selectedField}
-            setSelectedField={setSelectedField}
-            showImageLoaders={false}
-          />
-        </>
-      )}
     </Dialog>
   );
 };
