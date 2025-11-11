@@ -54,6 +54,14 @@ const handler = async (req, res) => {
         [userId, name.trim(), page_set_data]
       );
       const newPageSet = rows[0];
+      // Defensive parsing to ensure page_set_data is an object, mirroring the GET logic.
+      if (typeof newPageSet.page_set_data === 'string') {
+        try {
+          newPageSet.page_set_data = JSON.parse(newPageSet.page_set_data);
+        } catch (parseError) {
+          console.error(`[POST /api/page-sets] JSON parsing error for new PageSet ID ${newPageSet.id}:`, parseError);
+        }
+      }
       return res.status(201).json(newPageSet);
     } catch (error) {
       console.error(`[POST /api/page-sets] Error for user ${userId}:`, error);
