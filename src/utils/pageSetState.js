@@ -126,7 +126,11 @@ export const deserializePageSetData = async (loadedState) => {
 
 export const getPageSets = async () => {
   try {
-    const data = await fetchWithAuth('/api/page-sets');
+    const response = await fetchWithAuth('/api/page-sets');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch page sets: ${response.status}`);
+    }
+    const data = await response.json();
     return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error("Failed to fetch page sets:", error);
@@ -137,7 +141,11 @@ export const getPageSets = async () => {
 
 export const loadPageSet = async (id) => {
   if (!id) throw new Error("Cannot load a PageSet without an ID.");
-  const pageSet = await fetchWithAuth(`/api/page-sets/${id}`);
+  const response = await fetchWithAuth(`/api/page-sets/${id}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load PageSet: ${response.status}`);
+  }
+  const pageSet = await response.json();
   const { finalState, newlyCreatedAssets } = await deserializePageSetData(pageSet.page_set_data);
   return { ...pageSet, page_set_data: finalState, pendingAssets: newlyCreatedAssets };
 };
@@ -159,12 +167,11 @@ export const savePageSet = async (name, pageSetData, pendingAssets) => {
   }
   const savedPageSet = await response.json();
 
-  // Return the complete object received from the API, deserialized for UI use.
-  const { finalState, newlyCreatedAssets } = await deserializePageSetData(savedPageSet.page_set_data);
-  return {
-    pageSet: { ...savedPageSet, page_set_data: finalState },
-    pendingAssets: newlyCreatedAssets,
-  };
+  // Deserialize the saved data to get local blob URLs for immediate UI use.
+  const { finalState } = await deserializePageSetData(savedPageSet.page_set_data);
+  // Return the flattened, deserialized pageSet object.
+  // The component is responsible for managing its own pending assets state.
+  return { ...savedPageSet, page_set_data: finalState };
 };
 
 export const updatePageSet = async (id, name, pageSetData, pendingAssets) => {
@@ -181,12 +188,9 @@ export const updatePageSet = async (id, name, pageSetData, pendingAssets) => {
   }
   const updatedPageSet = await response.json();
 
-  // Re-deserialize for immediate use in the frontend
-  const { finalState, newlyCreatedAssets } = await deserializePageSetData(updatedPageSet.page_set_data);
-  return {
-    pageSet: { ...updatedPageSet, page_set_data: finalState },
-    pendingAssets: newlyCreatedAssets,
-  };
+  // Re-deserialize for immediate use in the frontend and return the flat object.
+  const { finalState } = await deserializePageSetData(updatedPageSet.page_set_data);
+  return { ...updatedPageSet, page_set_data: finalState };
 };
 
 export const deletePageSet = async (id) => {
