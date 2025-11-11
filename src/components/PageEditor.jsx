@@ -23,6 +23,7 @@ const PageEditor = ({
 }) => {
   const [pageData, setPageData] = useState(null);
   const [editorState, setEditorState] = useState(null);
+  const [selectedField, setSelectedField] = useState(null); // <<< ADICIONAR ESTADO AQUI
   const { campaignSwatches } = useCampaign();
 
   useEffect(() => {
@@ -45,7 +46,7 @@ const PageEditor = ({
         fieldPositions: data.customFieldPositions || baseTemplate.fieldPositions || {},
         fieldStyles: data.customFieldStyles || baseTemplate.fieldStyles || {},
         brandElements: data.customBrandElements || baseTemplate.brandElements || [],
-        csvData: csvData, // <<< FIX: Include csvData in the editor state
+        csvData: csvData, // Adiciona o csvData ao estado do editor
       };
       setEditorState(initialState);
     }
@@ -92,9 +93,23 @@ const PageEditor = ({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
       <DialogTitle>Editar Página</DialogTitle>
       <DialogContent>
-        <Grid container spacing={2}>
+        <Grid container spacing={2} sx={{ height: '75vh' }}>
+          {/* Coluna da Esquerda para o FieldPositioner */}
+          <Grid item xs={12} md={8} sx={{ height: '100%' }}>
+            <FieldPositioner
+              editorState={editorState}
+              setEditorState={setEditorState}
+              aspectRatio={aspectRatio}
+              originalImageSize={originalImageSize}
+              selectedField={selectedField}
+              setSelectedField={setSelectedField}
+              currentPreviewIndex={currentPreviewIndex}
+            />
+          </Grid>
+
+          {/* Coluna da Direita para o Painel de Formatação e Controles */}
           <Grid item xs={12} md={4}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%', overflowY: 'auto' }}>
               {recordFields.map(field => (
                 <TextField
                   key={field}
@@ -112,21 +127,14 @@ const PageEditor = ({
                 aspectRatio={aspectRatio}
               />
               <FormattingPanel
-                 editorState={editorState}
-                 onEditorStateChange={setEditorState}
-                 campaignSwatches={campaignSwatches}
-                 imageSwatches={[]}
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={8} sx={{ height: '70vh' }}>
-             <FieldPositioner
                 editorState={editorState}
                 setEditorState={setEditorState}
-                aspectRatio={aspectRatio}
-                originalImageSize={originalImageSize}
-                currentPreviewIndex={currentPreviewIndex}
+                campaignSwatches={campaignSwatches}
+                imageSwatches={[]}
+                selectedField={selectedField}
+                setSelectedField={setSelectedField}
               />
+            </Box>
           </Grid>
         </Grid>
       </DialogContent>
