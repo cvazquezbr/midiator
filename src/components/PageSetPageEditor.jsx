@@ -28,11 +28,13 @@ const PageSetPageEditor = ({
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
 
   useEffect(() => {
-    if (open && pageData && !editorState) {
+    if (open && pageData) {
       const record = {};
       const fieldPositions = safeDeepClone(pageData.fieldPositions || {});
       const fieldStyles = safeDeepClone(pageData.fieldStyles || {});
       const pageTemplate = safeDeepClone(pageData.pageTemplate || { backgroundColor: '#FFFFFF', images: [] });
+
+      const definedImageFields = new Set((pageSetFields || []).filter(f => f.type === 'image').map(f => f.name));
 
       // Ensure all fields from the PageSet definition are present in the editor state
       (pageSetFields || []).forEach(field => {
@@ -58,18 +60,16 @@ const PageSetPageEditor = ({
           const imageExists = pageTemplate.images.some(img => img.id === fieldName);
           if (!imageExists) {
             const newImagePlaceholder = createNewImageElement(PLACEHOLDER_IMAGE_URL, fieldName);
-            newImagePlaceholder.zIndex = -1; // Default to background
+            newImagePlaceholder.zIndex = fieldPositions[fieldName]?.zIndex ?? 1;
             pageTemplate.images.push(newImagePlaceholder);
           }
         }
       });
 
       // Remove image objects that are no longer in the field definition
-      const imageFieldNames = pageSetFields.filter(f => f.type === 'image').map(f => f.name);
-      pageTemplate.images = pageTemplate.images.filter(img => imageFieldNames.includes(img.id));
+      pageTemplate.images = pageTemplate.images.filter(img => definedImageFields.has(img.id));
 
-
-      const expandedFieldNames = pageSetFields.map(f => f.name);
+      const expandedFieldNames = (pageSetFields || []).map(f => f.name);
 
       const initialState = {
         fieldPositions,
@@ -79,10 +79,10 @@ const PageSetPageEditor = ({
         csvHeaders: expandedFieldNames,
       };
       setEditorState(initialState);
-    } else if (!open && editorState) {
+    } else if (!open) {
       setEditorState(null);
     }
-  }, [open, pageData, pageSetFields, editorState]);
+  }, [open, pageData, pageSetFields]);
 
 
   useEffect(() => {
@@ -165,6 +165,7 @@ const PageSetPageEditor = ({
                 selectedField={selectedField}
                 setSelectedField={setSelectedField}
                 showImageLoaders={false}
+                pageSetFields={pageSetFields}
               />
             </Box>
           )}
