@@ -9,8 +9,24 @@ import ImageIcon from '@mui/icons-material/Image';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
 import { safeDeepClone } from '../lib/utils';
-import PageSetPageEditor from './PageSetPageEditor'; // Import the new editor
-import FieldsEditor from './FieldsEditor'; // A new component to manage fields
+import PageSetPageEditor from './PageSetPageEditor';
+import FieldsEditor from './FieldsEditor';
+
+// Helper function to expand fields based on quantity
+const expandFields = (fields) => {
+  const expanded = [];
+  fields.forEach(field => {
+    if (field.quantity > 1) {
+      for (let i = 1; i <= field.quantity; i++) {
+        expanded.push({ ...field, name: `${field.name} ${i}` });
+      }
+    } else {
+      expanded.push(field);
+    }
+  });
+  return expanded;
+};
+
 
 const PageSetEditor = ({
   pageSet,
@@ -34,6 +50,8 @@ const PageSetEditor = ({
     return Array.isArray(fieldsData) ? fieldsData : [];
   }, [pageSet]);
 
+  const expandedFieldNames = useMemo(() => expandFields(fields).map(f => f.name), [fields]);
+
   const aspectRatio = useMemo(() => pageSet?.page_set_data?.aspectRatio || '1:1', [pageSet]);
 
   useEffect(() => {
@@ -53,7 +71,6 @@ const PageSetEditor = ({
   const handleAddNewPage = () => {
     const newPage = {
       index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
-      // The record will be populated with placeholders in the editor
       record: {},
     };
     setEditingPage(newPage);
@@ -173,7 +190,7 @@ const PageSetEditor = ({
               <Box>
                 <Typography variant="subtitle1" gutterBottom>Campos Definidos</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                  {fields.map((field) => <Chip key={field} label={field} />)}
+                  {fields.map((field) => <Chip key={field.id || field.name} label={`${field.name} (${field.quantity})`} />)}
                   <Button onClick={() => setIsFieldsEditorOpen(true)}>Editar Campos</Button>
                 </Box>
               </Box>
@@ -238,7 +255,7 @@ const PageSetEditor = ({
           pageData={safeDeepClone(editingPage)}
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
-          pageSetFields={fields} // Pass the defined fields to the editor
+          pageSetFields={expandFields(fields)} // Pass the expanded fields to the editor
         />
       )}
 
