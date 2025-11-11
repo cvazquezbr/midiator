@@ -54,7 +54,16 @@ const handler = async (req, res) => {
       if (rows.length === 0) {
         return res.status(404).json({ error: 'PageSet not found or access denied.' });
       }
-      return res.status(200).json(rows[0]);
+      const updatedPageSet = rows[0];
+      // Defensive parsing to ensure page_set_data is an object.
+      if (typeof updatedPageSet.page_set_data === 'string') {
+        try {
+          updatedPageSet.page_set_data = JSON.parse(updatedPageSet.page_set_data);
+        } catch (parseError) {
+          console.error(`[PUT /api/page-sets/${id}] JSON parsing error for PageSet ID ${id}:`, parseError);
+        }
+      }
+      return res.status(200).json(updatedPageSet);
     } catch (error) {
       console.error(`[PUT /api/page-sets/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
