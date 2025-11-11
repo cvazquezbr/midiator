@@ -69,6 +69,20 @@ const FormattingPanel = ({
     if (selectedField === '__page_background__') {
       return { currentElement: pageTemplate, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: true };
     }
+
+    // Prioritize checking for image types (Page Image or Brand Element) before text fields.
+    // This resolves the ambiguity in PageSet contexts where an element ID can exist both as an image and a field position.
+    const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
+    if (pageImg) {
+      return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
+    }
+
+    const brandEl = brandElements?.find(el => el.id === selectedField);
+    if (brandEl) {
+      return { currentElement: brandEl, isTextField: false, isPageImage: false, isBrandElement: true, isPageBackground: false };
+    }
+
+    // Fallback to check for a text field.
     if (fieldPositions && fieldPositions[selectedField]) {
       const element = {
         ...fieldPositions[selectedField],
@@ -76,14 +90,7 @@ const FormattingPanel = ({
       };
       return { currentElement: element, isTextField: true, isPageImage: false, isBrandElement: false, isPageBackground: false };
     }
-    const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
-    if (pageImg) {
-      return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
-    }
-    const brandEl = brandElements?.find(el => el.id === selectedField);
-    if (brandEl) {
-      return { currentElement: brandEl, isTextField: false, isPageImage: false, isBrandElement: true, isPageBackground: false };
-    }
+
     return { currentElement: null, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: false };
   }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
 
