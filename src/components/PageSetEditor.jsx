@@ -1,34 +1,26 @@
-import React, {
-  useState, useEffect, useMemo,
-} from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Alert, FormControl, InputLabel, Select, MenuItem,
+  Box, Button, Typography, Grid, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Alert, FormControl, InputLabel, Select, MenuItem, Chip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ImageIcon from '@mui/icons-material/Image';
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
-import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
-import PageEditor from './PageEditor';
-import { getDimensionsFromAspectRatio } from '../utils/imageComposer';
-
-const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
-
+import PageSetPageEditor from './PageSetPageEditor'; // Import the new editor
+import FieldsEditor from './FieldsEditor'; // A new component to manage fields
 
 const PageSetEditor = ({
   pageSet,
   onPageSetChange,
-  onOpenImageGallery,
   isSaving,
 }) => {
-  const { addPendingAsset } = useCampaign();
   const [editingPage, setEditingPage] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
+  const [isFieldsEditorOpen, setIsFieldsEditorOpen] = useState(false);
 
   const gridRef = React.useRef();
 
@@ -36,9 +28,13 @@ const PageSetEditor = ({
     const pagesData = pageSet?.page_set_data?.pages;
     return Array.isArray(pagesData) ? pagesData : [];
   }, [pageSet]);
-  const aspectRatio = useMemo(() => pageSet?.page_set_data?.aspectRatio || '1:1', [pageSet]);
 
-  const imageSize = useMemo(() => getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE, [aspectRatio]);
+  const fields = useMemo(() => {
+    const fieldsData = pageSet?.page_set_data?.fields;
+    return Array.isArray(fieldsData) ? fieldsData : [];
+  }, [pageSet]);
+
+  const aspectRatio = useMemo(() => pageSet?.page_set_data?.aspectRatio || '1:1', [pageSet]);
 
   useEffect(() => {
     if (gridRef.current && pages.length > 0) {
@@ -57,7 +53,8 @@ const PageSetEditor = ({
   const handleAddNewPage = () => {
     const newPage = {
       index: pages.length > 0 ? Math.max(...pages.map(p => p.index)) + 1 : 0,
-      record: { Título: `Nova Página ${pages.length + 1}` },
+      // The record will be populated with placeholders in the editor
+      record: {},
     };
     setEditingPage(newPage);
     setIsEditorOpen(true);
@@ -69,16 +66,13 @@ const PageSetEditor = ({
   };
 
   const handleSavePage = (editedPageData) => {
-    // editedPageData now contains all custom fields (template, positions, styles, etc.)
-    const finalPageData = editedPageData;
-
     const newPages = [...pages];
-    const existingIndex = newPages.findIndex(p => p.index === finalPageData.index);
+    const existingIndex = newPages.findIndex(p => p.index === editedPageData.index);
 
     if (existingIndex > -1) {
-      newPages[existingIndex] = finalPageData;
+      newPages[existingIndex] = editedPageData;
     } else {
-      newPages.push(finalPageData);
+      newPages.push(editedPageData);
     }
 
     const currentPageSetData = pageSet.page_set_data || {};
@@ -111,26 +105,34 @@ const PageSetEditor = ({
   const handleAspectRatioChange = (event) => {
     const newAspectRatio = event.target.value;
     const currentPageSetData = pageSet.page_set_data || {};
-    const currentPages = currentPageSetData.pages;
-
     onPageSetChange({
       ...pageSet,
       page_set_data: {
         ...currentPageSetData,
-        pages: Array.isArray(currentPages) ? currentPages : [],
         aspectRatio: newAspectRatio,
+      },
+    });
+  };
+
+  const handleFieldsChange = (newFields) => {
+    const currentPageSetData = pageSet.page_set_data || {};
+    onPageSetChange({
+      ...pageSet,
+      page_set_data: {
+        ...currentPageSetData,
+        fields: newFields,
       },
     });
   };
 
   if (!pageSet) {
     return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-            <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
-            <Typography variant="h6" color="text.secondary">
-                Selecione ou crie um conjunto de páginas para começar.
-            </Typography>
-        </Box>
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+        <Typography variant="h6" color="text.secondary">
+          Selecione ou crie um conjunto de páginas para começar.
+        </Typography>
+      </Box>
     );
   }
 
@@ -140,27 +142,18 @@ const PageSetEditor = ({
         <CardContent>
           <Grid container spacing={2} sx={{ mb: 2 }} alignItems="center">
             <Grid item xs={12} sm={6}>
-                <TextField
-                    label="Nome do Conjunto de Páginas"
-                    value={pageSet.name || ''}
-                    onChange={(e) => onPageSetChange({ ...pageSet, name: e.target.value })}
-                    fullWidth
-                    variant="outlined"
-                />
-            </Grid>
-            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAddNewPage}
-                >
-                Adicionar Página
-                </Button>
+              <TextField
+                label="Nome do Conjunto de Páginas"
+                value={pageSet.name || ''}
+                onChange={(e) => onPageSetChange({ ...pageSet, name: e.target.value })}
+                fullWidth
+                variant="outlined"
+              />
             </Grid>
           </Grid>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth>
                 <InputLabel id="aspect-ratio-label">Proporção</InputLabel>
                 <Select
@@ -176,56 +169,58 @@ const PageSetEditor = ({
                 </Select>
               </FormControl>
             </Grid>
+            <Grid item xs={12} sm={8}>
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>Campos Definidos</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                  {fields.map((field) => <Chip key={field} label={field} />)}
+                  <Button onClick={() => setIsFieldsEditorOpen(true)}>Editar Campos</Button>
+                </Box>
+              </Box>
+            </Grid>
           </Grid>
-
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddNewPage}
+              disabled={fields.length === 0}
+            >
+              Adicionar Página
+            </Button>
+          </Box>
+          {fields.length === 0 && <Alert severity="warning">Defina os campos do conjunto de páginas antes de adicionar uma página.</Alert>}
 
           {pages.length === 0 ? (
-             <Alert severity="info" sx={{ mt: 2 }}>
-                Este conjunto de páginas está vazio. Clique em "Adicionar Página" para começar a criar.
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Este conjunto de páginas está vazio. Clique em "Adicionar Página" para começar.
             </Alert>
           ) : (
             <div ref={gridRef} className="grid">
-              <div className="grid-sizer"></div>
+              <div className="grid-sizer" />
               {pages.map((page) => (
                 <div className="grid-item" key={page.index}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="body2" noWrap gutterBottom>
-                        {page.record?.Título || `Página ${page.index}`}
+                        {page.record?.Título || page.record?.title || `Página ${page.index}`}
                       </Typography>
-                      <Box
-                        sx={{
-                          position: 'relative',
-                          width: '100%',
-                          aspectRatio: String(aspectRatio).replace(':', ' / '),
-                          backgroundColor: '#f0f0f0',
-                          borderRadius: 1,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {page.customPageTemplate?.images && page.customPageTemplate.images.length > 0 ? (
-                          <img
-                            src={page.customPageTemplate.images[0].url}
-                            alt={`Preview ${page.index}`}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
-                            </Box>
-                        )}
+                      <Box sx={{
+                        position: 'relative',
+                        width: '100%',
+                        aspectRatio: String(aspectRatio).replace(':', ' / '),
+                        backgroundColor: '#f0f0f0',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
-                        <Tooltip title="Editar">
-                          <IconButton size="small" onClick={() => handleEditPage(page)}>
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Excluir">
-                          <IconButton size="small" onClick={() => setPageToDelete(page)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
+                        <Tooltip title="Editar"><IconButton size="small" onClick={() => handleEditPage(page)}><EditIcon /></IconButton></Tooltip>
+                        <Tooltip title="Excluir"><IconButton size="small" onClick={() => setPageToDelete(page)}><DeleteIcon /></IconButton></Tooltip>
                       </Box>
                     </CardContent>
                   </Card>
@@ -237,29 +232,26 @@ const PageSetEditor = ({
       </Card>
 
       {isEditorOpen && (
-        <PageEditor
+        <PageSetPageEditor
           open={isEditorOpen}
           onClose={() => { setIsEditorOpen(false); setEditingPage(null); }}
           pageData={safeDeepClone(editingPage)}
-          baseTemplate={{ // Provide a minimal, correctly typed base template
-            pageTemplate: { backgroundColor: '#FFFFFF', elements: [], images: [] },
-            fieldPositions: {},
-            fieldStyles: {},
-            brandElements: [], // Correctly typed as an array
-          }}
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
-          originalImageSize={imageSize}
-          onOpenImageGallery={() => onOpenImageGallery(editingPage.index)}
-          addPendingAsset={addPendingAsset}
+          pageSetFields={fields} // Pass the defined fields to the editor
         />
       )}
 
+      <FieldsEditor
+        open={isFieldsEditorOpen}
+        onClose={() => setIsFieldsEditorOpen(false)}
+        fields={fields}
+        onSave={handleFieldsChange}
+      />
+
       <Dialog open={!!pageToDelete} onClose={() => setPageToDelete(null)}>
         <DialogTitle>Confirmar Exclusão</DialogTitle>
-        <DialogContent>
-          <Typography>Tem certeza que deseja excluir esta página?</Typography>
-        </DialogContent>
+        <DialogContent><Typography>Tem certeza que deseja excluir esta página?</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setPageToDelete(null)}>Cancelar</Button>
           <Button onClick={handleDeletePage} color="error">Excluir</Button>
