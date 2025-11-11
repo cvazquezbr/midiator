@@ -85,34 +85,30 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
     if (!name || !name.trim()) { toast.error('O nome é obrigatório.'); return false; }
 
     try {
-      let result;
+      let saved;
       if (id) {
-        result = await updatePageSet(id, name, page_set_data, pendingAssets);
+        saved = await updatePageSet(id, name, page_set_data, pendingAssets);
       } else {
-        result = await savePageSet(name, page_set_data, pendingAssets);
+        saved = await savePageSet(name, page_set_data, pendingAssets);
       }
-      const saved = result.pageSet;
       toast.success("Salvo com sucesso!");
 
-      // Update the list locally instead of re-fetching
+      // Update the list locally
       setPageSetList(prevList => {
         const existingIndex = prevList.findIndex(ps => ps.id === saved.id);
         if (existingIndex > -1) {
-          // It's an update, so we replace the item in the list with the full saved object
           const newList = [...prevList];
           newList[existingIndex] = saved;
           return newList;
         } else {
-          // It's a new item, so we add the full saved object to the top of the list
           return [saved, ...prevList];
         }
       });
 
-      const pageSetWithData = { ...saved, page_set_data: saved.page_set_data || { pages: [], aspectRatio: '1:1' } };
-      setSelectedPageSet(pageSetWithData);
-      setOriginalPageSet(JSON.parse(JSON.stringify(pageSetWithData)));
-      setPendingAssets(result.pendingAssets || {});
-      setIsDirty(false);
+      // Select the new item and clear pending assets now that they are saved.
+      handleSelectPageSet(saved);
+      setPendingAssets({});
+
       return true;
     } catch (err) {
       toast.error(`Falha ao salvar: ${err.message}`);
@@ -195,7 +191,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       {!loading && !error && (
         <List>
           {pageSetList.map((ps) => (
-            <ListItem key={ps.id} disablePadding secondaryAction={<IconButton edge="end" onClick={() => handleDeleteClick(ps)}><DeleteIcon /></IconButton>}>
+            <ListItem key={ps.id} disablePadding secondaryAction={<IconButton edge="end" aria-label="Excluir Conjunto de Páginas" onClick={() => handleDeleteClick(ps)}><DeleteIcon /></IconButton>}>
               <ListItemButton selected={selectedPageSet?.id === ps.id} onClick={() => handleNavigation(() => handleSelectPageSet(ps))}>
                 <ListItemText primary={ps.name} />
               </ListItemButton>

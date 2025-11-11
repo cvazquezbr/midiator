@@ -14,27 +14,44 @@ const parseBody = async (req) => {
 };
 
 /**
+ * Normalizes a page set object to ensure page_set_data is a parsed JSON object.
+ * @param {object} ps - The page set object from the database.
+ * @returns {object} The normalized page set object.
+ */
+const normalizePageSet = (ps) => {
+  if (!ps) return null;
+
+  let page_set_data = ps.page_set_data || {}; // Default to empty object if null/undefined
+
+  if (typeof page_set_data === 'string') {
+    try {
+      page_set_data = JSON.parse(page_set_data);
+    } catch (e) {
+      console.error(`[normalizePageSet] Failed to parse page_set_data for PageSet ID ${ps.id}:`, e);
+      page_set_data = {}; // Default to empty object on parse failure
+    }
+  }
+
+  return {
+    ...ps,
+    page_set_data,
+  };
+};
+
+/**
  * API handler for page_set collection operations.
- * All routes in this handler are protected and require authentication.
  */
 const handler = async (req, res) => {
   const userId = req.user.sub;
 
   // Handles GET requests to /api/page-sets
-  // Fetches all page_sets belonging to the authenticated user.
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
         'SELECT id, name, page_set_data, updated_at FROM page_sets WHERE user_id = $1 ORDER BY updated_at DESC',
         [userId]
       );
-      // Ensure page_set_data is always an object, parsing if it's a string
-      const pageSets = rows.map(ps => ({
-        ...ps,
-        page_set_data: typeof ps.page_set_data === 'string'
-          ? JSON.parse(ps.page_set_data)
-          : ps.page_set_data,
-      }));
+      const pageSets = rows.map(normalizePageSet);
       return res.status(200).json(pageSets);
     } catch (error) {
       console.error(`[GET /api/page-sets] Error for user ${userId}:`, error);
@@ -42,7 +59,6 @@ const handler = async (req, res) => {
     }
   }
   // Handles POST requests to /api/page-sets
-  // Creates a new page_set for the authenticated user.
   else if (req.method === 'POST') {
     try {
       const { name, page_set_data } = await parseBody(req);
@@ -53,15 +69,7 @@ const handler = async (req, res) => {
         'INSERT INTO page_sets (user_id, name, page_set_data) VALUES ($1, $2, $3) RETURNING id, name, page_set_data, updated_at',
         [userId, name.trim(), page_set_data]
       );
-      const newPageSet = rows[0];
-      // Defensive parsing to ensure page_set_data is an object, mirroring the GET logic.
-      if (typeof newPageSet.page_set_data === 'string') {
-        try {
-          newPageSet.page_set_data = JSON.parse(newPageSet.page_set_data);
-        } catch (parseError) {
-          console.error(`[POST /api/page-sets] JSON parsing error for new PageSet ID ${newPageSet.id}:`, parseError);
-        }
-      }
+      const newPageSet = normalizePageSet(rows[0]);
       return res.status(201).json(newPageSet);
     } catch (error) {
       console.error(`[POST /api/page-sets] Error for user ${userId}:`, error);
