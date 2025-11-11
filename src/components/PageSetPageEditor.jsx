@@ -60,7 +60,15 @@ const PageSetPageEditor = ({
           const imageExists = pageTemplate.images.some(img => img.id === fieldName);
           if (!imageExists) {
             const newImagePlaceholder = createNewImageElement(PLACEHOLDER_IMAGE_URL, fieldName);
-            newImagePlaceholder.zIndex = fieldPositions[fieldName]?.zIndex ?? 1;
+            // Sync position and dimensions from fieldPositions
+            const pos = fieldPositions[fieldName];
+            if (pos) {
+              newImagePlaceholder.x = pos.x;
+              newImagePlaceholder.y = pos.y;
+              newImagePlaceholder.width = pos.width;
+              newImagePlaceholder.height = pos.height;
+              newImagePlaceholder.zIndex = pos.zIndex ?? 1;
+            }
             pageTemplate.images.push(newImagePlaceholder);
           }
         }
