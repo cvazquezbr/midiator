@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Box, } from '@mui/material';
+import {
+  Box,
+} from '@mui/material';
 import DraggableElement from './DraggableElement';
 import { useCampaign } from '../context/CampaignContext';
+
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
   fontSize: 24,
@@ -23,8 +26,10 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   backgroundColor: '#000000',
   backgroundOpacity: 0,
 };
+
 import { isHtmlField } from '../lib/utils';
 import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange';
+
 
 const FieldPositioner = ({
   editorState,
@@ -39,7 +44,13 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
 }) => {
-  const { fieldPositions, fieldStyles, csvData, brandElements, pageTemplate } = editorState;
+  const {
+    fieldPositions,
+    fieldStyles,
+    csvData,
+    brandElements,
+    pageTemplate
+  } = editorState;
 
   // Derive csvHeaders from csvData to make the component more robust
   const csvHeaders = useMemo(() => {
@@ -217,6 +228,7 @@ const FieldPositioner = ({
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
       const previewScale = renderedImageMetrics.width / effectiveImageSize.width;
       setFontScale(previewScale);
+
       if (onFontScaleChange) {
         onFontScaleChange(previewScale);
       }
@@ -342,6 +354,7 @@ const FieldPositioner = ({
 
   const getGradientCss = (gradient) => {
     if (!gradient) return 'none';
+
     const colors = gradient.colors || ['#ffffff', '#000000'];
     const stops = colors.join(', ');
 
@@ -355,7 +368,9 @@ const FieldPositioner = ({
     return 'none';
   };
 
-  const backgroundValue = pageTemplate?.gradient ? getGradientCss(pageTemplate.gradient) : pageTemplate?.backgroundColor || '#FFFFFF';
+  const backgroundValue = pageTemplate?.gradient
+    ? getGradientCss(pageTemplate.gradient)
+    : pageTemplate?.backgroundColor || '#FFFFFF';
 
   return (
     <Box
@@ -396,12 +411,12 @@ const FieldPositioner = ({
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedField('page_background');
+              setSelectedField('__page_background__');
             }
           }}
           onTouchStart={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedField('page_background');
+              setSelectedField('__page_background__');
             }
           }}
         >
