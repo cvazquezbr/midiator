@@ -608,9 +608,12 @@ const DraggableElementInternal = ({
     lineHeight: `${scaledLineHeight}px`,
     textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
-    WebkitTextStroke: style.textStroke ? `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}` : 'none',
     pointerEvents: 'none',
   };
+
+  if (style.textStroke) {
+    textContentStyle.WebkitTextStroke = `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}`;
+  }
 
   const effectiveHandleMouseDown = (e, type, handle = null) => {
     doHandleMouseDown(e, type, handle);
