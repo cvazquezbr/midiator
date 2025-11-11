@@ -48,6 +48,7 @@ const FormattingPanel = ({
   setSelectedField,
   campaignSwatches,
   imageSwatches,
+  pageSetFields,
 }) => {
   const {
     fieldStyles,
@@ -70,8 +71,17 @@ const FormattingPanel = ({
       return { currentElement: pageTemplate, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: true };
     }
 
-    // Prioritize checking for image types (Page Image or Brand Element) before text fields.
-    // This resolves the ambiguity in PageSet contexts where an element ID can exist both as an image and a field position.
+    // In PageSet context, the field definition is the source of truth for the type.
+    if (pageSetFields) {
+      const fieldDef = pageSetFields.find(f => f.name === selectedField);
+      if (fieldDef?.type === 'image') {
+        const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
+        // An image might not exist if it was deleted, but it's still an image field.
+        return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
+      }
+    }
+
+    // Default logic: prioritize finding an existing image element before assuming it's text.
     const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
     if (pageImg) {
       return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
@@ -92,7 +102,7 @@ const FormattingPanel = ({
     }
 
     return { currentElement: null, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: false };
-  }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
+  }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate, pageSetFields]);
 
   React.useEffect(() => {
     if (!selectedField) {
