@@ -675,10 +675,21 @@ const DraggableElementInternal = ({
   if (element.type === 'image') {
     boxSx.filter = getFilterString(style.filters);
     boxSx.boxShadow = getBoxShadowString(style);
-    boxSx.border = `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`;
     boxSx.borderRadius = `${style.borderRadius || 0}px`;
     boxSx.overflow = 'visible'; // Allow handles to be visible
     boxSx.padding = 0;
+
+    // Check if it's a placeholder and apply a distinctive style
+    if (displayUrl && displayUrl.includes('ftcdn.net')) {
+      boxSx.border = '2px dashed grey';
+      // Prevent user-defined border from overriding the placeholder style
+      if (isSelected) {
+        boxSx.outline = '2px solid #1976d2'; // Keep selection outline
+      }
+    } else {
+      boxSx.border = `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`;
+    }
+
   } else if (element.type === 'cropbox') {
     boxSx.backgroundColor = 'transparent';
     boxSx.border = 'none';
