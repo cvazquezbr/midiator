@@ -102,8 +102,12 @@ export const findFolderByName = async (name, parentId = null) => {
     }
     const result = await response.json();
     if (result.files && result.files.length > 0) {
-        console.log(`[googleApi] Found folder '${name}' with ID: ${result.files[0].id}`);
-        return result.files[0];
+        if (result.files.length > 1) {
+            console.warn(`[googleApi] Alerta: Mais de uma pasta encontrada com o nome '${name}'. Usando a mais recente. Considere renomear ou excluir as pastas duplicadas no Google Drive para evitar comportamento inesperado.`);
+        }
+        // The API call is already sorting by createdTime desc, so result.files[0] is the newest one.
+        const folder = result.files[0];
+        return folder;
     }
     console.log(`[googleApi] Folder '${name}' not found.`);
     return null; // Retornar null é um resultado esperado, não um erro.
