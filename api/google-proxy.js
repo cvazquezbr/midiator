@@ -1,6 +1,7 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { google } from 'googleapis';
+import { Readable } from 'stream';
 
 async function getGoogleAuthClient(userId) {
     const { rows } = await query('SELECT google_access_token, google_refresh_token FROM users WHERE id = $1', [userId]);
@@ -48,7 +49,7 @@ async function handleUploadImageToFolder(request, response) {
         };
         const media = {
             mimeType: imageType,
-            body: require('stream').Readable.from(imageBuffer),
+            body: Readable.from(imageBuffer),
         };
 
         const file = await drive.files.create({
