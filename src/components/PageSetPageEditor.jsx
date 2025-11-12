@@ -164,6 +164,7 @@ const PageSetPageEditor = ({
                 originalImageSize={{ width: 1080, height: 1080 }}
                 currentPreviewIndex={0}
                 editorType={editorType}
+                pageSetFields={pageSetFields}
               />
             </Box>
           </Box>

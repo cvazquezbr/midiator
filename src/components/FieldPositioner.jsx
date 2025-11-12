@@ -44,6 +44,7 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
   editorType,
+  pageSetFields,
 }) => {
   const {
     fieldPositions,
@@ -308,21 +309,46 @@ const FieldPositioner = ({
       });
     }
 
-    const textElements = (csvHeaders || [])
-      .map(header => {
-        // In PageSet edit mode, if an image placeholder with the same name already exists, skip rendering the text field.
-        if (editorType === 'pageSet' && elements.some(el => el.type === 'image' && el.id === header)) {
-          return null;
-        }
+    const textElements = [];
+    const sourceFields = editorType === 'pageSet' && pageSetFields ? pageSetFields : (csvHeaders || []).map(h => ({ name: h, type: 'text' }));
 
-        const position = fieldPositions ? fieldPositions[header] : undefined;
-        const style = completeFieldStyles[header];
-        if (!position || !position.visible) return null;
+    sourceFields.forEach(field => {
+      const header = typeof field === 'string' ? field : field.name;
+      const fieldType = typeof field === 'string' ? 'text' : field.type;
 
-        const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
-        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+      // Skip if an image with the same ID/name already exists from the pageTemplate.images array
+      if (elements.some(el => el.id === header)) {
+        return;
+      }
 
-        return {
+      const position = fieldPositions ? fieldPositions[header] : undefined;
+      const style = completeFieldStyles[header];
+      if (!position || !position.visible) return;
+
+      const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
+      const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+
+      // The core of the fix: determine the element type from the field definition
+      if (fieldType === 'image') {
+        // This case handles image elements that might not be in pageTemplate.images yet
+        // but are defined in pageSetFields. We find its corresponding image data.
+        const imageData = pageTemplate.images?.find(img => img.id === header);
+        const imageUrl = imageData?.src || imageData?.imageUrl; // Use the placeholder URL
+        if (!imageUrl) return; // Don't render if no URL
+
+        elements.push({
+          id: header,
+          type: 'image',
+          position: { ...position, zIndex: Math.max(position.zIndex || 0, 0) },
+          style: { ...(imageData?.filters || {}), ...imageData },
+          content: imageUrl,
+          rotation: position.rotation || 0,
+          fontScale: 1,
+          enableHtmlRendering: false,
+        });
+
+      } else { // It's a text element
+        textElements.push({
           id: header,
           type: 'text',
           position,
@@ -332,9 +358,9 @@ const FieldPositioner = ({
           rotation: position.rotation,
           fontScale: fontScale,
           enableHtmlRendering: isHtmlField(header),
-        };
-      })
-      .filter(Boolean);
+        });
+      }
+    });
 
     const brandEls = (brandElements || [])
       .map(element => {
