@@ -305,16 +305,6 @@ const FormattingPanel = ({
     });
   };
 
-  const handleSetBrandElements = (updater) => {
-    setEditorState(prev => {
-      const newBrandElements = typeof updater === 'function' ? updater(prev.brandElements) : updater;
-      return {
-        ...prev,
-        brandElements: newBrandElements
-      };
-    })
-  }
-
   return (
     <Card>
       <CardContent>
@@ -440,7 +430,7 @@ const FormattingPanel = ({
           <AccordionSummary expandIcon={<ExpandMore />}><Typography><BrandingWatermark sx={{ mr: 1, verticalAlign: 'middle' }} />Elementos da Marca</Typography></AccordionSummary>
           <AccordionDetails>
             <BrandElementManager
-              onElementSelect={(newElement) => handleSetBrandElements(prev => [...(prev || []), newElement])}
+              onElementSelect={(newElement) => setEditorState(prev => ({ ...prev, brandElements: [...(prev.brandElements || []), newElement] }))}
             />
           </AccordionDetails>
         </Accordion>
