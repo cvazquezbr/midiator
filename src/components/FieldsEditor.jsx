@@ -27,7 +27,7 @@ const FieldsEditor = ({ open, onClose, fields, onSave }) => {
   const handleAddField = (name = '') => {
     const newField = {
       id: uuidv4(),
-      name: name || `Novo Campo ${localFields.length + 1}`,
+      name: name || `Novo Elemento ${localFields.length + 1}`,
       type: 'text',
       quantity: 1,
       size: 100,
@@ -58,10 +58,10 @@ const FieldsEditor = ({ open, onClose, fields, onSave }) => {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Editar Campos do Conjunto</DialogTitle>
+      <DialogTitle>Editar Elementos do Conjunto</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Defina os campos que cada página neste conjunto terá. Arraste para reordenar.
+          Defina os elementos que cada página neste conjunto terá. Arraste para reordenar.
         </Typography>
 
         <DragDropContext onDragEnd={onDragEnd}>
@@ -82,7 +82,7 @@ const FieldsEditor = ({ open, onClose, fields, onSave }) => {
                           onChange={(e) => handleUpdateField(field.id, { name: e.target.value })}
                           variant="outlined"
                           size="small"
-                          label="Nome do Campo"
+                          label="Nome do Elemento"
                         />
                         <FormControl size="small">
                           <InputLabel>Tipo</InputLabel>
@@ -129,12 +129,12 @@ const FieldsEditor = ({ open, onClose, fields, onSave }) => {
 
         <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
           <Button onClick={() => handleAddField()} startIcon={<AddIcon />}>
-            Adicionar Campo Vazio
+            Adicionar Elemento Vazio
           </Button>
           <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Adicionar Campo Sugerido</InputLabel>
+            <InputLabel>Adicionar Elemento Sugerido</InputLabel>
             <Select
-              label="Adicionar Campo Sugerido"
+              label="Adicionar Elemento Sugerido"
               onChange={(e) => handleAddField(e.target.value)}
               value=""
             >
@@ -147,7 +147,7 @@ const FieldsEditor = ({ open, onClose, fields, onSave }) => {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="primary" variant="contained">Salvar Campos</Button>
+        <Button onClick={handleSave} color="primary" variant="contained">Salvar Elementos</Button>
       </DialogActions>
     </Dialog>
   );

@@ -71,19 +71,11 @@ const FormattingPanel = ({
       return { currentElement: pageTemplate, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: true };
     }
 
-    // In PageSet context, the field definition is the source of truth for the type.
-    if (pageSetFields) {
-      const fieldDef = pageSetFields.find(f => f.name === selectedField);
-      if (fieldDef?.type === 'image') {
-        const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
-        // An image might not exist if it was deleted, but it's still an image field.
-        return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
-      }
-    }
-
-    // Default logic: prioritize finding an existing image element before assuming it's text.
+    // New logic: Check for image types before text types.
+    const isPageSetImage = pageSetFields?.find(f => f.name === selectedField)?.type === 'image';
     const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
-    if (pageImg) {
+
+    if (pageImg || isPageSetImage) {
       return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
     }
 
@@ -92,7 +84,7 @@ const FormattingPanel = ({
       return { currentElement: brandEl, isTextField: false, isPageImage: false, isBrandElement: true, isPageBackground: false };
     }
 
-    // Fallback to check for a text field.
+    // Fallback to check for a text field, which is the original bug's cause.
     if (fieldPositions && fieldPositions[selectedField]) {
       const element = {
         ...fieldPositions[selectedField],
