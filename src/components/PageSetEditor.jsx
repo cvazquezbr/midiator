@@ -32,6 +32,8 @@ const PageSetEditor = ({
   pageSet,
   onPageSetChange,
   isSaving,
+  pendingAssets,
+  onPendingAssetsChange,
 }) => {
   const [editingPage, setEditingPage] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -82,14 +84,19 @@ const PageSetEditor = ({
     setIsEditorOpen(true);
   };
 
-  const handleSavePage = (editedPageData) => {
+  const handleSavePage = ({ pageData, thumbnailBlob }) => {
     const newPages = [...pages];
-    const existingIndex = newPages.findIndex(p => p.index === editedPageData.index);
+    const existingIndex = newPages.findIndex(p => p.index === pageData.index);
+
+    const thumbnailUrl = URL.createObjectURL(thumbnailBlob);
+    const updatedPageData = { ...pageData, thumbnailUrl };
+
+    onPendingAssetsChange({ ...pendingAssets, [thumbnailUrl]: thumbnailBlob });
 
     if (existingIndex > -1) {
-      newPages[existingIndex] = editedPageData;
+      newPages[existingIndex] = updatedPageData;
     } else {
-      newPages.push(editedPageData);
+      newPages.push(updatedPageData);
     }
 
     const currentPageSetData = pageSet.page_set_data || {};
@@ -233,7 +240,11 @@ const PageSetEditor = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}>
-                        <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
+                        {page.thumbnailUrl ? (
+                          <img src={page.thumbnailUrl} alt={`Thumbnail for page ${page.index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
+                        )}
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
                         <Tooltip title="Editar"><IconButton size="small" onClick={() => handleEditPage(page)}><EditIcon /></IconButton></Tooltip>

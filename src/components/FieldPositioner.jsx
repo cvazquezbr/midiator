@@ -31,7 +31,7 @@ import { isHtmlField } from '../lib/utils';
 import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange';
 
 
-const FieldPositioner = ({
+const FieldPositioner = React.forwardRef(({
   editorState,
   setEditorState,
   onImageDisplayedSizeChange,
@@ -45,7 +45,7 @@ const FieldPositioner = ({
   isCropping,
   editorType,
   pageSetFields,
-}) => {
+}, ref) => {
   const {
     fieldPositions,
     fieldStyles,
@@ -424,6 +424,7 @@ const FieldPositioner = ({
       }}
     >
       <Box
+        ref={ref}
         className="text-container"
         sx={{
           position: 'relative',
@@ -489,6 +490,6 @@ const FieldPositioner = ({
       </Box>
     </Box>
   );
-};
+});
 
 export default FieldPositioner;
