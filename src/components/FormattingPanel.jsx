@@ -135,13 +135,25 @@ const FormattingPanel = ({
         };
       }
       if (isPageImage) {
-        return {
-          ...prev,
-          pageTemplate: {
-            ...prev.pageTemplate,
-            images: prev.pageTemplate.images.map(img => img.id === selectedField ? { ...img, [property]: value } : img)
-          }
-        };
+        const images = prev.pageTemplate.images || [];
+        const existingImgIndex = images.findIndex(img => img.id === selectedField);
+        let newImages;
+        if (existingImgIndex > -1) {
+          newImages = [...images];
+          newImages[existingImgIndex] = { ...newImages[existingImgIndex], [property]: value };
+        } else {
+          const position = prev.fieldPositions?.[selectedField] || {};
+          const newImage = {
+            id: selectedField,
+            ...position,
+            visible: true,
+            filters: {},
+            imageUrl: 'https://as1.ftcdn.net/v2/jpg/07/12/27/56/1000_F_712275644_opOBN5SnauV92mW0tyELL5qUBKoucMqA.jpg',
+            [property]: value
+          };
+          newImages = [...images, newImage];
+        }
+        return { ...prev, pageTemplate: { ...prev.pageTemplate, images: newImages } };
       }
       if (isBrandElement) {
         return {
@@ -157,13 +169,24 @@ const FormattingPanel = ({
     const updater = (element) => ({ ...element, filters: { ...(element.filters || {}), [filterProperty]: value } });
     setEditorState(prev => {
       if (isPageImage) {
-        return {
-          ...prev,
-          pageTemplate: {
-            ...prev.pageTemplate,
-            images: prev.pageTemplate.images.map(img => img.id === selectedField ? updater(img) : img)
-          }
-        };
+        const images = prev.pageTemplate.images || [];
+        const existingImgIndex = images.findIndex(img => img.id === selectedField);
+        let newImages;
+        if (existingImgIndex > -1) {
+          newImages = [...images];
+          newImages[existingImgIndex] = updater(newImages[existingImgIndex]);
+        } else {
+          const position = prev.fieldPositions?.[selectedField] || {};
+          const newImage = {
+            id: selectedField,
+            ...position,
+            visible: true,
+            filters: {},
+            imageUrl: 'https://as1.ftcdn.net/v2/jpg/07/12/27/56/1000_F_712275644_opOBN5SnauV92mW0tyELL5qUBKoucMqA.jpg',
+          };
+          newImages = [...images, updater(newImage)];
+        }
+        return { ...prev, pageTemplate: { ...prev.pageTemplate, images: newImages } };
       }
       if (isBrandElement) {
         return {
