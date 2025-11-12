@@ -117,14 +117,29 @@ const PageEditor = ({
     if (firstImage) {
       extractColorPalette(firstImage.src, setImageSwatches);
     }
-    const currentImages = editorState?.pageTemplate?.images || [];
-    const previousImages = prevImagesRef.current || [];
-    if (currentImages.length > previousImages.length) {
-      const newImage = currentImages.find(img => !previousImages.some(prevImg => prevImg.id === img.id));
-      if (newImage) setSelectedField(newImage.id);
+
+    // Get the images from the hook, which represents the "source of truth" from the parent.
+    const sourceImages = pageDataFromHook?.effectivePageTemplate?.images || [];
+    const localImages = editorState?.pageTemplate?.images || [];
+
+    // Detect if a new image was added externally (e.g., from the gallery)
+    if (sourceImages.length > localImages.length) {
+        const newImage = sourceImages.find(sourceImg => !localImages.some(localImg => localImg.id === sourceImg.id));
+        if (newImage) {
+            // A new image was found, so add it to the local state.
+            setEditorState(prev => ({
+                ...prev,
+                pageTemplate: {
+                    ...prev.pageTemplate,
+                    images: [...(prev.pageTemplate.images || []), newImage]
+                }
+            }));
+            setSelectedField(newImage.id); // Also select the new image.
+        }
     }
-    prevImagesRef.current = currentImages;
-  }, [editorState?.pageTemplate?.images]);
+
+    prevImagesRef.current = editorState?.pageTemplate?.images || [];
+  }, [editorState?.pageTemplate?.images, pageDataFromHook?.effectivePageTemplate?.images]);
 
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
   const previewContainerRef = useRef(null);

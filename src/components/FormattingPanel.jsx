@@ -305,6 +305,16 @@ const FormattingPanel = ({
     });
   };
 
+  const handleSetBrandElements = (updater) => {
+    setEditorState(prev => {
+      const newBrandElements = typeof updater === 'function' ? updater(prev.brandElements) : updater;
+      return {
+        ...prev,
+        brandElements: newBrandElements
+      };
+    })
+  }
+
   return (
     <Card>
       <CardContent>
