@@ -76,7 +76,10 @@ const FormattingPanel = ({
     const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
 
     if (pageImg || isPageSetImage) {
-      return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
+      // If it's a defined image element but doesn't have a record in pageTemplate.images yet,
+      // create a default one for the formatting panel to use.
+      const currentElement = pageImg || { id: selectedField, visible: true, filters: {} };
+      return { currentElement, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
     }
 
     const brandEl = brandElements?.find(el => el.id === selectedField);
