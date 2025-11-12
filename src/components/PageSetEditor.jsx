@@ -256,6 +256,7 @@ const PageSetEditor = ({
           onSave={handleSavePage}
           aspectRatio={aspectRatio}
           pageSetFields={expandFields(fields)} // Pass the expanded fields to the editor
+          editorType="pageSet"
         />
       )}
 

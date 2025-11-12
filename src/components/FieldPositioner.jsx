@@ -43,6 +43,7 @@ const FieldPositioner = ({
   currentPreviewIndex,
   onFontScaleChange,
   isCropping,
+  editorType,
 }) => {
   const {
     fieldPositions,
@@ -309,6 +310,11 @@ const FieldPositioner = ({
 
     const textElements = (csvHeaders || [])
       .map(header => {
+        // In PageSet edit mode, if an image placeholder with the same name already exists, skip rendering the text field.
+        if (editorType === 'pageSet' && elements.some(el => el.type === 'image' && el.id === header)) {
+          return null;
+        }
+
         const position = fieldPositions ? fieldPositions[header] : undefined;
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;

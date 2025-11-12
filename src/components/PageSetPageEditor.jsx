@@ -20,6 +20,7 @@ const PageSetPageEditor = ({
   onSave,
   aspectRatio,
   pageSetFields,
+  editorType,
 }) => {
   const [editorState, setEditorState] = useState(null);
   const [selectedField, setSelectedField] = useState(null);
@@ -162,6 +163,7 @@ const PageSetPageEditor = ({
                 setSelectedField={setSelectedField}
                 originalImageSize={{ width: 1080, height: 1080 }}
                 currentPreviewIndex={0}
+                editorType={editorType}
               />
             </Box>
           </Box>
