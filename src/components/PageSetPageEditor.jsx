@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, IconButton, Fab,
 } from '@mui/material';
 import { Close, Edit } from '@mui/icons-material';
+import html2canvas from 'html2canvas';
 import { useIsMobile } from '../hooks/use-mobile';
 import FieldPositioner from './FieldPositioner';
 import FormattingPanel from './FormattingPanel';
@@ -26,6 +28,7 @@ const PageSetPageEditor = ({
   const [selectedField, setSelectedField] = useState(null);
   const isMobile = useIsMobile();
   const previewContainerRef = useRef(null);
+  const fieldPositionerRef = useRef(null);
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
 
   useEffect(() => {
@@ -130,13 +133,29 @@ const PageSetPageEditor = ({
     return null;
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!fieldPositionerRef.current) {
+      toast.error('Preview element not found for thumbnail generation.');
+      return;
+    }
+
+    const canvas = await html2canvas(fieldPositionerRef.current, {
+      allowTaint: true,
+      useCORS: true,
+      backgroundColor: editorState.pageTemplate.backgroundColor || '#FFFFFF',
+    });
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
     onSave({
-      ...pageData,
-      fieldPositions: editorState.fieldPositions,
-      fieldStyles: editorState.fieldStyles,
-      pageTemplate: editorState.pageTemplate,
-      record: editorState.csvData[0],
+      pageData: {
+        ...pageData,
+        fieldPositions: editorState.fieldPositions,
+        fieldStyles: editorState.fieldStyles,
+        pageTemplate: editorState.pageTemplate,
+        record: editorState.csvData[0],
+      },
+      thumbnailBlob: blob,
     });
     onClose();
   };
@@ -157,6 +176,7 @@ const PageSetPageEditor = ({
           >
             <Box sx={{ aspectRatio: aspectRatio.replace(':', ' / '), width: previewSize.width, height: previewSize.height }}>
               <FieldPositioner
+                ref={fieldPositionerRef}
                 editorState={editorState}
                 setEditorState={setEditorState}
                 selectedField={selectedField}
