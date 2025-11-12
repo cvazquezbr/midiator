@@ -274,80 +274,73 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [];
+    const PLACEHOLDER_IMAGE_URL = 'https://as1.ftcdn.net/v2/jpg/07/12/27/56/1000_F_712275644_opOBN5SnauV92mW0tyELL5qUBKoucMqA.jpg';
 
-    // Add page images
-    (pageTemplate.images || []).forEach(image => {
-      const imageUrl = image.src || image.imageUrl;
-      if (image.visible === false || !imageUrl) return;
-      const elementType = image.type === 'background' ? 'image' : image.type;
+    if (editorType === 'pageSet' && pageSetFields) {
+      // Logic for PageSet Editor: pageSetFields is the source of truth
+      pageSetFields.forEach(field => {
+        const fieldName = field.name;
+        const position = fieldPositions ? fieldPositions[fieldName] : undefined;
+        if (!position || position.visible === false) return;
 
-      elements.push({
-        id: image.id,
-        type: elementType,
-        position: { ...image, zIndex: Math.max(image.zIndex || 0, 0) },
-        style: { ...image.filters, ...image },
-        content: imageUrl,
-        rotation: image.rotation || 0,
-        fontScale: 1,
-        enableHtmlRendering: false,
+        if (field.type === 'image') {
+          const imageData = (pageTemplate.images || []).find(img => img.id === fieldName) || {};
+          const imageUrl = imageData.src || imageData.imageUrl || PLACEHOLDER_IMAGE_URL;
+
+          elements.push({
+            id: fieldName,
+            type: 'image',
+            position: { ...imageData, ...position, zIndex: Math.max(position.zIndex || 0, 0) },
+            style: { ...(imageData.filters || {}), ...imageData },
+            content: imageUrl,
+            rotation: position.rotation || 0,
+            fontScale: 1,
+            enableHtmlRendering: false,
+          });
+        } else { // 'text'
+          const style = completeFieldStyles[fieldName];
+          const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
+          const sampleData = record[fieldName] !== undefined ? record[fieldName] : `[${fieldName}]`;
+          elements.push({
+            id: fieldName,
+            type: 'text',
+            position,
+            style,
+            content: sampleData,
+            zIndex: position.zIndex || 0,
+            rotation: position.rotation,
+            fontScale: fontScale,
+            enableHtmlRendering: isHtmlField(fieldName),
+          });
+        }
       });
-    });
-
-    // Add cropbox if needed for the selected image.
-    const selectedImage = isCropping && pageTemplate.images?.find(img => img.id === selectedField);
-    if (selectedImage) {
-      elements.push({
-        id: '__cropbox__',
-        type: 'cropbox',
-        position: selectedImage.crop || { x: 10, y: 10, width: 80, height: 80 },
-        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-        content: '',
-        zIndex: 1000, // Should be on top of everything
-        rotation: 0,
-        fontScale: 1,
-        enableHtmlRendering: false,
-      });
-    }
-
-    const textElements = [];
-    const sourceFields = editorType === 'pageSet' && pageSetFields ? pageSetFields : (csvHeaders || []).map(h => ({ name: h, type: 'text' }));
-
-    sourceFields.forEach(field => {
-      const header = typeof field === 'string' ? field : field.name;
-      const fieldType = typeof field === 'string' ? 'text' : field.type;
-
-      // Skip if an image with the same ID/name already exists from the pageTemplate.images array
-      if (elements.some(el => el.id === header)) {
-        return;
-      }
-
-      const position = fieldPositions ? fieldPositions[header] : undefined;
-      const style = completeFieldStyles[header];
-      if (!position || !position.visible) return;
-
-      const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
-      const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
-
-      // The core of the fix: determine the element type from the field definition
-      if (fieldType === 'image') {
-        // This case handles image elements that might not be in pageTemplate.images yet
-        // but are defined in pageSetFields. We find its corresponding image data.
-        const imageData = pageTemplate.images?.find(img => img.id === header);
-        const imageUrl = imageData?.src || imageData?.imageUrl; // Use the placeholder URL
-        if (!imageUrl) return; // Don't render if no URL
-
+    } else {
+      // Original Logic for Campaign Editor
+      (pageTemplate.images || []).forEach(image => {
+        const imageUrl = image.src || image.imageUrl;
+        if (image.visible === false || !imageUrl) return;
+        const elementType = image.type === 'background' ? 'image' : image.type;
         elements.push({
-          id: header,
-          type: 'image',
-          position: { ...position, zIndex: Math.max(position.zIndex || 0, 0) },
-          style: { ...(imageData?.filters || {}), ...imageData },
+          id: image.id,
+          type: elementType,
+          position: { ...image, zIndex: Math.max(image.zIndex || 0, 0) },
+          style: { ...image.filters, ...image },
           content: imageUrl,
-          rotation: position.rotation || 0,
+          rotation: image.rotation || 0,
           fontScale: 1,
           enableHtmlRendering: false,
         });
-
-      } else { // It's a text element
+      });
+      const textElements = [];
+      (csvHeaders || []).forEach(header => {
+        if (elements.some(el => el.id === header)) {
+          return;
+        }
+        const position = fieldPositions ? fieldPositions[header] : undefined;
+        const style = completeFieldStyles[header];
+        if (!position || !position.visible) return;
+        const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
+        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
         textElements.push({
           id: header,
           type: 'text',
@@ -359,30 +352,44 @@ const FieldPositioner = ({
           fontScale: fontScale,
           enableHtmlRendering: isHtmlField(header),
         });
-      }
+      });
+      elements.push(...textElements);
+    }
+
+    // Add brand elements (common to both modes)
+    (brandElements || []).forEach(element => {
+      if (element.visible === false || !element.url) return;
+      elements.push({
+        id: element.id,
+        type: 'image',
+        position: { ...element, zIndex: Math.max(element.zIndex || 0, 0) },
+        style: { ...element.filters, ...element },
+        content: element.url,
+        rotation: element.rotation,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      });
     });
 
-    const brandEls = (brandElements || [])
-      .map(element => {
-        if (element.visible === false || !element.url) return null;
-        return {
-          id: element.id,
-          type: 'image',
-          position: { ...element, zIndex: Math.max(element.zIndex || 0, 0) },
-          style: { ...element.filters, ...element },
-          content: element.url,
-          rotation: element.rotation,
-          fontScale: 1,
-          enableHtmlRendering: false,
-        };
-      })
-      .filter(Boolean);
-
-    elements.push(...textElements, ...brandEls);
+    // Add cropbox if needed (common to both modes)
+    const selectedImage = isCropping && pageTemplate.images?.find(img => img.id === selectedField);
+    if (selectedImage) {
+      elements.push({
+        id: '__cropbox__',
+        type: 'cropbox',
+        position: selectedImage.crop || { x: 10, y: 10, width: 80, height: 80 },
+        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+        content: '',
+        zIndex: 1000,
+        rotation: 0,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      });
+    }
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, completeFieldStyles, brandElements, csvData, currentPreviewIndex, fontScale, selectedField]);
+  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, completeFieldStyles, brandElements, csvData, currentPreviewIndex, fontScale, selectedField, editorType, pageSetFields]);
 
   const getGradientCss = (gradient) => {
     if (!gradient) return 'none';
