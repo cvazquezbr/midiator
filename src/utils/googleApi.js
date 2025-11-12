@@ -157,44 +157,30 @@ export const getFileAsBlob = async (fileId) => {
 };
 
 export const createFolder = async (name, parentId = null) => {
-  console.log(`[googleApi] Creating folder: '${name}'`);
-  try {
-    if (!currentAccessToken) {
-      toast.error('Conexão com o Google Drive não estabelecida.');
-      throw new Error('Sessão com o Google não iniciada para criar pasta.');
+    console.log(`[googleApi] Creating folder '${name}' via proxy.`);
+    try {
+        const response = await fetch('/api/google-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'createFolder',
+                payload: { name, parentId },
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido.' }));
+            throw new Error(errorData.message);
+        }
+
+        const newFolder = await response.json();
+        toast.success(`Pasta "${newFolder.name}" criada com sucesso!`);
+        return newFolder;
+    } catch (error) {
+        console.error(`Erro ao criar pasta via proxy:`, error);
+        toast.error(`Falha ao criar pasta: ${error.message}`);
+        throw error; // Re-throw to be caught by the component
     }
-    // findFolderByName will throw on API error, so we only need to handle the "found" case.
-    const existingFolder = await findFolderByName(name, parentId);
-    if (existingFolder) {
-      console.warn(`[googleApi] Folder '${name}' already exists with ID: ${existingFolder.id}. Using existing.`);
-      return existingFolder;
-    }
-
-    console.log(`[googleApi] Folder '${name}' does not exist. Creating anew.`);
-    const metadata = { name, mimeType: 'application/vnd.google-apps.folder' };
-    if (parentId) metadata.parents = [parentId];
-
-    const response = await fetchWithRefresh('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(metadata),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      const errorMessage = errorBody.error?.message || response.statusText;
-      console.error(`[googleApi] Failed to create folder '${name}':`, errorMessage);
-      throw new Error(`Não foi possível criar a pasta '${name}': ${errorMessage}`);
-    }
-
-    const newFolder = await response.json();
-    console.log(`[googleApi] Successfully created folder '${name}' with ID: ${newFolder.id}`);
-    return newFolder;
-  } catch (error) {
-    console.error(`[googleApi] Error in createFolder for '${name}':`, error);
-    // O toast já foi dado no fetchWithRefresh, aqui apenas relançamos.
-    throw error;
-  }
 };
 
 export const uploadFile = async (fileBlob, fileName, folderId) => {
@@ -256,25 +242,28 @@ export const uploadFile = async (fileBlob, fileName, folderId) => {
   }
 };
 
-export const listFolders = async (pageSize = 100) => {
-  console.log('[googleApi] Listing all user folders.');
-  try {
-    if (!currentAccessToken) throw new Error('Access token não fornecido para listar pastas.');
-    const query = "mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false";
-    const response = await fetchWithRefresh(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name)&orderBy=name`, {});
-    if (!response.ok) {
-      const errorBody = await response.json();
-      const errorMessage = errorBody.error?.message || response.statusText;
-      throw new Error(`HTTP ${response.status}: ${errorMessage}`);
+export const listFolders = async () => {
+    console.log('[googleApi] Listing folders via proxy.');
+    try {
+        const response = await fetch('/api/google-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'listFolders' }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido.' }));
+            throw new Error(errorData.message);
+        }
+
+        const folders = await response.json();
+        console.log(`[googleApi] Received ${folders.length} folders from proxy.`);
+        return folders;
+    } catch (error) {
+        console.error('Erro ao listar pastas via proxy:', error);
+        toast.error(`Falha ao carregar pastas: ${error.message}`);
+        return [];
     }
-    const result = await response.json();
-    console.log(`[googleApi] Found ${result.files?.length || 0} total folders.`);
-    return result.files || [];
-  } catch (error) {
-    console.error(`[googleApi] Error listing folders:`, error);
-    toast.error('Não foi possível carregar suas pastas do Google Drive.');
-    return [];
-  }
 };
 
 export const moveFileToFolder = async (fileId, folderId) => {
