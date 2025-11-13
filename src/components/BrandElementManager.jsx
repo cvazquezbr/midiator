@@ -39,9 +39,8 @@ const BrandElementManager = ({ onElementSelect }) => {
         const elementosFolders = await findFoldersByName('elementos', midiatorFolder.id);
         if (elementosFolders.length > 0) {
           await Promise.all(elementosFolders.map(async (elementosFolder) => {
-            const fileList = await listFiles(elementosFolder.id);
-            const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
-            allImageFiles.push(...imageFiles);
+            const fileList = await listFiles(elementosFolder.id, 100, 'image/');
+            allImageFiles.push(...fileList.files);
           }));
         }
       }));
