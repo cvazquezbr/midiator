@@ -114,22 +114,39 @@ export const findFoldersByName = async (name, parentId = null) => {
 };
 
 export const listFiles = async (folderId, pageSize = 100) => {
-  console.log(`[googleApi] Listing files in folder: ${folderId}`);
+  console.log(`[googleApi] Listing all files in folder: ${folderId}`);
   try {
     if (!currentAccessToken) {
       toast.error('Conexão com o Google Drive não estabelecida.');
       return { files: [] };
     }
+
+    let allFiles = [];
+    let pageToken = null;
     const query = `'${folderId}' in parents and trashed=false`;
-    const response = await fetchWithRefresh(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name,mimeType,thumbnailLink)`, {});
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      console.error(`[googleApi] Failed to list files in folder '${folderId}':`, errorBody.error?.message || response.statusText);
-      return { files: [] };
-    }
-    const result = await response.json();
-    console.log(`[googleApi] Found ${result.files?.length || 0} files in folder ${folderId}.`);
-    return result;
+    const fields = 'nextPageToken,files(id,name,mimeType,thumbnailLink)';
+
+    do {
+      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=${encodeURIComponent(fields)}${pageToken ? `&pageToken=${pageToken}` : ''}`;
+      const response = await fetchWithRefresh(url, {});
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        console.error(`[googleApi] Failed to list files in folder '${folderId}':`, errorBody.error?.message || response.statusText);
+        return { files: allFiles }; // Return what we have so far
+      }
+
+      const result = await response.json();
+      if (result.files) {
+        allFiles = allFiles.concat(result.files);
+      }
+      pageToken = result.nextPageToken;
+
+    } while (pageToken);
+
+    console.log(`[googleApi] Found a total of ${allFiles.length} files in folder ${folderId}.`);
+    return { files: allFiles };
+
   } catch (error) {
     console.error(`[googleApi] Error in listFiles for folder '${folderId}':`, error);
     toast.error('Falha ao listar arquivos do Google Drive.');
