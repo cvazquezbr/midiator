@@ -9,7 +9,7 @@ import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
 import TextEditorDialog from './TextEditorDialog';
 import { createNewImageElement } from '../utils/elementFactory';
-import { usePageData } from '../hooks/usePageData';
+import { usePrevious } from '../hooks/usePrevious';
 import { useCampaign } from '../context/CampaignContext';
 import { useUserAuth } from '../context/UserAuthContext';
 import { safeDeepClone } from '../lib/utils';
@@ -60,18 +60,20 @@ const PageEditor = ({
   open,
   onClose,
   pageData,
+  baseTemplate,
   onSave,
   originalImageSize,
   aspectRatio,
   onOpenImageGallery,
   addPendingAsset,
+  csvData: fullCsvData,
+  currentPreviewIndex
 }) => {
   console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
 
   const { campaignState, isCampaignLoading } = useCampaign();
-  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets } = campaignState;
+  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: campaignSwatches } = campaignState;
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
-  const pageDataFromHook = usePageData(pageData?.index);
 
   const [editorState, setEditorState] = useState(null);
   const [selectedField, setSelectedField] = useState(null);
@@ -80,66 +82,41 @@ const PageEditor = ({
   const [imageSwatches, setImageSwatches] = useState([]);
   const [isDrivePickerOpen, setIsDrivePickerOpen] = useState(false);
   const isMobile = useIsMobile();
-  const prevImagesRef = useRef();
+  const prevOpen = usePrevious(open);
+
 
   useEffect(() => {
-    // Initialize state only when the editor opens and state is not yet set.
-    // This prevents state from being overwritten on re-renders caused by parent components.
-    if (open && pageData && pageDataFromHook && !editorState) {
-      const {
-        effectiveFieldPositions,
-        effectiveFieldStyles,
-        effectiveBrandElements,
-        effectivePageTemplate,
-        csvHeaders: headersFromHook,
-        record,
-      } = pageDataFromHook;
-
-      // Construct the initial state by prioritizing the specific page's custom data
-      // (`pageData.custom...`) and falling back to the effective/global data from the hook.
-      const initialEditorState = {
-        fieldPositions: safeDeepClone(pageData.customFieldPositions || effectiveFieldPositions || {}),
-        fieldStyles: safeDeepClone(pageData.customFieldStyles || effectiveFieldStyles || {}),
-        brandElements: safeDeepClone(pageData.customBrandElements || effectiveBrandElements || []),
-        pageTemplate: safeDeepClone(pageData.customPageTemplate || effectivePageTemplate || {}),
-        csvHeaders: headersFromHook || [],
-        csvData: record ? [safeDeepClone(record)] : [], // The record should be consistent
-      };
-
-      setEditorState(initialEditorState);
+    // This effect now acts as the single source of truth for the editor's state.
+    // It runs when the editor opens or if the underlying pageData prop changes while it's open.
+    if (open && pageData) {
+      // If the editor is just opening, or if the page being edited has changed,
+      // we rebuild the entire state from props. This prevents stale state.
+      if (!prevOpen || editorState?.index !== pageData.index) {
+        const initialState = {
+          index: pageData.index,
+          // Prioritize custom data from the page, fall back to the base template
+          pageTemplate: safeDeepClone(pageData.customPageTemplate || baseTemplate.pageTemplate),
+          fieldPositions: safeDeepClone(pageData.customFieldPositions || baseTemplate.fieldPositions),
+          fieldStyles: safeDeepClone(pageData.customFieldStyles || baseTemplate.fieldStyles),
+          brandElements: safeDeepClone(pageData.customBrandElements || baseTemplate.brandElements),
+          // The record for this specific page is what we care about
+          csvData: [safeDeepClone(pageData.record)],
+          csvHeaders: baseTemplate.csvHeaders || [], // Headers from base
+        };
+        setEditorState(initialState);
+      }
     }
-    // Note: The component is unmounted when `open` becomes false, so we don't need an `else if (!open)`
-    // to clear the state. The state will be naturally reset on the next mount.
-  }, [open, pageData, pageDataFromHook, editorState]);
+  }, [open, pageData, baseTemplate, prevOpen, editorState?.index]);
 
+
+  // This separate effect is ONLY for deriving data from the editorState,
+  // like extracting the color palette. It doesn't set the main state.
   useEffect(() => {
     const firstImage = editorState?.pageTemplate?.images?.[0];
     if (firstImage) {
       extractColorPalette(firstImage.src, setImageSwatches);
     }
-
-    // Get the images from the hook, which represents the "source of truth" from the parent.
-    const sourceImages = pageDataFromHook?.effectivePageTemplate?.images || [];
-    const localImages = editorState?.pageTemplate?.images || [];
-
-    // Detect if a new image was added externally (e.g., from the gallery)
-    if (sourceImages.length > localImages.length) {
-        const newImage = sourceImages.find(sourceImg => !localImages.some(localImg => localImg.id === sourceImg.id));
-        if (newImage && !localImages.some(localImg => localImg.id === newImage.id)) {
-            // A new image was found, so add it to the local state.
-            setEditorState(prev => ({
-                ...prev,
-                pageTemplate: {
-                    ...prev.pageTemplate,
-                    images: [...(prev.pageTemplate.images || []), newImage]
-                }
-            }));
-            setSelectedField(newImage.id); // Also select the new image.
-        }
-    }
-
-    prevImagesRef.current = editorState?.pageTemplate?.images || [];
-  }, [editorState?.pageTemplate?.images, pageDataFromHook?.effectivePageTemplate?.images]);
+  }, [editorState?.pageTemplate?.images]);
 
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
   const previewContainerRef = useRef(null);

@@ -624,6 +624,7 @@ const PageGeneratorFrontendOnly = ({
             fieldPositions,
             fieldStyles,
             brandElements,
+            csvHeaders: campaignState.csvHeaders, // Pass the headers
           }}
           onSave={handleSaveIndividualModifications}
           aspectRatio={aspectRatio}
