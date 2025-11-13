@@ -81,12 +81,12 @@ const fetchWithRefresh = async (url, options) => {
     return response;
 };
 
-export const findFolderByName = async (name, parentId = null) => {
-  console.log(`[googleApi] Finding folder by name: '${name}'`);
+export const findFoldersByName = async (name, parentId = null) => {
+  console.log(`[googleApi] Finding folders by name: '${name}'`);
   try {
     if (!currentAccessToken) {
       toast.error('Conexão com o Google Drive não estabelecida.');
-      throw new Error('Sessão com o Google não iniciada para buscar pasta.');
+      throw new Error('Sessão com o Google não iniciada para buscar pastas.');
     }
     let query = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
     if (parentId) query += ` and '${parentId}' in parents`;
@@ -96,23 +96,18 @@ export const findFolderByName = async (name, parentId = null) => {
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
       const errorMessage = errorBody.error?.message || response.statusText;
-      console.error(`[googleApi] Failed to find folder '${name}':`, errorMessage);
-      // O toast de erro já deve ter sido acionado pelo fetchWithRefresh
-      throw new Error(`Não foi possível encontrar a pasta '${name}': ${errorMessage}`);
+      console.error(`[googleApi] Failed to find folders for '${name}':`, errorMessage);
+      throw new Error(`Não foi possível encontrar as pastas '${name}': ${errorMessage}`);
     }
     const result = await response.json();
     if (result.files && result.files.length > 0) {
-        if (result.files.length > 1) {
-            console.warn(`[googleApi] Alerta: Mais de uma pasta encontrada com o nome '${name}'. Usando a mais recente. Considere renomear ou excluir as pastas duplicadas no Google Drive para evitar comportamento inesperado.`);
-        }
-        // The API call is already sorting by createdTime desc, so result.files[0] is the newest one.
-        const folder = result.files[0];
-        return folder;
+      console.log(`[googleApi] Found ${result.files.length} folder(s) named '${name}'.`);
+      return result.files;
     }
-    console.log(`[googleApi] Folder '${name}' not found.`);
-    return null; // Retornar null é um resultado esperado, não um erro.
+    console.log(`[googleApi] No folders named '${name}' found.`);
+    return []; // Return an empty array if no folders are found.
   } catch (error) {
-    console.error(`[googleApi] Error in findFolderByName for '${name}':`, error);
+    console.error(`[googleApi] Error in findFoldersByName for '${name}':`, error);
     // O toast já foi dado no fetchWithRefresh, aqui apenas relançamos para a lógica de chamada saber que falhou.
     throw error;
   }
@@ -357,14 +352,16 @@ export const uploadImageToDrive = async (imageBlob, folderId) => {
 export const getOrCreateBackgroundsFolderId = async () => {
     console.log("[googleApi] Getting or creating the 'midiator/backgrounds' folder structure.");
     try {
-        let midiatorFolder = await findFolderByName('midiator');
+        const midiatorFolders = await findFoldersByName('midiator');
+        let midiatorFolder = midiatorFolders[0]; // Get the most recent one
         if (!midiatorFolder) {
             console.log("[googleApi] 'midiator' folder not found, creating it.");
             midiatorFolder = await createFolder('midiator');
             if (!midiatorFolder) throw new Error("Falha ao criar a pasta 'midiator' no Drive.");
         }
 
-        let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
+        const backgroundsFolders = await findFoldersByName('backgrounds', midiatorFolder.id);
+        let backgroundsFolder = backgroundsFolders[0]; // Get the most recent one
         if (!backgroundsFolder) {
             console.log("[googleApi] 'backgrounds' folder not found, creating it.");
             backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
