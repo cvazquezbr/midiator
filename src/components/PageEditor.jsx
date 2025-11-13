@@ -118,6 +118,41 @@ const PageEditor = ({
     }
   }, [editorState?.pageTemplate?.images]);
 
+  const prevPageData = usePrevious(pageData);
+  // This separate effect syncs externally added images into the local state
+  // without overwriting all other local changes.
+  useEffect(() => {
+    // We only want this effect to run when the component is open and has state.
+    if (!open || !editorState) {
+      return;
+    }
+
+    // Get images from current and previous props
+    const currentImagesProp = pageData?.customPageTemplate?.images || [];
+    const prevImagesProp = prevPageData?.customPageTemplate?.images || [];
+
+    // Check if an image was added
+    if (currentImagesProp.length > prevImagesProp.length) {
+        // Find the new image(s) by comparing the current props with the previous props
+        const newImages = currentImagesProp.filter(
+            (currentImg) => !prevImagesProp.some((prevImg) => prevImg.id === currentImg.id)
+        );
+
+        if (newImages.length > 0) {
+            // Update the local state by adding only the new images
+            setEditorState(prev => ({
+                ...prev,
+                pageTemplate: {
+                    ...prev.pageTemplate,
+                    images: [...(prev.pageTemplate.images || []), ...newImages],
+                },
+            }));
+            // Select the last added image for better UX
+            setSelectedField(newImages[newImages.length - 1].id);
+        }
+    }
+  }, [pageData, open, editorState, prevPageData]);
+
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
   const previewContainerRef = useRef(null);
 
