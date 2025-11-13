@@ -33,18 +33,17 @@ const BrandElementManager = ({ onElementSelect }) => {
         return [];
       }
 
-      let allImageFiles = [];
-      // Use Promise.all to fetch from all 'elementos' folders concurrently
-      await Promise.all(midiatorFolders.map(async (midiatorFolder) => {
+      const allImageFiles = [];
+      for (const midiatorFolder of midiatorFolders) {
         const elementosFolders = await findFoldersByName('elementos', midiatorFolder.id);
-        if (elementosFolders.length > 0) {
-          await Promise.all(elementosFolders.map(async (elementosFolder) => {
-            const fileList = await listFiles(elementosFolder.id);
+        for (const elementosFolder of elementosFolders) {
+          const fileList = await listFiles(elementosFolder.id);
+          if (fileList && fileList.files) {
             const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
             allImageFiles.push(...imageFiles);
-          }));
+          }
         }
-      }));
+      }
 
       // Remove duplicates by ID
       const uniqueImageFiles = Array.from(new Map(allImageFiles.map(file => [file.id, file])).values());
