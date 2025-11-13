@@ -113,7 +113,7 @@ export const findFoldersByName = async (name, parentId = null) => {
   }
 };
 
-export const listFiles = async (folderId, pageSize = 100) => {
+export const listFiles = async (folderId, pageSize = 100, mimeTypeFilter = null) => {
   console.log(`[googleApi] Listing all files in folder: ${folderId}`);
   try {
     if (!currentAccessToken) {
@@ -123,7 +123,20 @@ export const listFiles = async (folderId, pageSize = 100) => {
 
     let allFiles = [];
     let pageToken = null;
-    const query = `'${folderId}' in parents and trashed=false`;
+    let query = `'${folderId}' in parents and trashed=false`;
+
+    // Adicionar filtro de tipo MIME se fornecido
+    if (mimeTypeFilter) {
+      // O Google Drive API v3 usa a sintaxe 'mimeType contains "image/"' para buscar todos os tipos de imagem
+      // ou 'mimeType = "image/jpeg"' para um tipo específico.
+      // Para o caso de Elementos da Marca, queremos todos os tipos de imagem.
+      if (mimeTypeFilter === 'image/') {
+        query += ` and mimeType contains 'image/'`;
+      } else {
+        query += ` and mimeType = '${mimeTypeFilter}'`;
+      }
+    }
+
     const fields = 'nextPageToken,files(id,name,mimeType,thumbnailLink)';
 
     do {
