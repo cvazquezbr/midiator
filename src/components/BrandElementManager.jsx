@@ -6,7 +6,7 @@ import {
 import { Refresh, Upload } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useCampaign } from '../context/CampaignContext';
-import { findFolderByName, listFiles, getFileAsBlob, uploadFile, createFolder } from '../utils/googleApi';
+import { findFoldersByName, listFiles, getFileAsBlob, uploadFile, createFolder } from '../utils/googleApi';
 import { toast } from 'sonner';
 
 const BrandElementManager = ({ onElementSelect }) => {
@@ -27,23 +27,29 @@ const BrandElementManager = ({ onElementSelect }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const midiatorFolder = await findFolderByName('midiator');
-      if (!midiatorFolder) {
-        throw new Error("A pasta 'midiator' não foi encontrada no seu Google Drive.");
-      }
-
-      const elementosFolder = await findFolderByName('elementos', midiatorFolder.id);
-      if (!elementosFolder) {
-        // This is not an error, it just means there are no elements yet.
+      const midiatorFolders = await findFoldersByName('midiator');
+      if (midiatorFolders.length === 0) {
         setImages([]);
-        console.log("Pasta 'elementos' não encontrada. Nenhum elemento para carregar.");
         return [];
       }
 
-      const fileList = await listFiles(elementosFolder.id); // Corrected call
-      const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
+      let allImageFiles = [];
+      // Use Promise.all to fetch from all 'elementos' folders concurrently
+      await Promise.all(midiatorFolders.map(async (midiatorFolder) => {
+        const elementosFolders = await findFoldersByName('elementos', midiatorFolder.id);
+        if (elementosFolders.length > 0) {
+          await Promise.all(elementosFolders.map(async (elementosFolder) => {
+            const fileList = await listFiles(elementosFolder.id);
+            const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
+            allImageFiles.push(...imageFiles);
+          }));
+        }
+      }));
 
-      const imagesWithLinks = imageFiles.map(file => ({
+      // Remove duplicates by ID
+      const uniqueImageFiles = Array.from(new Map(allImageFiles.map(file => [file.id, file])).values());
+
+      const imagesWithLinks = uniqueImageFiles.map(file => ({
         id: file.id,
         name: file.name,
         url: `https://drive.google.com/uc?export=view&id=${file.id}`,
@@ -121,13 +127,15 @@ const BrandElementManager = ({ onElementSelect }) => {
     const toastId = toast.loading('Fazendo upload da imagem...');
 
     try {
-        let midiatorFolder = await findFolderByName('midiator');
+        const midiatorFolders = await findFoldersByName('midiator');
+        let midiatorFolder = midiatorFolders[0]; // Get the most recent one
         if (!midiatorFolder) {
             toast.info("Criando pasta 'midiator' no seu Google Drive...");
             midiatorFolder = await createFolder('midiator');
         }
 
-        let elementosFolder = await findFolderByName('elementos', midiatorFolder.id);
+        const elementosFolders = await findFoldersByName('elementos', midiatorFolder.id);
+        let elementosFolder = elementosFolders[0]; // Get the most recent one
         if (!elementosFolder) {
             toast.info("Criando pasta 'elementos' no seu Google Drive...");
             elementosFolder = await createFolder('elementos', midiatorFolder.id);

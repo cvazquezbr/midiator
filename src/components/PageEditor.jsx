@@ -125,7 +125,7 @@ const PageEditor = ({
     // Detect if a new image was added externally (e.g., from the gallery)
     if (sourceImages.length > localImages.length) {
         const newImage = sourceImages.find(sourceImg => !localImages.some(localImg => localImg.id === sourceImg.id));
-        if (newImage) {
+        if (newImage && !localImages.some(localImg => localImg.id === newImage.id)) {
             // A new image was found, so add it to the local state.
             setEditorState(prev => ({
                 ...prev,
