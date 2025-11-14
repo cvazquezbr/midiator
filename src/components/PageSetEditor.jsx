@@ -12,6 +12,7 @@ import { safeDeepClone } from '../lib/utils';
 import PageSetPageEditor from './PageSetPageEditor';
 import FieldsEditor from './FieldsEditor';
 import PaletteSelector from './PaletteSelector';
+import AspectRatioSelector from './ui/AspectRatioSelector';
 
 // Helper function to expand fields based on quantity
 const expandFields = (fields) => {
@@ -181,20 +182,10 @@ const PageSetEditor = ({
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel id="aspect-ratio-label">Proporção</InputLabel>
-                <Select
-                  labelId="aspect-ratio-label"
-                  value={aspectRatio}
-                  label="Proporção"
-                  onChange={handleAspectRatioChange}
-                  disabled={isSaving}
-                >
-                  <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
-                  <MenuItem value="4:5">Retrato (4:5)</MenuItem>
-                  <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
-                </Select>
-              </FormControl>
+              <AspectRatioSelector
+                value={aspectRatio}
+                onChange={handleAspectRatioChange}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
               <PaletteSelector

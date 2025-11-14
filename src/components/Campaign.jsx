@@ -49,6 +49,7 @@ import {
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RevisaoTextoModal from './RevisaoTextoModal/RevisaoTextoModal';
+import AspectRatioSelector from './ui/AspectRatioSelector';
 
 const problemaHint = (
     <Box sx={{ p: 2, maxWidth: 500 }}>
@@ -815,20 +816,11 @@ const Campaign = ({
                                 </Grid>
 
                                 <Grid item xs={12}>
-                                    <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
-                                        <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
-                                        <Select
-                                        labelId="aspect-ratio-label"
+                                    <AspectRatioSelector
                                         value={aspectRatio}
-                                         onChange={(e) => setCampaignState(prev => ({ ...prev, aspectRatio: e.target.value }))}
-                                        label="Razão de Aspecto"
-                                    >
-                                        <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
-                                        <MenuItem value="4:5">Retrato (4:5)</MenuItem>
-                                        <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                                        onChange={(e) => setCampaignState(prev => ({ ...prev, aspectRatio: e.target.value }))}
+                                    />
+                                </Grid>
                             {imageTabError && <Grid item xs={12}><Alert severity="error">{imageTabError}</Alert></Grid>}
                             {generatedPageUrl && !isGeneratingImage && (
                                 <Box sx={{ maxWidth: '600px', margin: 'auto' }}>
