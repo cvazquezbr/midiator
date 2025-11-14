@@ -235,34 +235,75 @@ const PageSetEditor = ({
               <div className="grid-sizer" />
               {pages.map((page) => (
                 <div className="grid-item" key={page.index}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="body2" noWrap gutterBottom>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      aspectRatio: String(aspectRatio).replace(':', ' / '),
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      backgroundColor: '#f0f0f0',
+                      borderRadius: 1,
+                      '&:hover .overlay': {
+                        opacity: 1,
+                      },
+                      '&:hover img': {
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  >
+                    {page.thumbnailUrl ? (
+                      <img
+                        src={page.thumbnailUrl}
+                        alt={`Thumbnail for page ${page.index}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s ease-in-out',
+                        }}
+                      />
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                        <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
+                      </Box>
+                    )}
+                    <Box
+                      className="overlay"
+                      onClick={() => handleEditPage(page)}
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: 'white',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        p: 1,
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease-in-out',
+                      }}
+                    >
+                      <Typography variant="body2" noWrap>
                         {page.record?.Título || page.record?.title || `Página ${page.index}`}
                       </Typography>
-                      <Box sx={{
-                        position: 'relative',
-                        width: '100%',
-                        aspectRatio: String(aspectRatio).replace(':', ' / '),
-                        backgroundColor: '#f0f0f0',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        {page.thumbnailUrl ? (
-                          <img src={page.thumbnailUrl} alt={`Thumbnail for page ${page.index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
-                        )}
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                        <Tooltip title="Editar">
+                          <IconButton size="small" sx={{ color: 'white' }} onClick={(e) => { e.stopPropagation(); handleEditPage(page); }}>
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Excluir">
+                          <IconButton size="small" sx={{ color: 'white' }} onClick={(e) => { e.stopPropagation(); setPageToDelete(page); }}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
-                        <Tooltip title="Editar"><IconButton size="small" onClick={() => handleEditPage(page)}><EditIcon /></IconButton></Tooltip>
-                        <Tooltip title="Excluir"><IconButton size="small" onClick={() => setPageToDelete(page)}><DeleteIcon /></IconButton></Tooltip>
-                      </Box>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  </Box>
                 </div>
               ))}
             </div>
