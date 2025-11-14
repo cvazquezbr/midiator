@@ -12,6 +12,7 @@ import isEqual from 'lodash.isequal';
 import { useNavigate } from 'react-router-dom';
 
 import { getPageSets, savePageSet, updatePageSet, deletePageSet, loadPageSet } from '../utils/pageSetState';
+import { getPalettes } from '../utils/paletteState';
 import { importPageSetToCampaign } from '../utils/campaignUtils';
 import PageSetEditor from '../components/PageSetEditor';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
@@ -24,6 +25,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
   const { applyLoadedCampaign } = useCampaign();
 
   const [pageSetList, setPageSetList] = useState([]);
+  const [paletteList, setPaletteList] = useState([]);
   const [selectedPageSet, setSelectedPageSet] = useState(null);
   const [originalPageSet, setOriginalPageSet] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,7 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
 
   useEffect(() => {
     fetchPageSets();
+    fetchPalettes();
   }, []);
 
   const fetchPageSets = async () => {
@@ -56,6 +59,16 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPalettes = async () => {
+    try {
+      const data = await getPalettes();
+      setPaletteList(data);
+    } catch (err) {
+      // Non-critical, so we don't set the main error state
+      toast.error(`Falha ao carregar paletas: ${err.message}`);
     }
   };
 
@@ -223,6 +236,8 @@ const PageSetsPage = ({ drawerOpen, setDrawerOpen, onSwitchView }) => {
                 pendingAssets={pendingAssets}
                 onPendingAssetsChange={setPendingAssets}
                 isSaving={loading}
+                palettes={paletteList}
+                paletteColors={paletteList.find(p => p.id === selectedPageSet.page_set_data?.palette_id)?.colors}
               />
                <Box sx={{mt: 2, display: 'flex', justifyContent: 'space-between'}}>
                 <Button onClick={handleSave} variant="contained" disabled={!isDirty || loading}>Salvar Alterações</Button>
