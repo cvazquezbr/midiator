@@ -34,6 +34,8 @@ const PageSetEditor = ({
   isSaving,
   pendingAssets,
   onPendingAssetsChange,
+  palettes = [],
+  paletteColors,
 }) => {
   const [editingPage, setEditingPage] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -193,7 +195,33 @@ const PageSetEditor = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={8}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel id="palette-label">Paleta de Cores</InputLabel>
+                <Select
+                  labelId="palette-label"
+                  value={pageSet.page_set_data?.palette_id || ''}
+                  label="Paleta de Cores"
+                  onChange={(e) => {
+                    const currentPageSetData = pageSet.page_set_data || {};
+                    onPageSetChange({
+                      ...pageSet,
+                      page_set_data: {
+                        ...currentPageSetData,
+                        palette_id: e.target.value,
+                      },
+                    });
+                  }}
+                  disabled={isSaving}
+                >
+                  <MenuItem value=""><em>Nenhuma</em></MenuItem>
+                  {palettes.map((palette) => (
+                    <MenuItem key={palette.id} value={palette.id}>{palette.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4}>
               <Box>
                 <Typography variant="subtitle1" gutterBottom>Campos Definidos</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
@@ -268,6 +296,7 @@ const PageSetEditor = ({
           aspectRatio={aspectRatio}
           pageSetFields={expandFields(fields)} // Pass the expanded fields to the editor
           editorType="pageSet"
+          paletteColors={paletteColors}
         />
       )}
 

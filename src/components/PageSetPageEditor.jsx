@@ -23,6 +23,7 @@ const PageSetPageEditor = ({
   aspectRatio,
   pageSetFields,
   editorType,
+  paletteColors,
 }) => {
   const [editorState, setEditorState] = useState(null);
   const [selectedField, setSelectedField] = useState(null);
@@ -255,6 +256,7 @@ const PageSetPageEditor = ({
                 setSelectedField={setSelectedField}
                 showImageLoaders={false}
                 pageSetFields={pageSetFields}
+                campaignSwatches={paletteColors}
               />
             </Box>
           )}
