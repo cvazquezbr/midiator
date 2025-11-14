@@ -537,7 +537,7 @@ const PageGeneratorFrontendOnly = ({
           </Dialog>
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
-              <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
+              <Divider sx={{ mb: 2 }} />
               <div ref={gridRef} className="grid">
                 <div className="grid-sizer"></div>
                 {generatedPagesData.map((pageData, index) => (
