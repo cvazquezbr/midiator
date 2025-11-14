@@ -342,8 +342,6 @@ const PageEditor = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Editar Página Gerada #{(pageData?.index ?? -1) + 1}</span>
           <Box>
-            <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle}><ContentCopy /></IconButton></Tooltip>
-            <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle}><ContentPaste /></IconButton></Tooltip>
             <IconButton onClick={onClose} sx={{ ml: 2 }}><Close /></IconButton>
           </Box>
         </Box>
@@ -376,7 +374,7 @@ const PageEditor = ({
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: 0,
-              minHeight: 0,
+              minHeight: '90vh',
               overflow: 'hidden',
               position: 'relative',
               padding: 2,
