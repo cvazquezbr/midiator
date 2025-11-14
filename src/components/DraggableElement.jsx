@@ -201,69 +201,40 @@ const DraggableElementInternal = ({
     const initialCenterX = initialPosition.x + initialSize.width / 2;
     const initialCenterY = initialPosition.y + initialSize.height / 2;
 
-    let newCenterX = initialCenterX;
-    let newCenterY = initialCenterY;
     let dw = 0; // change in width
     let dh = 0; // change in height
 
-    switch (handleName) {
-      case 'e':
-        dw = rotatedDeltaX;
-        newWidth += dw;
-        newCenterX += (dw / 2) * cos;
-        newCenterY += (dw / 2) * sin;
-        break;
-      case 'w':
-        dw = -rotatedDeltaX;
-        newWidth += dw;
-        newCenterX -= (dw / 2) * cos;
-        newCenterY -= (dw / 2) * sin;
-        break;
-      case 's':
-        dh = rotatedDeltaY;
-        newHeight += dh;
-        newCenterX += (dh / 2) * -sin;
-        newCenterY += (dh / 2) * cos;
-        break;
-      case 'n':
-        dh = -rotatedDeltaY;
-        newHeight += dh;
-        newCenterX -= (dh / 2) * -sin;
-        newCenterY -= (dh / 2) * cos;
-        break;
-      case 'se':
-        dw = rotatedDeltaX;
-        dh = rotatedDeltaY;
-        newWidth += dw;
-        newHeight += dh;
-        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
-        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
-        break;
-      case 'sw':
-        dw = -rotatedDeltaX;
-        dh = rotatedDeltaY;
-        newWidth += dw;
-        newHeight += dh;
-        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
-        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
-        break;
-      case 'ne':
-        dw = rotatedDeltaX;
-        dh = -rotatedDeltaY;
-        newWidth += dw;
-        newHeight += dh;
-        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
-        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
-        break;
-      case 'nw':
-        dw = -rotatedDeltaX;
-        dh = -rotatedDeltaY;
-        newWidth += dw;
-        newHeight += dh;
-        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
-        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
-        break;
+    // Determine change in width based on handle
+    if (handleName.includes('e')) {
+      dw = rotatedDeltaX;
+    } else if (handleName.includes('w')) {
+      dw = -rotatedDeltaX;
     }
+
+    // Determine change in height based on handle
+    if (handleName.includes('s')) {
+      dh = rotatedDeltaY;
+    } else if (handleName.includes('n')) {
+      dh = -rotatedDeltaY;
+    }
+
+    // Apply the size changes
+    newWidth += dw;
+    newHeight += dh;
+
+    // Adjust center based on which handle is being dragged to keep the opposite side anchored.
+    // If 'w' or 'n' is in the handle name, the shift should be negative for that axis.
+    const xFactor = handleName.includes('w') ? -1 : 1;
+    const yFactor = handleName.includes('n') ? -1 : 1;
+
+    // The center of the element moves by half the change in size.
+    // The direction of movement depends on which handle is being dragged.
+    const centerXShift = (dw / 2) * xFactor;
+    const centerYShift = (dh / 2) * yFactor;
+
+    // Rotate the center shift to align with the element's rotation and apply it.
+    let newCenterX = initialCenterX + (centerXShift * cos - centerYShift * sin);
+    let newCenterY = initialCenterY + (centerXShift * sin + centerYShift * cos);
 
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
