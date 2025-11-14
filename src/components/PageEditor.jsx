@@ -374,7 +374,7 @@ const PageEditor = ({
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: 0,
-              minHeight: '85vh',
+              minHeight: '80vh',
               overflow: 'hidden',
               position: 'relative',
               padding: 1,
