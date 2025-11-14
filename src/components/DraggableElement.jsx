@@ -704,6 +704,7 @@ const DraggableElementInternal = ({
   return (
     <>
       <Box
+        id={element.id}
         ref={textBoxRef}
         className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected && element.type !== 'background' ? styles.selected : ''}`}
         sx={boxSx}

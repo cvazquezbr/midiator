@@ -143,6 +143,56 @@ const PageSetPageEditor = ({
       allowTaint: true,
       useCORS: true,
       backgroundColor: editorState.pageTemplate.backgroundColor || '#FFFFFF',
+      onclone: (clonedDoc) => {
+        const elements = clonedDoc.querySelectorAll('[id]'); // Select all elements with an id
+        const promises = [];
+
+        elements.forEach(element => {
+          const img = element.querySelector('img');
+          if (!img) return;
+
+          const elementId = element.id;
+          const imageData = editorState.pageTemplate.images.find(i => i.id === elementId);
+          if (!imageData) return;
+
+          const objectFit = imageData.objectFit || 'fill';
+          if (objectFit === 'fill') return; // html2canvas default is fill
+
+          const promise = new Promise((resolve, reject) => {
+            const canvas = clonedDoc.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const newImg = new Image();
+            newImg.crossOrigin = 'anonymous';
+            newImg.src = img.src;
+
+            newImg.onload = () => {
+              const { naturalWidth, naturalHeight } = newImg;
+              const { width, height } = img.getBoundingClientRect();
+              canvas.width = width;
+              canvas.height = height;
+
+              const hRatio = width / naturalWidth;
+              const vRatio = height / naturalHeight;
+              const ratio = objectFit === 'cover' ? Math.max(hRatio, vRatio) : Math.min(hRatio, vRatio);
+
+              const centerShiftX = (width - naturalWidth * ratio) / 2;
+              const centerShiftY = (height - naturalHeight * ratio) / 2;
+
+              ctx.drawImage(newImg, 0, 0, naturalWidth, naturalHeight,
+                            centerShiftX, centerShiftY, naturalWidth * ratio, naturalHeight * ratio);
+
+              img.parentNode.replaceChild(canvas, img);
+              resolve();
+            };
+            newImg.onerror = (err) => {
+              console.error("Failed to load image for canvas replacement:", err);
+              reject(err);
+            };
+          });
+          promises.push(promise);
+        });
+        return Promise.all(promises);
+      },
     });
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
