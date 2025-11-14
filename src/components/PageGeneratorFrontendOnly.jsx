@@ -538,54 +538,84 @@ const PageGeneratorFrontendOnly = ({
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <div ref={gridRef} className="grid">
-                <div className="grid-sizer"></div>
+                <div className="grid-sizer" />
                 {generatedPagesData.map((pageData, index) => (
                   <div className="grid-item" key={pageData.index}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Chip label={`#${index + 1}`} size="small" />
-                          <Typography variant="body2" noWrap sx={{ flexGrow: 1, ml: 1 }}>
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: '100%',
+                        aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '),
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        '&:hover .overlay': {
+                          opacity: 1,
+                        },
+                        '&:hover img': {
+                          transform: 'scale(1.05)',
+                        },
+                      }}
+                    >
+                      <img
+                        src={pageData.url}
+                        alt={`Preview ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          opacity: regeneratingIndex === index ? 0.5 : 1,
+                          transition: 'transform 0.3s ease-in-out',
+                        }}
+                      />
+                      {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px', zIndex: 2 }} />}
+
+                      <Box
+                        className="overlay"
+                        onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: 'white',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          p: 1,
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease-in-out',
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Chip label={`#${index + 1}`} size="small" sx={{ backgroundColor: 'rgba(255,255,255,0.3)', color: 'white', mr: 1 }} />
+                          <Typography variant="body2" noWrap>
                             {pageData.record?.Título || 'Página sem título'}
                           </Typography>
                         </Box>
-                        <Box
-                          sx={{
-                            position: 'relative',
-                            width: '100%',
-                            aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '),
-                            cursor: 'pointer',
-                            overflow: 'hidden', // Adicionado para conter o zoom da imagem
-                            '&:hover img': {
-                              transform: 'scale(1.05)', // Aplica o zoom na imagem dentro do Box
-                            },
-                          }}
-                          onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
-                        >
-                          <img
-                            src={pageData.url}
-                            alt={`Preview ${index + 1}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              opacity: regeneratingIndex === index ? 0.5 : 1,
-                              transition: 'transform 0.3s ease-in-out', // Adicionado para suavizar a transição do zoom
-                            }}
-                          />
-                          {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px' }} />}
+
+                        <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                          {[
+                            { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
+                            { title: 'Editar Prompt de Imagem', icon: <AutoFixHigh />, action: (e) => { e.stopPropagation(); handleOpenPromptEditor(pageData.index); } },
+                            { title: 'Resetar', icon: <SettingsBackupRestore />, action: (e) => { e.stopPropagation(); handleResetPage(pageData.index); } },
+                            { title: 'Editar', icon: <Edit />, action: (e) => { e.stopPropagation(); handleOpenGeneratedPageEditor(pageData.index); } },
+                            { title: 'Substituir Fundo', icon: <SwapHoriz />, action: (e) => { e.stopPropagation(); handleReplacePageClick(pageData.index); } },
+                            { title: 'Download', icon: <Download />, action: (e) => { e.stopPropagation(); downloadPage(pageData); } },
+                            { title: 'Compartilhar', icon: <Share />, action: (e) => { e.stopPropagation(); handleShare(pageData); } },
+                          ].map(item => (
+                            <Tooltip title={item.title} key={item.title}>
+                              <span>
+                                <IconButton size="small" onClick={item.action} disabled={item.disabled} sx={{ color: 'white' }}>
+                                  {item.icon}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          ))}
                         </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
-                          <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
-                          <Tooltip title="Editar Prompt de Imagem"><IconButton size="small" onClick={() => handleOpenPromptEditor(pageData.index)}><AutoFixHigh /></IconButton></Tooltip>
-                          <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
-                          <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData.index)}><Edit /></IconButton></Tooltip>
-                          <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
-                          <Tooltip title="Download"><IconButton size="small" onClick={() => downloadPage(pageData)}><Download /></IconButton></Tooltip>
-                          <Tooltip title="Compartilhar"><IconButton size="small" onClick={() => handleShare(pageData)}><Share /></IconButton></Tooltip>
-                        </Box>
-                      </CardContent>
-                    </Card>
+                      </Box>
+                    </Box>
                   </div>
                 ))}
               </div>

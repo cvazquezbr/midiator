@@ -2,7 +2,7 @@
 .grid-sizer,
 .grid-item {
   width: 20%;
-  padding: 8px;
+  padding: 0px;
 }
 
 /* 3 columns on medium screens (md) */
