@@ -377,7 +377,7 @@ const PageEditor = ({
               minHeight: '90vh',
               overflow: 'hidden',
               position: 'relative',
-              padding: 2,
+              padding: 0,
             }}
           >
             <Box
