@@ -116,7 +116,7 @@ const PageGeneratorFrontendOnly = ({
     };
 
     performSave();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageToSave]);
 
   useEffect(() => {
@@ -255,30 +255,30 @@ const PageGeneratorFrontendOnly = ({
 
         let blob;
         if (pageData.url.startsWith('blob:')) {
-            blob = pendingAssets[pageData.url];
+          blob = pendingAssets[pageData.url];
         } else if (pageData.url.startsWith('data:')) {
-            blob = dataURLtoBlob(pageData.url);
+          blob = dataURLtoBlob(pageData.url);
         } else {
-            const response = await fetch(`/api/asset-proxy?url=${encodeURIComponent(pageData.url)}`);
-            if (!response.ok) throw new Error(`Falha ao buscar a imagem da página ${i+1}`);
-            blob = await response.blob();
+          const response = await fetch(`/api/asset-proxy?url=${encodeURIComponent(pageData.url)}`);
+          if (!response.ok) throw new Error(`Falha ao buscar a imagem da página ${i + 1}`);
+          blob = await response.blob();
         }
 
         if (blob) {
-            const uploadedFile = await uploadFile(blob, pageData.filename, pagesFolder.id);
-            uploadedFileNames[pageData.index] = uploadedFile.name;
+          const uploadedFile = await uploadFile(blob, pageData.filename, pagesFolder.id);
+          uploadedFileNames[pageData.index] = uploadedFile.name;
         } else {
-             uploadedFileNames[pageData.index] = 'ERRO: BLOB NÃO ENCONTRADO';
+          uploadedFileNames[pageData.index] = 'ERRO: BLOB NÃO ENCONTRADO';
         }
       }
 
       toast.info('Criando planilha de controle...');
       const spreadsheetData = [
-          ['imagem', ...csvData[0] ? Object.keys(csvData[0]) : []],
-           ...csvData.map((row, index) => [
-               uploadedFileNames[index] || '',
-               ...Object.values(row)
-           ])
+        ['imagem', ...csvData[0] ? Object.keys(csvData[0]) : []],
+        ...csvData.map((row, index) => [
+          uploadedFileNames[index] || '',
+          ...Object.values(row)
+        ])
       ];
 
       const spreadsheet = await createSpreadsheet(
@@ -524,7 +524,7 @@ const PageGeneratorFrontendOnly = ({
     <Box sx={{ mt: 3 }}>
       <Card>
         <CardContent>
-          <Typography variant="h5" gutterBottom><Image sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
+          <Typography variant="h5" gutterBottom><Image sx={{ mr: 1, verticalAlign: 'middle' }} />Páginas</Typography>
           {!fontsLoaded && <Alert severity="info" sx={{ mb: 2 }}>Carregando fontes...</Alert>}
           {isGenerating && <Box sx={{ mt: 2 }}><LinearProgress /></Box>}
           <Dialog open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
@@ -537,7 +537,6 @@ const PageGeneratorFrontendOnly = ({
           </Dialog>
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
-              <Divider sx={{ mb: 2 }} />
               <div ref={gridRef} className="grid">
                 <div className="grid-sizer"></div>
                 {generatedPagesData.map((pageData, index) => (
@@ -558,22 +557,22 @@ const PageGeneratorFrontendOnly = ({
                           {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px' }} />}
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
-                           <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
-                           <Tooltip title="Editar Prompt de Imagem"><IconButton size="small" onClick={() => handleOpenPromptEditor(pageData.index)}><AutoFixHigh /></IconButton></Tooltip>
-                           <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
-                           <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData.index)}><Edit /></IconButton></Tooltip>
-                           <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
-                           <Tooltip title="Download"><IconButton size="small" onClick={() => downloadPage(pageData)}><Download /></IconButton></Tooltip>
-                           <Tooltip title="Compartilhar"><IconButton size="small" onClick={() => handleShare(pageData)}><Share /></IconButton></Tooltip>
+                          <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
+                          <Tooltip title="Editar Prompt de Imagem"><IconButton size="small" onClick={() => handleOpenPromptEditor(pageData.index)}><AutoFixHigh /></IconButton></Tooltip>
+                          <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
+                          <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData.index)}><Edit /></IconButton></Tooltip>
+                          <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
+                          <Tooltip title="Download"><IconButton size="small" onClick={() => downloadPage(pageData)}><Download /></IconButton></Tooltip>
+                          <Tooltip title="Compartilhar"><IconButton size="small" onClick={() => handleShare(pageData)}><Share /></IconButton></Tooltip>
                         </Box>
                       </CardContent>
                     </Card>
-                   </div>
+                  </div>
                 ))}
-               </div>
+              </div>
             </Box>
           )}
-                    <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} sm={generatedPagesData.some(img => img.url) ? 4 : 12}>
               <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<Image />} fullWidth>
                 {generatedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
