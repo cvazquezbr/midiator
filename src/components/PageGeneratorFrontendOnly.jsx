@@ -526,44 +526,6 @@ const PageGeneratorFrontendOnly = ({
         <CardContent>
           <Typography variant="h5" gutterBottom><Image sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
           {!fontsLoaded && <Alert severity="info" sx={{ mb: 2 }}>Carregando fontes...</Alert>}
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={generatedPagesData.some(img => img.url) ? 4 : 12}>
-              <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<Image />} fullWidth>
-                {generatedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
-              </Button>
-            </Grid>
-            {generatedPagesData.some(img => img.url) && (
-              <>
-                <Grid item xs={12} sm={4}><Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>Download Todas</Button></Grid>
-                <Grid item xs={12} sm={4}><Button variant="outlined" color="error" onClick={() => setShowDeleteConfirm(true)} startIcon={<Delete />} fullWidth>Excluir Todas</Button></Grid>
-              </>
-            )}
-          </Grid>
-          {generatedPagesData.some(img => img.url) && (
-            <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
-              <Typography variant="h6" gutterBottom><Google sx={{ mr: 1, verticalAlign: 'middle' }} />Exportar para Google Drive</Typography>
-              <TextField
-                label="Nome do Projeto no Drive"
-                variant="outlined"
-                fullWidth
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                sx={{ mb: 1 }}
-                disabled={isUploadingToDrive}
-              />
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={handleUploadToDrive}
-                disabled={!googleAccessToken || isUploadingToDrive || !projectName}
-                startIcon={isUploadingToDrive ? <CircularProgress size={20} /> : <CloudUpload />}
-                fullWidth
-              >
-                {isUploadingToDrive ? 'Exportando...' : 'Exportar Páginas e Planilha'}
-              </Button>
-              {!googleAccessToken && <Alert severity="warning" sx={{ mt: 1 }}>Faça login com o Google para habilitar a exportação.</Alert>}
-            </Box>
-          )}
           {isGenerating && <Box sx={{ mt: 2 }}><LinearProgress /></Box>}
           <Dialog open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
@@ -611,6 +573,45 @@ const PageGeneratorFrontendOnly = ({
                </div>
             </Box>
           )}
+                    <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={generatedPagesData.some(img => img.url) ? 4 : 12}>
+              <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<Image />} fullWidth>
+                {generatedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
+              </Button>
+            </Grid>
+            {generatedPagesData.some(img => img.url) && (
+              <>
+                <Grid item xs={12} sm={4}><Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>Download Todas</Button></Grid>
+                <Grid item xs={12} sm={4}><Button variant="outlined" color="error" onClick={() => setShowDeleteConfirm(true)} startIcon={<Delete />} fullWidth>Excluir Todas</Button></Grid>
+              </>
+            )}
+          </Grid>
+          {generatedPagesData.some(img => img.url) && (
+            <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
+              <Typography variant="h6" gutterBottom><Google sx={{ mr: 1, verticalAlign: 'middle' }} />Exportar para Google Drive</Typography>
+              <TextField
+                label="Nome do Projeto no Drive"
+                variant="outlined"
+                fullWidth
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                sx={{ mb: 1 }}
+                disabled={isUploadingToDrive}
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleUploadToDrive}
+                disabled={!googleAccessToken || isUploadingToDrive || !projectName}
+                startIcon={isUploadingToDrive ? <CircularProgress size={20} /> : <CloudUpload />}
+                fullWidth
+              >
+                {isUploadingToDrive ? 'Exportando...' : 'Exportar Páginas e Planilha'}
+              </Button>
+              {!googleAccessToken && <Alert severity="warning" sx={{ mt: 1 }}>Faça login com o Google para habilitar a exportação.</Alert>}
+            </Box>
+          )}
+
         </CardContent>
       </Card>
       {pageToEdit && (
