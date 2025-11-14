@@ -8,6 +8,10 @@ import {
 } from '@mui/icons-material';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
+import { useMediaQuery, useTheme } from '@mui/material';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/navigation';
 import './PageGenerator.css';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
@@ -51,6 +55,9 @@ const PageGeneratorFrontendOnly = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pageToSave, setPageToSave] = useState(null);
   const gridRef = useRef(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
 
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
   const [editingPromptIndex, setEditingPromptIndex] = useState(null);
@@ -537,88 +544,177 @@ const PageGeneratorFrontendOnly = ({
           </Dialog>
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
-              <div ref={gridRef} className="grid">
-                <div className="grid-sizer" />
-                {generatedPagesData.map((pageData, index) => (
-                  <div className="grid-item" key={pageData.index}>
-                    <Box
-                      sx={{
-                        position: 'relative',
-                        width: '100%',
-                        aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '),
-                        cursor: 'pointer',
-                        overflow: 'hidden',
-                        '&:hover .overlay': {
-                          opacity: 1,
-                        },
-                        '&:hover img': {
-                          transform: 'scale(1.05)',
-                        },
-                      }}
-                    >
-                      <img
-                        src={pageData.url}
-                        alt={`Preview ${index + 1}`}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          opacity: regeneratingIndex === index ? 0.5 : 1,
-                          transition: 'transform 0.3s ease-in-out',
-                        }}
-                      />
-                      {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px', zIndex: 2 }} />}
-
+              {isMobile ? (
+                <Swiper
+                  spaceBetween={10}
+                  slidesPerView={1.2}
+                  centeredSlides
+                  loop
+                >
+                  {generatedPagesData.map((pageData, index) => (
+                    <SwiperSlide key={pageData.index}>
+                      {/* Repetir a mesma estrutura de Box e imagem usada no modo desktop */}
                       <Box
-                        className="overlay"
-                        onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
                         sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
+                          position: 'relative',
                           width: '100%',
-                          height: '100%',
-                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                          color: 'white',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          p: 1,
-                          opacity: 0,
-                          transition: 'opacity 0.3s ease-in-out',
+                          aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '),
+                          cursor: 'pointer',
+                          overflow: 'hidden',
+                          '&:hover .overlay': {
+                            opacity: 1,
+                          },
+                          '&:hover img': {
+                            transform: 'scale(1.05)',
+                          },
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Chip label={`#${index + 1}`} size="small" sx={{ backgroundColor: 'rgba(255,255,255,0.3)', color: 'white', mr: 1 }} />
-                          <Typography variant="body2" noWrap>
-                            {pageData.record?.Título || 'Página sem título'}
-                          </Typography>
-                        </Box>
+                        <img
+                          src={pageData.url}
+                          alt={`Preview ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            opacity: regeneratingIndex === index ? 0.5 : 1,
+                            transition: 'transform 0.3s ease-in-out',
+                          }}
+                        />
+                        {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px', zIndex: 2 }} />}
+                        <Box
+                          className="overlay"
+                          onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            color: 'white',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            p: 1,
+                            opacity: 0,
+                            transition: 'opacity 0.3s ease-in-out',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Chip label={`#${index + 1}`} size="small" sx={{ backgroundColor: 'rgba(255,255,255,0.3)', color: 'white', mr: 1 }} />
+                            <Typography variant="body2" noWrap>
+                              {pageData.record?.Título || 'Página sem título'}
+                            </Typography>
+                          </Box>
 
-                        <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                          {[
-                            { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
-                            { title: 'Editar Prompt de Imagem', icon: <AutoFixHigh />, action: (e) => { e.stopPropagation(); handleOpenPromptEditor(pageData.index); } },
-                            { title: 'Resetar', icon: <SettingsBackupRestore />, action: (e) => { e.stopPropagation(); handleResetPage(pageData.index); } },
-                            { title: 'Editar', icon: <Edit />, action: (e) => { e.stopPropagation(); handleOpenGeneratedPageEditor(pageData.index); } },
-                            { title: 'Substituir Fundo', icon: <SwapHoriz />, action: (e) => { e.stopPropagation(); handleReplacePageClick(pageData.index); } },
-                            { title: 'Download', icon: <Download />, action: (e) => { e.stopPropagation(); downloadPage(pageData); } },
-                            { title: 'Compartilhar', icon: <Share />, action: (e) => { e.stopPropagation(); handleShare(pageData); } },
-                          ].map(item => (
-                            <Tooltip title={item.title} key={item.title}>
-                              <span>
-                                <IconButton size="small" onClick={item.action} disabled={item.disabled} sx={{ color: 'white' }}>
-                                  {item.icon}
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                          ))}
+                          <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                            {[
+                              { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
+                              { title: 'Editar Prompt de Imagem', icon: <AutoFixHigh />, action: (e) => { e.stopPropagation(); handleOpenPromptEditor(pageData.index); } },
+                              { title: 'Resetar', icon: <SettingsBackupRestore />, action: (e) => { e.stopPropagation(); handleResetPage(pageData.index); } },
+                              { title: 'Editar', icon: <Edit />, action: (e) => { e.stopPropagation(); handleOpenGeneratedPageEditor(pageData.index); } },
+                              { title: 'Substituir Fundo', icon: <SwapHoriz />, action: (e) => { e.stopPropagation(); handleReplacePageClick(pageData.index); } },
+                              { title: 'Download', icon: <Download />, action: (e) => { e.stopPropagation(); downloadPage(pageData); } },
+                              { title: 'Compartilhar', icon: <Share />, action: (e) => { e.stopPropagation(); handleShare(pageData); } },
+                            ].map(item => (
+                              <Tooltip title={item.title} key={item.title}>
+                                <span>
+                                  <IconButton size="small" onClick={item.action} disabled={item.disabled} sx={{ color: 'white' }}>
+                                    {item.icon}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            ))}
+                          </Box>
                         </Box>
                       </Box>
-                    </Box>
-                  </div>
-                ))}
-              </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              ) : (
+                <div ref={gridRef} className="grid">
+                  <div className="grid-sizer" />
+                  {generatedPagesData.map((pageData, index) => (
+                    <div className="grid-item" key={pageData.index}>
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          width: '100%',
+                          aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '),
+                          cursor: 'pointer',
+                          overflow: 'hidden',
+                          '&:hover .overlay': {
+                            opacity: 1,
+                          },
+                          '&:hover img': {
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      >
+                        <img
+                          src={pageData.url}
+                          alt={`Preview ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            opacity: regeneratingIndex === index ? 0.5 : 1,
+                            transition: 'transform 0.3s ease-in-out',
+                          }}
+                        />
+                        {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px', zIndex: 2 }} />}
+
+                        <Box
+                          className="overlay"
+                          onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            color: 'white',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            p: 1,
+                            opacity: 0,
+                            transition: 'opacity 0.3s ease-in-out',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Chip label={`#${index + 1}`} size="small" sx={{ backgroundColor: 'rgba(255,255,255,0.3)', color: 'white', mr: 1 }} />
+                            <Typography variant="body2" noWrap>
+                              {pageData.record?.Título || 'Página sem título'}
+                            </Typography>
+                          </Box>
+
+                          <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                            {[
+                              { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
+                              { title: 'Editar Prompt de Imagem', icon: <AutoFixHigh />, action: (e) => { e.stopPropagation(); handleOpenPromptEditor(pageData.index); } },
+                              { title: 'Resetar', icon: <SettingsBackupRestore />, action: (e) => { e.stopPropagation(); handleResetPage(pageData.index); } },
+                              { title: 'Editar', icon: <Edit />, action: (e) => { e.stopPropagation(); handleOpenGeneratedPageEditor(pageData.index); } },
+                              { title: 'Substituir Fundo', icon: <SwapHoriz />, action: (e) => { e.stopPropagation(); handleReplacePageClick(pageData.index); } },
+                              { title: 'Download', icon: <Download />, action: (e) => { e.stopPropagation(); downloadPage(pageData); } },
+                              { title: 'Compartilhar', icon: <Share />, action: (e) => { e.stopPropagation(); handleShare(pageData); } },
+                            ].map(item => (
+                              <Tooltip title={item.title} key={item.title}>
+                                <span>
+                                  <IconButton size="small" onClick={item.action} disabled={item.disabled} sx={{ color: 'white' }}>
+                                    {item.icon}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Box>
           )}
           <Grid container spacing={2} alignItems="center">

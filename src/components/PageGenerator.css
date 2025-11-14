@@ -28,3 +28,12 @@
     width: 100%;
   }
 }
+
+.swiper-slide .grid-item {
+  width: auto;
+  padding: 0 20px;
+}
+
+.swiper {
+  padding: 10px 0;
+}
