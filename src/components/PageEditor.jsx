@@ -374,10 +374,10 @@ const PageEditor = ({
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: 0,
-              minHeight: '90vh',
+              minHeight: '85vh',
               overflow: 'hidden',
               position: 'relative',
-              padding: 0,
+              padding: 1,
             }}
           >
             <Box
