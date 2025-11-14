@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, IconButton, Fab,
@@ -30,6 +30,14 @@ const PageSetPageEditor = ({
   const previewContainerRef = useRef(null);
   const fieldPositionerRef = useRef(null);
   const [previewSize, setPreviewSize] = useState({ width: '100%', height: 'auto' });
+
+  const originalImageSize = useMemo(() => {
+    if (!aspectRatio) return { width: 1080, height: 1080 };
+    const [w, h] = aspectRatio.split(':').map(Number);
+    const width = 1080;
+    const height = (width / w) * h;
+    return { width, height };
+  }, [aspectRatio]);
 
   useEffect(() => {
     if (open && pageData) {
@@ -231,7 +239,7 @@ const PageSetPageEditor = ({
                 setEditorState={setEditorState}
                 selectedField={selectedField}
                 setSelectedField={setSelectedField}
-                originalImageSize={{ width: 1080, height: 1080 }}
+                originalImageSize={originalImageSize}
                 currentPreviewIndex={0}
                 editorType={editorType}
                 pageSetFields={pageSetFields}
