@@ -237,7 +237,8 @@ const PageSetEditor = ({
               Este conjunto de páginas está vazio. Clique em "Adicionar Página" para começar.
             </Alert>
           ) : (
-            isMobile ? (
+            <Box sx={isMobile ? { mt: 2, mx: -2 } : {}}>
+            {isMobile ? (
               <Swiper
                 spaceBetween={10}
                 slidesPerView={1.2}
@@ -397,6 +398,7 @@ const PageSetEditor = ({
               </div>
             )
           )}
+          </Box>
         </CardContent>
       </Card>
 

@@ -543,7 +543,7 @@ const PageGeneratorFrontendOnly = ({
             </DialogActions>
           </Dialog>
           {generatedPagesData.length > 0 && (
-            <Box sx={{ mt: 3 }}>
+            <Box sx={isMobile ? { mt: 3, mx: -2 } : { mt: 3 }}>
               {isMobile ? (
                 <Swiper
                   spaceBetween={10}
