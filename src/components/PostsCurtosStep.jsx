@@ -17,6 +17,7 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
+import AspectRatioSelector from './ui/AspectRatioSelector';
 import {
   CloudUpload,
   InsertDriveFileOutlined,
@@ -125,20 +126,10 @@ const PostsCurtosStep = ({
                 <ToggleButton value="manual">Criação Manual</ToggleButton>
               </ToggleButtonGroup>
 
-              <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-                <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
-                <Select
-                  labelId="aspect-ratio-label"
-                  value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value)}
-                  label="Razão de Aspecto"
-                  size="small"
-                >
-                  <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
-                  <MenuItem value="4:5">Retrato (4:5)</MenuItem>
-                  <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
-                </Select>
-              </FormControl>
+              <AspectRatioSelector
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value)}
+              />
             </Box>
         )}
 

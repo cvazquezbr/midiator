@@ -177,7 +177,7 @@ const ImageStepUI = ({
             >
               <Box
                 sx={{
-                  aspectRatio: aspectRatio || '1 / 1',
+                  aspectRatio: (aspectRatio || '1:1').replace(':', ' / '),
                   width: previewSize.width,
                   height: previewSize.height,
                   maxWidth: '100%',
