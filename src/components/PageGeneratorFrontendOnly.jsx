@@ -550,10 +550,29 @@ const PageGeneratorFrontendOnly = ({
                           </Typography>
                         </Box>
                         <Box
-                          sx={{ position: 'relative', width: '100%', aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '), cursor: 'pointer' }}
+                          sx={{
+                            position: 'relative',
+                            width: '100%',
+                            aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '),
+                            cursor: 'pointer',
+                            overflow: 'hidden', // Adicionado para conter o zoom da imagem
+                            '&:hover img': {
+                              transform: 'scale(1.05)', // Aplica o zoom na imagem dentro do Box
+                            },
+                          }}
                           onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
                         >
-                          <img src={pageData.url} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: regeneratingIndex === index ? 0.5 : 1 }} />
+                          <img
+                            src={pageData.url}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              opacity: regeneratingIndex === index ? 0.5 : 1,
+                              transition: 'transform 0.3s ease-in-out', // Adicionado para suavizar a transição do zoom
+                            }}
+                          />
                           {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px' }} />}
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
