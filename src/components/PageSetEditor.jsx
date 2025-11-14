@@ -11,26 +11,7 @@ import imagesLoaded from 'imagesloaded';
 import { safeDeepClone } from '../lib/utils';
 import PageSetPageEditor from './PageSetPageEditor';
 import FieldsEditor from './FieldsEditor';
-
-const PaletteMenuItem = ({ palette }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-    <Typography sx={{ flexGrow: 1 }}>{palette.name}</Typography>
-    <Box sx={{ display: 'flex', gap: 0.5 }}>
-      {(palette.colors || []).slice(0, 5).map((color, index) => (
-        <Box
-          key={index}
-          sx={{
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            backgroundColor: color.hex,
-            border: '1px solid #ccc',
-          }}
-        />
-      ))}
-    </Box>
-  </Box>
-);
+import PaletteSelector from './PaletteSelector';
 
 // Helper function to expand fields based on quantity
 const expandFields = (fields) => {
@@ -216,32 +197,21 @@ const PageSetEditor = ({
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel id="palette-label">Paleta de Cores</InputLabel>
-                <Select
-                  labelId="palette-label"
-                  value={pageSet.page_set_data?.palette_id || ''}
-                  label="Paleta de Cores"
-                  onChange={(e) => {
-                    const currentPageSetData = pageSet.page_set_data || {};
-                    onPageSetChange({
-                      ...pageSet,
-                      page_set_data: {
-                        ...currentPageSetData,
-                        palette_id: e.target.value,
-                      },
-                    });
-                  }}
-                  disabled={isSaving}
-                >
-                  <MenuItem value=""><em>Nenhuma</em></MenuItem>
-                  {palettes.map((palette) => (
-                    <MenuItem key={palette.id} value={palette.id}>
-                      <PaletteMenuItem palette={palette} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <PaletteSelector
+                palettes={palettes}
+                value={pageSet.page_set_data?.palette_id || ''}
+                onChange={(e) => {
+                  const currentPageSetData = pageSet.page_set_data || {};
+                  onPageSetChange({
+                    ...pageSet,
+                    page_set_data: {
+                      ...currentPageSetData,
+                      palette_id: e.target.value,
+                    },
+                  });
+                }}
+                disabled={isSaving}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
               <Box>
