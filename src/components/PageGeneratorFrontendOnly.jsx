@@ -4,7 +4,7 @@ import {
   Box, Button, Typography, Card, CardContent, Grid, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress, Divider,
 } from '@mui/material';
 import {
-  Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete, AutoFixHigh,
+  Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete, AutoFixHigh, Style,
 } from '@mui/icons-material';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
@@ -17,6 +17,7 @@ import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob } from '../utils/imageComposer';
 import { createNewImageElement } from '../utils/elementFactory';
+import { savePageSet } from '../utils/pageSetState';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
@@ -62,6 +63,8 @@ const PageGeneratorFrontendOnly = ({
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
   const [editingPromptIndex, setEditingPromptIndex] = useState(null);
   const [currentPrompt, setCurrentPrompt] = useState('');
+  const [isCreatingPageSet, setIsCreatingPageSet] = useState(false);
+  const [pageSetName, setPageSetName] = useState('');
 
   useEffect(() => {
     if (!pageToSave) return;
@@ -525,6 +528,92 @@ const PageGeneratorFrontendOnly = ({
     handleClosePromptEditor();
   };
 
+  const handleCreatePageSetFromAll = () => {
+    setIsCreatingPageSet(true);
+    setPageSetName(`Novo PageSet - ${new Date().toLocaleString()}`);
+  };
+
+  const handleClosePageSetDialog = () => {
+    setIsCreatingPageSet(false);
+    setPageSetName('');
+  };
+
+  const handleConfirmCreatePageSet = async () => {
+    if (!pageSetName.trim()) {
+      toast.error("O nome do PageSet não pode estar vazio.");
+      return;
+    }
+
+    try {
+      // 1. Define Fields from the base campaign template
+      const newFields = [];
+      Object.keys(fieldPositions).forEach(key => {
+        newFields.push({
+          id: key,
+          name: key,
+          type: 'text',
+          quantity: 1,
+          size: fieldStyles[key]?.fontSize || 16,
+        });
+      });
+      pageTemplate.images?.forEach(img => {
+        newFields.push({ id: img.id, name: `Imagem ${newFields.length + 1}`, type: 'image', quantity: 1 });
+      });
+      brandElements?.forEach(b => {
+        newFields.push({ id: b.id, name: `Logo ${newFields.length + 1}`, type: 'image', quantity: 1 });
+      });
+
+      // 2. Process all generated pages
+      const newPages = [];
+      const newPendingAssets = {};
+
+      for (const pageData of generatedPagesData) {
+        let thumbnailBlob;
+        if (pageData.url.startsWith('blob:')) {
+          thumbnailBlob = pendingAssets[pageData.url];
+        } else {
+          const response = await fetch(pageData.url);
+          if (!response.ok) throw new Error(`Não foi possível baixar a imagem da página #${pageData.index + 1}.`);
+          thumbnailBlob = await response.blob();
+        }
+
+        if (!thumbnailBlob) throw new Error(`Falha ao criar o thumbnail para a página #${pageData.index + 1}.`);
+
+        const thumbnailUrl = URL.createObjectURL(thumbnailBlob);
+        newPendingAssets[thumbnailUrl] = thumbnailBlob;
+
+        newPages.push({
+          index: pageData.index,
+          record: {}, // Template pages don't have specific records
+          thumbnailUrl: thumbnailUrl,
+          pageTemplate: pageData.customPageTemplate || pageTemplate,
+          fieldPositions: pageData.customFieldPositions || fieldPositions,
+          fieldStyles: pageData.customFieldStyles || fieldStyles,
+          brandElements: pageData.customBrandElements || brandElements,
+        });
+      }
+
+      // 3. Construct the final PageSet data object
+      const pageSetData = {
+        aspectRatio: campaignState.aspectRatio,
+        palette_id: campaignState.pageTemplate?.palette_id || null,
+        fields: newFields,
+        pages: newPages,
+      };
+
+      // 4. Save the new PageSet (will be implemented in the next step)
+      await savePageSet(pageSetName.trim(), pageSetData, newPendingAssets);
+
+      toast.success(`Conjunto de Páginas "${pageSetName.trim()}" criado com sucesso!`);
+
+    } catch (error) {
+      console.error("Erro ao criar PageSet:", error);
+      toast.error(`Falha ao criar o Conjunto de Páginas: ${error.message}`);
+    } finally {
+      handleClosePageSetDialog();
+    }
+  };
+
   const pageToEdit = (generatedPagesData || []).find(p => p.index === editingGeneratedPageIndex);
 
   return (
@@ -716,15 +805,20 @@ const PageGeneratorFrontendOnly = ({
             </Box>
           )}
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={generatedPagesData.some(img => img.url) ? 4 : 12}>
+            <Grid item xs={12} sm={generatedPagesData.some(img => img.url) ? 3 : 12}>
               <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<Image />} fullWidth>
                 {generatedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
             {generatedPagesData.some(img => img.url) && (
               <>
-                <Grid item xs={12} sm={4}><Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>Download Todas</Button></Grid>
-                <Grid item xs={12} sm={4}><Button variant="outlined" color="error" onClick={() => setShowDeleteConfirm(true)} startIcon={<Delete />} fullWidth>Excluir Todas</Button></Grid>
+                <Grid item xs={12} sm={3}>
+                  <Button variant="outlined" onClick={() => handleCreatePageSetFromAll()} startIcon={<Style />} fullWidth>
+                    Criar PageSet
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={3}><Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>Download Todas</Button></Grid>
+                <Grid item xs={12} sm={3}><Button variant="outlined" color="error" onClick={() => setShowDeleteConfirm(true)} startIcon={<Delete />} fullWidth>Excluir Todas</Button></Grid>
               </>
             )}
           </Grid>
@@ -814,6 +908,27 @@ const PageGeneratorFrontendOnly = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDriveResult(null)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={isCreatingPageSet} onClose={handleClosePageSetDialog} fullWidth maxWidth="sm">
+        <DialogTitle>Criar Novo Conjunto de Páginas</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Dê um nome para o novo conjunto de páginas que será criado a partir das {generatedPagesData.length} páginas atuais.
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Nome do Conjunto de Páginas"
+            type="text"
+            fullWidth
+            value={pageSetName}
+            onChange={(e) => setPageSetName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePageSetDialog}>Cancelar</Button>
+          <Button onClick={handleConfirmCreatePageSet} variant="contained">Criar</Button>
         </DialogActions>
       </Dialog>
     </Box>
