@@ -547,46 +547,43 @@ const PageGeneratorFrontendOnly = ({
 
     setIsSavingPageSet(true);
     try {
-      // 1. Aggregate all unique fields from all generated pages to create a superset.
-      const fieldMap = new Map();
+      // 1. Determine the superset of all fields and the maximum number of images on any page.
+      const textFieldsMap = new Map();
+      let maxImageCount = 0;
+
       generatedPagesData.forEach(pageData => {
         const positions = pageData.customFieldPositions || fieldPositions;
-        const styles = pageData.customFieldStyles || fieldStyles;
         const template = pageData.customPageTemplate || pageTemplate;
         const brand = pageData.customBrandElements || brandElements;
 
-        // Text fields
+        // Aggregate all unique text fields
         Object.keys(positions).forEach(key => {
-          if (!fieldMap.has(key)) {
-            fieldMap.set(key, {
-              id: key,
-              name: key,
-              type: 'text',
-              quantity: 1,
-              size: styles[key]?.fontSize || 16,
-            });
+          const isTextField = !(template.images?.some(img => img.id === key) || brand?.some(b => b.id === key));
+          if (isTextField && !textFieldsMap.has(key)) {
+            textFieldsMap.set(key, { name: key, type: 'text', quantity: 1 });
           }
         });
 
-        // Image elements
-        template.images?.forEach(img => {
-          if (!fieldMap.has(img.id)) {
-            fieldMap.set(img.id, { id: img.id, name: img.id, type: 'image', quantity: 1 });
-          }
-        });
-
-        // Brand elements
-        brand?.forEach(b => {
-          if (!fieldMap.has(b.id)) {
-            fieldMap.set(b.id, { id: b.id, name: b.id, type: 'image', quantity: 1 });
-          }
-        });
+        // Find the max number of images on a single page
+        const imageCount = (template.images?.length || 0) + (brand?.length || 0);
+        if (imageCount > maxImageCount) {
+          maxImageCount = imageCount;
+        }
       });
-      const newFields = Array.from(fieldMap.values());
 
-      // 2. Process all generated pages
+      const newTextFields = Array.from(textFieldsMap.values());
+      const newImageFields = Array.from({ length: maxImageCount }, (_, i) => ({
+        name: `image_${i + 1}`,
+        type: 'image',
+        quantity: 1,
+      }));
+      const newFields = [...newTextFields, ...newImageFields];
+
+      // 2. Process all generated pages into PageSet pages.
       const newPages = [];
       const newPendingAssets = {};
+      const PLACEHOLDER_IMAGE_URL = 'https://as1.ftcdn.net/v2/jpg/07/12/27/56/1000_F_712275644_opOBN5SnauV92mW0tyELL5qUBKoucMqA.jpg';
+
 
       for (const pageData of generatedPagesData) {
         let thumbnailBlob;
@@ -603,61 +600,62 @@ const PageGeneratorFrontendOnly = ({
         const thumbnailUrl = URL.createObjectURL(thumbnailBlob);
         newPendingAssets[thumbnailUrl] = thumbnailBlob;
 
-        // Use the specific properties of the generated page
+        // Get the specific properties for this page
         const positionsForThisPage = pageData.customFieldPositions || fieldPositions;
         const stylesForThisPage = pageData.customFieldStyles || fieldStyles;
-        const pageTemplateForThisPage = pageData.customPageTemplate || pageTemplate;
-        const brandElementsForThisPage = pageData.customBrandElements || brandElements;
+        const templateForThisPage = pageData.customPageTemplate || pageTemplate;
+        const brandForThisPage = pageData.customBrandElements || brandElements;
 
-        // Create deep clones to modify them safely
-        const finalPageTemplate = safeDeepClone(pageTemplateForThisPage);
-        const finalBrandElements = safeDeepClone(brandElementsForThisPage);
-
-        // --- New Unified Element Logic ---
-        const finalElements = [];
-
-        // 1. Process Text Fields
-        Object.keys(positionsForThisPage).forEach(key => {
-          // Only add text fields that are not also image IDs
-          const isImage = (pageTemplateForThisPage.images || []).some(img => img.id === key) ||
-                        (brandElementsForThisPage || []).some(brand => brand.id === key);
-
-          if (!isImage) {
-            finalElements.push({
-              id: key,
-              type: 'text',
-              ...positionsForThisPage[key],
-              ...stylesForThisPage[key],
-            });
-          }
-        });
-
-        // 2. Process Template Images and Brand Elements
-        const allImageElements = [
-          ...(pageTemplateForThisPage.images || []),
-          ...(brandElementsForThisPage || [])
+        const allImageElementsOnPage = [
+          ...(templateForThisPage.images || []),
+          ...(brandForThisPage || [])
         ];
 
-        allImageElements.forEach(element => {
-          const pos = positionsForThisPage[element.id];
-          const style = stylesForThisPage[element.id];
-          const combined = { ...element, ...pos, ...style };
-          finalElements.push(combined);
+        const newPageTemplate = {
+            backgroundColor: templateForThisPage.backgroundColor,
+            gradient: templateForThisPage.gradient,
+            overlay: templateForThisPage.overlay,
+            images: [], // This will be populated with placeholders
+        };
+
+        const newFieldPositions = {};
+        const newFieldStyles = {};
+
+        // Map text fields directly
+        textFieldsMap.forEach((_, key) => {
+            if (positionsForThisPage[key]) {
+                newFieldPositions[key] = positionsForThisPage[key];
+            }
+            if (stylesForThisPage[key]) {
+                newFieldStyles[key] = stylesForThisPage[key];
+            }
         });
 
-        // Replace the old structure with the new unified `elements` array.
-        const newPageTemplate = {
-          ...pageTemplateForThisPage,
-          elements: finalElements,
-          images: undefined, // Clear old properties
-        };
+        // Map page images to generic image placeholders
+        allImageElementsOnPage.forEach((imgElement, i) => {
+          const placeholderName = `image_${i + 1}`;
+          const originalId = imgElement.id;
+
+          // Copy position and style from the original element to the placeholder
+          if (positionsForThisPage[originalId]) {
+            newFieldPositions[placeholderName] = positionsForThisPage[originalId];
+          }
+          if (stylesForThisPage[originalId]) {
+            newFieldStyles[placeholderName] = stylesForThisPage[originalId];
+          }
+
+          // Create a new placeholder image element in the template
+          const newImage = createNewImageElement(PLACEHOLDER_IMAGE_URL, placeholderName);
+          newPageTemplate.images.push(newImage);
+        });
 
         newPages.push({
           index: pageData.index,
-          record: pageData.record,
+          record: {},
           thumbnailUrl: thumbnailUrl,
           pageTemplate: newPageTemplate,
-          // fieldPositions, fieldStyles, and brandElements are now baked into the template.
+          fieldPositions: newFieldPositions,
+          fieldStyles: newFieldStyles,
         });
       }
 
@@ -669,7 +667,6 @@ const PageGeneratorFrontendOnly = ({
         pages: newPages,
       };
 
-      // 4. Save the new PageSet (will be implemented in the next step)
       await savePageSet(pageSetName.trim(), pageSetData, newPendingAssets);
 
       toast.success(`Conjunto de Páginas "${pageSetName.trim()}" criado com sucesso!`);
