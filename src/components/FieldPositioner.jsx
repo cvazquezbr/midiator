@@ -304,7 +304,7 @@ const FieldPositioner = React.forwardRef(({
           elements.push({
             id: fieldName,
             type: 'text',
-            position,
+            position: { ...position, zIndex: position.zIndex || 0 },
             style,
             content: sampleData,
             zIndex: position.zIndex || 0,
@@ -344,7 +344,7 @@ const FieldPositioner = React.forwardRef(({
         textElements.push({
           id: header,
           type: 'text',
-          position,
+          position: { ...position, zIndex: position.zIndex || 0 },
           style,
           content: sampleData,
           zIndex: position.zIndex || 0,
