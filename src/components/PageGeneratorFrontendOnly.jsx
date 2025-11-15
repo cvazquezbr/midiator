@@ -631,20 +631,26 @@ const PageGeneratorFrontendOnly = ({
             }
         });
 
-        // Map page images to generic image placeholders
+        // Map page images to generic image placeholders, preserving all layout properties
         allImageElementsOnPage.forEach((imgElement, i) => {
           const placeholderName = `image_${i + 1}`;
           const originalId = imgElement.id;
 
-          // Copy position and style from the original element to the placeholder
-          if (positionsForThisPage[originalId]) {
-            newFieldPositions[placeholderName] = positionsForThisPage[originalId];
-          }
+          // This is the critical fix:
+          // We combine the base properties from the element itself (like x, y, width, height)
+          // with any additional positioning overrides. This preserves the exact layout.
+          const comprehensivePosition = {
+            ...imgElement,
+            ...(positionsForThisPage[originalId] || {}),
+          };
+          newFieldPositions[placeholderName] = comprehensivePosition;
+
+          // Copy styles if they exist
           if (stylesForThisPage[originalId]) {
             newFieldStyles[placeholderName] = stylesForThisPage[originalId];
           }
 
-          // Create a new placeholder image element in the template
+          // Create a new, clean placeholder image element for the template
           const newImage = createNewImageElement(PLACEHOLDER_IMAGE_URL, placeholderName);
           newPageTemplate.images.push(newImage);
         });

@@ -68,21 +68,24 @@ const PageSetPageEditor = ({
           fieldStyles[fieldName] = { ...COMPLETE_DEFAULT_STYLE };
         }
 
-        // For image fields, ensure a placeholder image object exists in the pageTemplate
+        // For image fields, ensure a placeholder image object exists and is synced with fieldPositions
         if (field.type === 'image') {
-          const imageExists = pageTemplate.images.some(img => img.id === fieldName);
-          if (!imageExists) {
-            const newImagePlaceholder = createNewImageElement(PLACEHOLDER_IMAGE_URL, fieldName);
-            // Sync position and dimensions from fieldPositions
-            const pos = fieldPositions[fieldName];
-            if (pos) {
-              newImagePlaceholder.x = pos.x;
-              newImagePlaceholder.y = pos.y;
-              newImagePlaceholder.width = pos.width;
-              newImagePlaceholder.height = pos.height;
-              newImagePlaceholder.zIndex = pos.zIndex ?? 1;
-            }
-            pageTemplate.images.push(newImagePlaceholder);
+          let imageObject = pageTemplate.images.find(img => img.id === fieldName);
+
+          if (!imageObject) {
+            imageObject = createNewImageElement(PLACEHOLDER_IMAGE_URL, fieldName);
+            pageTemplate.images.push(imageObject);
+          }
+
+          // Always sync position, dimensions and visibility from fieldPositions
+          const pos = fieldPositions[fieldName];
+          if (pos && imageObject) {
+            imageObject.x = pos.x;
+            imageObject.y = pos.y;
+            imageObject.width = pos.width;
+            imageObject.height = pos.height;
+            imageObject.zIndex = pos.zIndex ?? 1;
+            imageObject.visible = pos.visible;
           }
         }
       });
