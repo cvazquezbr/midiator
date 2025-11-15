@@ -22,7 +22,7 @@ import PaletteWizard from '../components/PaletteWizard';
 
 const emptyPalette = { name: '', colors: [], harmony: '', harmony_justification: '' };
 
-const PalettesPage = () => {
+const PalettesPage = ({ onUpdate }) => {
   const [palettes, setPalettes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -78,6 +78,9 @@ const PalettesPage = () => {
       await promise;
       toast.success(`Palette ${isUpdating ? 'updated' : 'saved'} successfully!`);
 
+      if (onUpdate) {
+        onUpdate();
+      }
       fetchPalettes();
       handleCloseWizard();
     } catch (err) {
@@ -92,6 +95,9 @@ const PalettesPage = () => {
         toast.success('Palette deleted successfully!');
         if (selectedPalette?.id === paletteId) {
           handleCloseWizard();
+        }
+        if (onUpdate) {
+          onUpdate();
         }
         fetchPalettes();
       } catch (err) {
