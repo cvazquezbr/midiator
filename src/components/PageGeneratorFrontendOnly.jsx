@@ -613,34 +613,51 @@ const PageGeneratorFrontendOnly = ({
         const finalPageTemplate = safeDeepClone(pageTemplateForThisPage);
         const finalBrandElements = safeDeepClone(brandElementsForThisPage);
 
-        // Sync properties for regular template images
-        if (finalPageTemplate.images) {
-          finalPageTemplate.images.forEach(image => {
-            const pos = positionsForThisPage[image.id];
-            if (pos) { Object.assign(image, pos); }
-            const style = stylesForThisPage[image.id];
-            if (style) { const { id, src, ...styleProps } = style; Object.assign(image, styleProps); }
-          });
-        }
+        // --- New Unified Element Logic ---
+        const finalElements = [];
 
-        // Sync properties for brand elements
-        if (finalBrandElements) {
-          finalBrandElements.forEach(element => {
-            const pos = positionsForThisPage[element.id];
-            if (pos) { Object.assign(element, pos); }
-            const style = stylesForThisPage[element.id];
-            if (style) { const { id, src, ...styleProps } = style; Object.assign(element, styleProps); }
-          });
-        }
+        // 1. Process Text Fields
+        Object.keys(positionsForThisPage).forEach(key => {
+          // Only add text fields that are not also image IDs
+          const isImage = (pageTemplateForThisPage.images || []).some(img => img.id === key) ||
+                        (brandElementsForThisPage || []).some(brand => brand.id === key);
+
+          if (!isImage) {
+            finalElements.push({
+              id: key,
+              type: 'text',
+              ...positionsForThisPage[key],
+              ...stylesForThisPage[key],
+            });
+          }
+        });
+
+        // 2. Process Template Images and Brand Elements
+        const allImageElements = [
+          ...(pageTemplateForThisPage.images || []),
+          ...(brandElementsForThisPage || [])
+        ];
+
+        allImageElements.forEach(element => {
+          const pos = positionsForThisPage[element.id];
+          const style = stylesForThisPage[element.id];
+          const combined = { ...element, ...pos, ...style };
+          finalElements.push(combined);
+        });
+
+        // Replace the old structure with the new unified `elements` array.
+        const newPageTemplate = {
+          ...pageTemplateForThisPage,
+          elements: finalElements,
+          images: undefined, // Clear old properties
+        };
 
         newPages.push({
           index: pageData.index,
-          record: {}, // Template pages don't have specific records
+          record: pageData.record,
           thumbnailUrl: thumbnailUrl,
-          pageTemplate: finalPageTemplate,
-          fieldPositions: positionsForThisPage,
-          fieldStyles: stylesForThisPage,
-          brandElements: finalBrandElements,
+          pageTemplate: newPageTemplate,
+          // fieldPositions, fieldStyles, and brandElements are now baked into the template.
         });
       }
 
