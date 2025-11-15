@@ -398,7 +398,7 @@ const PageSetEditor = ({
               </div>
             )
           )}
-          </Box>
+        </Box>
         </CardContent>
       </Card>
 
