@@ -42,82 +42,62 @@ const PageSetPageEditor = ({
 
   useEffect(() => {
     if (open && pageData) {
-      const record = pageData.record ? safeDeepClone(pageData.record) : {};
-      const basePageTemplate = safeDeepClone(pageData.pageTemplate || { backgroundColor: '#FFFFFF', elements: [] });
+      const record = {};
+      const fieldPositions = safeDeepClone(pageData.fieldPositions || {});
+      const fieldStyles = safeDeepClone(pageData.fieldStyles || {});
+      const pageTemplate = safeDeepClone(pageData.pageTemplate || { backgroundColor: '#FFFFFF', images: [] });
 
-      const fieldPositions = {};
-      const fieldStyles = {};
-      const images = [];
+      const definedImageFields = new Set((pageSetFields || []).filter(f => f.type === 'image').map(f => f.name));
 
-      // If the new 'elements' structure exists, use it as the source of truth.
-      if (basePageTemplate.elements) {
-        basePageTemplate.elements.forEach(element => {
-          const { id, type, src, ...styleProps } = element;
-          fieldPositions[id] = {
-            x: element.x, y: element.y, width: element.width, height: element.height,
-            visible: element.visible !== false, zIndex: element.zIndex
-          };
-          fieldStyles[id] = styleProps;
-          if (element.type === 'image' || src) { // Treat elements with 'src' as images
-            images.push({ ...element });
-          }
-        });
-      } else {
-        // Fallback for old data structure (fieldPositions, fieldStyles, pageTemplate.images)
-        Object.assign(fieldPositions, safeDeepClone(pageData.fieldPositions || {}));
-        Object.assign(fieldStyles, safeDeepClone(pageData.fieldStyles || {}));
-        images.push(...(basePageTemplate.images || []));
-      }
-
-      const pageTemplate = { ...basePageTemplate, images };
-
-      // Get a set of fields that genuinely exist on this page.
-      const existingFieldsOnPage = new Set(Object.keys(fieldPositions));
-
-      // Iterate through the master list of fields for the entire PageSet.
+      // Ensure all fields from the PageSet definition are present in the editor state
       (pageSetFields || []).forEach(field => {
         const fieldName = field.name;
 
-        // If a field from the master list does NOT exist on this specific page,
-        // ensure it has a corresponding 'fieldPositions' entry but is marked as invisible.
-        if (!existingFieldsOnPage.has(fieldName)) {
-          fieldPositions[fieldName] = { x: 0, y: 0, width: 0, height: 0, visible: false, zIndex: 0 };
+        if (field.type === 'text') {
+          const placeholder = 'no nono nooooo no... ';
+          const repeatCount = Math.max(1, Math.ceil((field.size || 100) / placeholder.length));
+          record[fieldName] = pageData.record?.[fieldName] || placeholder.repeat(repeatCount);
+        } else {
+          record[fieldName] = pageData.record?.[fieldName] || null;
         }
 
-        // For text fields that DO exist on this page, ensure they have placeholder text if empty.
-        if (field.type === 'text' && existingFieldsOnPage.has(fieldName)) {
-          if (!record[fieldName]) {
-            const placeholder = 'no nono nooooo no... ';
-            const repeatCount = Math.max(1, Math.ceil((field.size || 100) / placeholder.length));
-            record[fieldName] = placeholder.repeat(repeatCount);
-          }
+        if (!fieldPositions[fieldName]) {
+          fieldPositions[fieldName] = { x: 10, y: 10, width: 80, height: 10, visible: true, zIndex: 1 };
         }
-
-        // Ensure every field has a style object to prevent crashes.
         if (!fieldStyles[fieldName]) {
           fieldStyles[fieldName] = { ...COMPLETE_DEFAULT_STYLE };
         }
 
-        // For image fields, ensure a placeholder image object exists in the pageTemplate if it's missing.
+        // For image fields, ensure a placeholder image object exists in the pageTemplate
         if (field.type === 'image') {
           const imageExists = pageTemplate.images.some(img => img.id === fieldName);
           if (!imageExists) {
             const newImagePlaceholder = createNewImageElement(PLACEHOLDER_IMAGE_URL, fieldName);
+            // Sync position and dimensions from fieldPositions
             const pos = fieldPositions[fieldName];
-            if (pos) { Object.assign(newImagePlaceholder, pos); }
+            if (pos) {
+              newImagePlaceholder.x = pos.x;
+              newImagePlaceholder.y = pos.y;
+              newImagePlaceholder.width = pos.width;
+              newImagePlaceholder.height = pos.height;
+              newImagePlaceholder.zIndex = pos.zIndex ?? 1;
+            }
             pageTemplate.images.push(newImagePlaceholder);
           }
         }
       });
 
-      const csvHeaders = (pageSetFields || []).map(f => f.name);
+      // Remove image objects that are no longer in the field definition
+      pageTemplate.images = pageTemplate.images.filter(img => definedImageFields.has(img.id));
+
+      const expandedFieldNames = (pageSetFields || []).map(f => f.name);
 
       const initialState = {
         fieldPositions,
         fieldStyles,
         pageTemplate,
         csvData: [record],
-        csvHeaders: csvHeaders,
+        csvHeaders: expandedFieldNames,
       };
       setEditorState(initialState);
     } else if (!open) {
