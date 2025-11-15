@@ -547,24 +547,42 @@ const PageGeneratorFrontendOnly = ({
 
     setIsSavingPageSet(true);
     try {
-      // 1. Define Fields from the base campaign template
-      const newFields = [];
-      Object.keys(fieldPositions).forEach(key => {
-        newFields.push({
-          id: key,
-          name: key,
-          type: 'text',
-          quantity: 1,
-          size: fieldStyles[key]?.fontSize || 16,
+      // 1. Aggregate all unique fields from all generated pages to create a superset.
+      const fieldMap = new Map();
+      generatedPagesData.forEach(pageData => {
+        const positions = pageData.customFieldPositions || fieldPositions;
+        const styles = pageData.customFieldStyles || fieldStyles;
+        const template = pageData.customPageTemplate || pageTemplate;
+        const brand = pageData.customBrandElements || brandElements;
+
+        // Text fields
+        Object.keys(positions).forEach(key => {
+          if (!fieldMap.has(key)) {
+            fieldMap.set(key, {
+              id: key,
+              name: key,
+              type: 'text',
+              quantity: 1,
+              size: styles[key]?.fontSize || 16,
+            });
+          }
+        });
+
+        // Image elements
+        template.images?.forEach(img => {
+          if (!fieldMap.has(img.id)) {
+            fieldMap.set(img.id, { id: img.id, name: img.id, type: 'image', quantity: 1 });
+          }
+        });
+
+        // Brand elements
+        brand?.forEach(b => {
+          if (!fieldMap.has(b.id)) {
+            fieldMap.set(b.id, { id: b.id, name: b.id, type: 'image', quantity: 1 });
+          }
         });
       });
-      // Corrigido: O 'name' do campo DEVE ser o 'id' do elemento de imagem para que o editor o encontre.
-      pageTemplate.images?.forEach(img => {
-        newFields.push({ id: img.id, name: img.id, type: 'image', quantity: 1 });
-      });
-      brandElements?.forEach(b => {
-        newFields.push({ id: b.id, name: b.id, type: 'image', quantity: 1 });
-      });
+      const newFields = Array.from(fieldMap.values());
 
       // 2. Process all generated pages
       const newPages = [];
