@@ -603,14 +603,44 @@ const PageGeneratorFrontendOnly = ({
         const thumbnailUrl = URL.createObjectURL(thumbnailBlob);
         newPendingAssets[thumbnailUrl] = thumbnailBlob;
 
+        // Use the specific properties of the generated page
+        const positionsForThisPage = pageData.customFieldPositions || fieldPositions;
+        const stylesForThisPage = pageData.customFieldStyles || fieldStyles;
+        const pageTemplateForThisPage = pageData.customPageTemplate || pageTemplate;
+        const brandElementsForThisPage = pageData.customBrandElements || brandElements;
+
+        // Create deep clones to modify them safely
+        const finalPageTemplate = safeDeepClone(pageTemplateForThisPage);
+        const finalBrandElements = safeDeepClone(brandElementsForThisPage);
+
+        // Sync properties for regular template images
+        if (finalPageTemplate.images) {
+          finalPageTemplate.images.forEach(image => {
+            const pos = positionsForThisPage[image.id];
+            if (pos) { Object.assign(image, pos); }
+            const style = stylesForThisPage[image.id];
+            if (style) { const { id, src, ...styleProps } = style; Object.assign(image, styleProps); }
+          });
+        }
+
+        // Sync properties for brand elements
+        if (finalBrandElements) {
+          finalBrandElements.forEach(element => {
+            const pos = positionsForThisPage[element.id];
+            if (pos) { Object.assign(element, pos); }
+            const style = stylesForThisPage[element.id];
+            if (style) { const { id, src, ...styleProps } = style; Object.assign(element, styleProps); }
+          });
+        }
+
         newPages.push({
           index: pageData.index,
           record: {}, // Template pages don't have specific records
           thumbnailUrl: thumbnailUrl,
-          pageTemplate: pageData.customPageTemplate || pageTemplate,
-          fieldPositions: pageData.customFieldPositions || fieldPositions,
-          fieldStyles: pageData.customFieldStyles || fieldStyles,
-          brandElements: pageData.customBrandElements || brandElements,
+          pageTemplate: finalPageTemplate,
+          fieldPositions: positionsForThisPage,
+          fieldStyles: stylesForThisPage,
+          brandElements: finalBrandElements,
         });
       }
 
