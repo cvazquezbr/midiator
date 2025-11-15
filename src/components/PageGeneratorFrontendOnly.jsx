@@ -65,6 +65,7 @@ const PageGeneratorFrontendOnly = ({
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [isCreatingPageSet, setIsCreatingPageSet] = useState(false);
   const [pageSetName, setPageSetName] = useState('');
+  const [isSavingPageSet, setIsSavingPageSet] = useState(false);
 
   useEffect(() => {
     if (!pageToSave) return;
@@ -544,6 +545,7 @@ const PageGeneratorFrontendOnly = ({
       return;
     }
 
+    setIsSavingPageSet(true);
     try {
       // 1. Define Fields from the base campaign template
       const newFields = [];
@@ -610,6 +612,7 @@ const PageGeneratorFrontendOnly = ({
       console.error("Erro ao criar PageSet:", error);
       toast.error(`Falha ao criar o Conjunto de Páginas: ${error.message}`);
     } finally {
+      setIsSavingPageSet(false);
       handleClosePageSetDialog();
     }
   };
@@ -927,8 +930,10 @@ const PageGeneratorFrontendOnly = ({
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClosePageSetDialog}>Cancelar</Button>
-          <Button onClick={handleConfirmCreatePageSet} variant="contained">Criar</Button>
+          <Button onClick={handleClosePageSetDialog} disabled={isSavingPageSet}>Cancelar</Button>
+          <Button onClick={handleConfirmCreatePageSet} variant="contained" disabled={isSavingPageSet}>
+            {isSavingPageSet ? <CircularProgress size={24} /> : "Criar"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
