@@ -1034,7 +1034,7 @@ function HomePage() {
           )}
           {currentView === 'personas' && <PersonasPage {...{ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected: () => setPersonaDrawerOpen(true), onUpdate: fetchPersonasForCampaign, startInCreateMode: startPersonasInCreate, onPersonaCreated: handlePersonaCreated, onCreationCancelled: () => handleCreationDone('personas') }} />}
           {currentView === 'autores' && <AutoresPage {...{ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected: () => setAutorDrawerOpen(true), onUpdate: fetchAutoresForCampaign, startInCreateMode: startAutoresInCreate, onAutorCreated: handleAutorCreated, onCreationCancelled: () => handleCreationDone('autores') }} />}
-          {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true) }} />}
+          {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true), onUpdate: fetchPalettesForCampaign }} />}
           {currentView === 'pagesets' && <PageSetsPage {...{ drawerOpen: pageSetDrawerOpen, setDrawerOpen: setPageSetDrawerOpen, onSwitchView: setCurrentView, onNoPageSetSelected: () => setPageSetDrawerOpen(true), onCreationCancelled: () => handleCreationDone('pagesets') }} />}
           {currentView === 'monitor' && <Monitor {...{ currentCampaign }} />}
         </Box>
