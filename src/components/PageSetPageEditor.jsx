@@ -209,13 +209,31 @@ const PageSetPageEditor = ({
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 
+    // Create a deep clone to avoid mutating the original state
+    const finalState = safeDeepClone(editorState);
+
+    // Remove placeholder URLs before saving
+    if (finalState.pageTemplate?.images) {
+      finalState.pageTemplate.images.forEach(image => {
+        if (image.src === PLACEHOLDER_IMAGE_URL) {
+          delete image.src;
+        }
+        if (image.url === PLACEHOLDER_IMAGE_URL) {
+          delete image.url;
+        }
+      });
+    }
+
+    console.log('--- Verifying Page Data Before Save ---');
+    console.log(JSON.stringify(finalState, null, 2));
+
     onSave({
       pageData: {
         ...pageData,
-        fieldPositions: editorState.fieldPositions,
-        fieldStyles: editorState.fieldStyles,
-        pageTemplate: editorState.pageTemplate,
-        record: editorState.csvData[0],
+        fieldPositions: finalState.fieldPositions,
+        fieldStyles: finalState.fieldStyles,
+        pageTemplate: finalState.pageTemplate,
+        record: finalState.csvData[0],
       },
       thumbnailBlob: blob,
     });

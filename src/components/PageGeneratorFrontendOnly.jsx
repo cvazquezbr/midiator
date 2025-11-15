@@ -621,36 +621,34 @@ const PageGeneratorFrontendOnly = ({
         const newFieldPositions = {};
         const newFieldStyles = {};
 
-        // Map text fields directly
+        // Map text and image fields, ensuring zIndex is preserved
         textFieldsMap.forEach((_, key) => {
             if (positionsForThisPage[key]) {
-                newFieldPositions[key] = positionsForThisPage[key];
+                newFieldPositions[key] = {
+                    ...positionsForThisPage[key],
+                    zIndex: positionsForThisPage[key].zIndex || 0
+                };
             }
             if (stylesForThisPage[key]) {
                 newFieldStyles[key] = stylesForThisPage[key];
             }
         });
 
-        // Map page images to generic image placeholders, preserving all layout properties
         allImageElementsOnPage.forEach((imgElement, i) => {
           const placeholderName = `image_${i + 1}`;
           const originalId = imgElement.id;
 
-          // This is the critical fix:
-          // We combine the base properties from the element itself (like x, y, width, height)
-          // with any additional positioning overrides. This preserves the exact layout.
           const comprehensivePosition = {
             ...imgElement,
             ...(positionsForThisPage[originalId] || {}),
+            zIndex: imgElement.zIndex || positionsForThisPage[originalId]?.zIndex || 0
           };
           newFieldPositions[placeholderName] = comprehensivePosition;
 
-          // Copy styles if they exist
           if (stylesForThisPage[originalId]) {
             newFieldStyles[placeholderName] = stylesForThisPage[originalId];
           }
 
-          // Create a new, clean placeholder image element for the template
           const newImage = createNewImageElement(PLACEHOLDER_IMAGE_URL, placeholderName);
           newPageTemplate.images.push(newImage);
         });
