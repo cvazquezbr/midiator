@@ -558,11 +558,12 @@ const PageGeneratorFrontendOnly = ({
           size: fieldStyles[key]?.fontSize || 16,
         });
       });
+      // Corrigido: O 'name' do campo DEVE ser o 'id' do elemento de imagem para que o editor o encontre.
       pageTemplate.images?.forEach(img => {
-        newFields.push({ id: img.id, name: `Imagem ${newFields.length + 1}`, type: 'image', quantity: 1 });
+        newFields.push({ id: img.id, name: img.id, type: 'image', quantity: 1 });
       });
       brandElements?.forEach(b => {
-        newFields.push({ id: b.id, name: `Logo ${newFields.length + 1}`, type: 'image', quantity: 1 });
+        newFields.push({ id: b.id, name: b.id, type: 'image', quantity: 1 });
       });
 
       // 2. Process all generated pages
