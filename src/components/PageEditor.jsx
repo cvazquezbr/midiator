@@ -67,12 +67,13 @@ const PageEditor = ({
   onOpenImageGallery,
   addPendingAsset,
   csvData: fullCsvData,
-  currentPreviewIndex
+  currentPreviewIndex,
+  palettes, // Receive the list of standard palettes
 }) => {
   console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
 
   const { campaignState, isCampaignLoading } = useCampaign();
-  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: campaignSwatches } = campaignState;
+  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets } = campaignState;
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
 
   const [editorState, setEditorState] = useState(null);
@@ -314,6 +315,19 @@ const PageEditor = ({
   };
 
   if (!open || !editorState) return null;
+
+  // Derive campaignSwatches from the editor's current state, applying the correct logic.
+  const campaignSwatches = React.useMemo(() => {
+    const { pageTemplate } = editorState;
+    if (pageTemplate?.customPalette?.colors?.length > 0) {
+      return pageTemplate.customPalette.colors;
+    }
+    if (pageTemplate?.paletteId && palettes) {
+      const standardPalette = palettes.find(p => p.id === pageTemplate.paletteId);
+      return standardPalette?.colors || [];
+    }
+    return [];
+  }, [editorState, palettes]);
 
   const handleSave = () => {
     onSave({

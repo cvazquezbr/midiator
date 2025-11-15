@@ -1005,7 +1005,8 @@ function HomePage() {
                     fontScale: campaignState.fontScale,
                     handleGenerateSinglePage,
                     aspectRatio,
-                    onOpenImageGallery: handleOpenImageGallery
+                    onOpenImageGallery: handleOpenImageGallery,
+                    palettes,
                   }}
                 />
               }
