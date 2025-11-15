@@ -543,16 +543,14 @@ const PageGeneratorFrontendOnly = ({
             </DialogActions>
           </Dialog>
           {generatedPagesData.length > 0 && (
-            <Box sx={isMobile ? { mt: 3, mx: -2 } : { mt: 3 }}>
+            <Box sx={{ mt: 3 }}>
               {isMobile ? (
                 <Swiper
                   spaceBetween={10}
-                  slidesPerView={1.2}
-                  centeredSlides
-                  loop
+                  slidesPerView={'auto'}
                 >
                   {generatedPagesData.map((pageData, index) => (
-                    <SwiperSlide key={pageData.index}>
+                    <SwiperSlide key={pageData.index} style={{ width: '80%', maxWidth: '350px' }}>
                       {/* Repetir a mesma estrutura de Box e imagem usada no modo desktop */}
                       <Box
                         sx={{
@@ -632,7 +630,7 @@ const PageGeneratorFrontendOnly = ({
                   ))}
                 </Swiper>
               ) : (
-                <div ref={gridRef} className="grid">
+                <div ref={gridRef} className="grid desktop-grid">
                   <div className="grid-sizer" />
                   {generatedPagesData.map((pageData, index) => (
                     <div className="grid-item" key={pageData.index}>

@@ -237,16 +237,14 @@ const PageSetEditor = ({
               Este conjunto de páginas está vazio. Clique em "Adicionar Página" para começar.
             </Alert>
           ) : (
-            <Box sx={isMobile ? { mt: 2, mx: -2 } : { mt: 2 }}>
+            <Box sx={{ mt: 2 }}>
             {isMobile ? (
               <Swiper
                 spaceBetween={10}
-                slidesPerView={1.2}
-                centeredSlides
-                loop
+                slidesPerView={'auto'}
               >
                 {pages.map((page) => (
-                  <SwiperSlide key={page.index}>
+                  <SwiperSlide key={page.index} style={{ width: '80%', maxWidth: '350px' }}>
                     <Box
                       sx={{
                         position: 'relative',
@@ -320,7 +318,7 @@ const PageSetEditor = ({
                 ))}
               </Swiper>
             ) : (
-              <div ref={gridRef} className="grid">
+              <div ref={gridRef} className="grid desktop-grid">
                 <div className="grid-sizer" />
                 {pages.map((page) => (
                   <div className="grid-item" key={page.index}>
