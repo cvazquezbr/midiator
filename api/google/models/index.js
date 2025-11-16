@@ -40,7 +40,7 @@ async function handler(req, res) {
         // Buffer the response body before sending it to the client
         const modelsData = await fetchResponse.json();
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.status(200).json(modelsData);
     } catch (error) {
         console.error('Error fetching from Google API:', error);
