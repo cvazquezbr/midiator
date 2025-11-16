@@ -1,7 +1,9 @@
-import { getGeminiModel, getGeminiImageModel } from './geminiCredentials';
+import { getGeminiModel } from './geminiCredentials';
+import fetchWithAuth from './fetchWithAuth'; // Importar fetchWithAuth
 
-// ATENÇÃO: A geração de imagem requer a API v1beta.
-const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+// A URL base da API do Google não é mais necessária no frontend para imagens.
+// Mantido para generateContent, mas poderia ser refatorado também.
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models';
 
 class GeminiAPI {
   constructor() {
@@ -27,12 +29,11 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiModel() || 'gemini-1.5-pro'; // Fallback para geração de texto é aceitável.
+    const model = getGeminiModel() || 'gemini-1.5-pro';
     console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    // Usa v1 para geração de conteúdo de texto padrão
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.apiKey}`;
+    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
 
     try {
       const response = await fetch(apiUrl, {
@@ -77,6 +78,7 @@ class GeminiAPI {
   }
 
   async generateImage(promptString, purpose = 'Geração de Imagem') {
+    // A inicialização ainda é necessária para outras chamadas, então mantemos a verificação.
     if (!this.isInitialized) {
       throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
     }
@@ -84,80 +86,38 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiImageModel(); // NENHUM fallback. Deve ser definido nas configurações.
-    if (!model) {
-      throw new Error('Nenhum modelo de imagem Gemini foi selecionado. Por favor, configure um nas configurações.');
-    }
-
-    console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
+    console.log(`[${purpose}] Iniciando chamada ao proxy de imagem Gemini.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
-
     try {
-      const response = await fetch(apiUrl, {
+      // Chamar nosso próprio endpoint de proxy
+      const response = await fetchWithAuth('/api/google/generateImage', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: promptString
-            }]
-          }],
-          safetySettings: [
-            {
-              category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-            {
-              category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-            {
-              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-            {
-              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-          ],
-        }),
+        body: JSON.stringify({ prompt: promptString }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        const errorMessage = errorData.error?.message || `Erro ${response.status}`;
-        console.error('Erro da API Gemini (Imagem):', errorData);
-        throw new Error(`Erro da API Gemini (Imagem): ${errorMessage}`);
-      }
-
       const responseData = await response.json();
-      console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
 
-      if (responseData.promptFeedback && responseData.promptFeedback.blockReason) {
-        const blockReason = responseData.promptFeedback.blockReason;
-        const safetyRatings = responseData.promptFeedback.safetyRatings;
-        console.error(`[${purpose}] A solicitação foi bloqueada pela API Gemini. Razão: ${blockReason}`);
-        console.error(`[${purpose}] Detalhes de Segurança:`, safetyRatings);
-        throw new Error(`A geração de imagem foi bloqueada por questões de segurança: ${blockReason}. Verifique o conteúdo do seu prompt.`);
+      if (!response.ok) {
+        const errorMessage = responseData.error || `Erro ${response.status}`;
+        console.error('Erro do proxy Gemini (Imagem):', responseData);
+        // O erro do proxy já deve ser amigável, então apenas o lançamos.
+        throw new Error(errorMessage);
       }
 
-      const imagePart = responseData.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-      if (imagePart) {
-        console.log(`[${purpose}] Imagem Base64 recebida (tamanho: ${imagePart.inlineData.data.length} bytes).`);
-        return imagePart.inlineData.data;
+      if (responseData.base64Image) {
+        console.log(`[${purpose}] Imagem Base64 recebida do proxy (tamanho: ${responseData.base64Image.length} bytes).`);
+        return responseData.base64Image;
       } else {
-        console.error('Formato de resposta inesperado da API Gemini (Imagem). Nenhum candidato ou parte de imagem encontrada:', responseData);
-        throw new Error('Nenhuma imagem foi retornada pela API. A resposta não continha dados de imagem.');
+        console.error('Resposta inesperada do proxy Gemini (Imagem):', responseData);
+        throw new Error('Nenhuma imagem foi retornada pelo serviço de proxy.');
       }
     } catch (error) {
-      console.error('Erro ao chamar a API de imagem Gemini:', error);
-      if (error instanceof Error && error.message.startsWith('Erro da API Gemini')) {
-        throw error;
-      }
+      console.error('Erro ao chamar o proxy de imagem Gemini:', error);
+      // Reformular a mensagem para ser mais clara para o usuário final.
       throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
     }
   }
