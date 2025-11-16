@@ -31,7 +31,8 @@ async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini image generation is not configured. Please select an image model in the settings.' });
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiImageModel}:generateContent`;
+    // O geminiImageModel do banco de dados já inclui o prefixo "models/", então não o adicionamos aqui.
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${geminiImageModel}:generateContent`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
