@@ -100,9 +100,6 @@ class GeminiAPI {
               text: promptString
             }]
           }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
-          },
           safetySettings: [
             {
               category: 'HARM_CATEGORY_HARASSMENT',
