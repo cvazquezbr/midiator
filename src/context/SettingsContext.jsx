@@ -36,12 +36,26 @@ export const SettingsProvider = ({ children }) => {
       }
       const data = await response.json();
       const allModels = data.models || [];
-      const textModels = allModels
-        .filter(m => m.supportedGenerationMethods.includes('generateContent'))
-        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      // Filter for image models first, using a more robust check.
       const imgModels = allModels
-        .filter(m => m.supportedGenerationMethods.includes('generateImages'))
+        .filter(m =>
+          (m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateImages')) ||
+          (m.displayName && m.displayName.toLowerCase().includes('image'))
+        )
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+      // Create a set of image model names for efficient lookup.
+      const imageModelNames = new Set(imgModels.map(m => m.name));
+
+      // Filter for text models, excluding any that are already classified as image models.
+      const textModels = allModels
+        .filter(m =>
+          !imageModelNames.has(m.name) &&
+          m.supportedGenerationMethods &&
+          m.supportedGenerationMethods.includes('generateContent')
+        )
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
       setModels(textModels);
       setImageModels(imgModels);
     } catch (e) {
