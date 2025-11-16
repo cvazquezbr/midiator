@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import geminiAPI from '../utils/geminiAPI';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import GeminiInfobox from './GeminiInfobox';
 
 const GeminiAuthSetup = () => {
-  const { settings, updateSetting } = useSettings();
+  const { settings, updateSetting, models, imageModels, loadingModels, errorModels } = useSettings();
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
@@ -15,8 +16,8 @@ const GeminiAuthSetup = () => {
   const [testResult, setTestResult] = useState(null);
 
   const apiKey = settings.gemini_api_key || '';
-  const selectedModel = settings.gemini_model || 'gemini-1.5-pro';
-  const selectedImageModel = settings.gemini_image_model || 'imagen-2.0-flash-001';
+  const selectedModel = settings.gemini_model || '';
+  const selectedImageModel = settings.gemini_image_model || '';
 
   const handleApiKeyChange = (e) => {
     updateSetting('gemini_api_key', e.target.value);
@@ -101,8 +102,10 @@ const GeminiAuthSetup = () => {
             {showKey ? <VisibilityOff /> : <Visibility />}
           </IconButton>
         </Box>
+        {loadingModels && <CircularProgress size={20} />}
+        {errorModels && <Alert severity="error">{errorModels}</Alert>}
 
-        <FormControl fullWidth sx={{ mt: 2 }}>
+        <FormControl fullWidth sx={{ mt: 2 }} disabled={loadingModels || errorModels}>
             <InputLabel id="gemini-model-select-label">Modelo Gemini</InputLabel>
             <Select
                 labelId="gemini-model-select-label"
@@ -111,16 +114,13 @@ const GeminiAuthSetup = () => {
                 label="Modelo Gemini"
                 onChange={handleModelChange}
             >
-                <MenuItem value="gemini-2.5-pro">Gemini 2.5 Pro</MenuItem>
-                <MenuItem value="gemini-2.5-flash">Gemini 2.5 Flash</MenuItem>
-                <MenuItem value="gemini-1.5-pro">Gemini 1.5 Pro</MenuItem>
-                <MenuItem value="gemini-1.5-flash">Gemini 1.5 Flash</MenuItem>
-                <MenuItem value="gemini-1.5-pro-preview-0514">Gemini 1.5 Pro (Preview 0514)</MenuItem>
-                <MenuItem value="gemini-1.0-pro">Gemini 1.0 Pro</MenuItem>
+              {models.map(model => (
+                <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
+              ))}
             </Select>
         </FormControl>
 
-        <FormControl fullWidth sx={{ mt: 2 }}>
+        <FormControl fullWidth sx={{ mt: 2 }} disabled={loadingModels || errorModels}>
             <InputLabel id="gemini-image-model-select-label">Modelo Gemini (imagem)</InputLabel>
             <Select
                 labelId="gemini-image-model-select-label"
@@ -129,7 +129,9 @@ const GeminiAuthSetup = () => {
                 label="Modelo Gemini (imagem)"
                 onChange={handleImageModelChange}
             >
-                <MenuItem value="imagen-2.0-flash-001">Imagen 2.0 Flash</MenuItem>
+              {imageModels.map(model => (
+                <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
+              ))}
             </Select>
         </FormControl>
 
