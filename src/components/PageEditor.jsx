@@ -314,10 +314,8 @@ const PageEditor = ({
     }
   };
 
-  if (!open || !editorState) return null;
-
-  // Derive campaignSwatches from the editor's current state, applying the correct logic.
   const campaignSwatches = React.useMemo(() => {
+    if (!editorState) return [];
     const { pageTemplate } = editorState;
     if (pageTemplate?.customPalette?.colors?.length > 0) {
       return pageTemplate.customPalette.colors;
@@ -328,6 +326,8 @@ const PageEditor = ({
     }
     return [];
   }, [editorState, palettes]);
+
+  if (!open || !editorState) return null;
 
   const handleSave = () => {
     onSave({
