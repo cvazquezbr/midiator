@@ -47,7 +47,7 @@ const ConfigPage = () => {
                     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
                 const imgModels = allModels
-                    .filter(m => m.supportedGenerationMethods.includes('generateContent') && m.name.includes('image'))
+                    .filter(m => m.supportedGenerationMethods.includes('generateContent') && m.name.includes('imagen'))
                     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
                 setModels(textModels);
@@ -62,7 +62,8 @@ const ConfigPage = () => {
                 }
 
                 if (!getGeminiImageModel() && imgModels.length > 0) {
-                    const defaultImageModel = imgModels.find(m => m.name.includes('gemini-2.0-flash-preview-image-generation'));
+                    // Seleciona o primeiro modelo de imagem disponível como padrão
+                    const defaultImageModel = imgModels[0];
                     if (defaultImageModel) {
                         setSelectedImageModel(defaultImageModel.name);
                         saveGeminiImageModel(defaultImageModel.name);
