@@ -1,5 +1,5 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from '../../middleware/auth.js';
+import { query } from '../../db.js';
 
 // Note: This is now a standard Node.js serverless function, not an edge function.
 // The 'res' object is the standard response object from Express/Connect.
