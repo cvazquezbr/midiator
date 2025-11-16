@@ -96,7 +96,7 @@ export const applySettings = (settings) => {
     saveGeminiModel(settings[CREDENTIAL_KEYS.GEMINI_MODEL]);
   }
   if (settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]) {
-    const validImageModels = ['gemini-2.0-flash-preview-image-generation'];
+    const validImageModels = ['imagen-2.0-flash-001'];
     if (validImageModels.includes(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL])) {
       saveGeminiImageModel(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]);
     } else {

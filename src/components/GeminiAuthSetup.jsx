@@ -16,7 +16,7 @@ const GeminiAuthSetup = () => {
 
   const apiKey = settings.gemini_api_key || '';
   const selectedModel = settings.gemini_model || 'gemini-1.5-pro';
-  const selectedImageModel = settings.gemini_image_model || 'gemini-2.0-flash-preview-image-generation';
+  const selectedImageModel = settings.gemini_image_model || 'imagen-2.0-flash-001';
 
   const handleApiKeyChange = (e) => {
     updateSetting('gemini_api_key', e.target.value);
@@ -129,7 +129,7 @@ const GeminiAuthSetup = () => {
                 label="Modelo Gemini (imagem)"
                 onChange={handleImageModelChange}
             >
-                <MenuItem value="gemini-2.0-flash-preview-image-generation">Gemini 2.0 Flash (Preview)</MenuItem>
+                <MenuItem value="imagen-2.0-flash-001">Imagen 2.0 Flash</MenuItem>
             </Select>
         </FormControl>
 
