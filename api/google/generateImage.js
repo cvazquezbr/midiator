@@ -31,8 +31,16 @@ async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini image generation is not configured. Please select an image model in the settings.' });
     }
 
-    // O geminiImageModel do banco de dados já inclui o prefixo "models/", então não o adicionamos aqui.
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${geminiImageModel}:generateContent`;
+    // Lógica condicional para determinar o método de geração correto.
+    // Modelos "imagen" usam :generateImage, outros (Gemini) usam :generateContent.
+    const generationMethod = geminiImageModel.includes('imagen') ? 'generateImage' : 'generateContent';
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${geminiImageModel}:${generationMethod}`;
+
+    // O corpo da requisição também muda para modelos "imagen".
+    const requestBody = generationMethod === 'generateImage'
+      ? JSON.stringify({ prompt: { text: prompt } })
+      : JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -40,15 +48,7 @@ async function handler(req, res) {
         'Content-Type': 'application/json',
         'x-goog-api-key': geminiApiKey,
       },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      }),
+      body: requestBody,
     });
 
     if (!response.ok) {
