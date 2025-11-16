@@ -1,6 +1,7 @@
 import { getGeminiModel, getGeminiImageModel } from './geminiCredentials';
 
-const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models';
+// ATENÇÃO: A geração de imagem requer a API v1beta.
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 class GeminiAPI {
   constructor() {
@@ -26,11 +27,12 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiModel() || 'gemini-1.5-pro';
+    const model = getGeminiModel() || 'gemini-1.5-pro'; // Fallback para geração de texto é aceitável.
     console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
+    // Usa v1 para geração de conteúdo de texto padrão
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.apiKey}`;
 
     try {
       const response = await fetch(apiUrl, {
@@ -82,7 +84,11 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiImageModel() || 'imagen-2.0-flash-001';
+    const model = getGeminiImageModel(); // NENHUM fallback. Deve ser definido nas configurações.
+    if (!model) {
+      throw new Error('Nenhum modelo de imagem Gemini foi selecionado. Por favor, configure um nas configurações.');
+    }
+
     console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
@@ -131,7 +137,6 @@ class GeminiAPI {
       const responseData = await response.json();
       console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
 
-      // Check for prompt feedback which indicates a safety block
       if (responseData.promptFeedback && responseData.promptFeedback.blockReason) {
         const blockReason = responseData.promptFeedback.blockReason;
         const safetyRatings = responseData.promptFeedback.safetyRatings;
@@ -145,7 +150,6 @@ class GeminiAPI {
         console.log(`[${purpose}] Imagem Base64 recebida (tamanho: ${imagePart.inlineData.data.length} bytes).`);
         return imagePart.inlineData.data;
       } else {
-        // This case handles when there are no candidates, but it wasn't explicitly blocked.
         console.error('Formato de resposta inesperado da API Gemini (Imagem). Nenhum candidato ou parte de imagem encontrada:', responseData);
         throw new Error('Nenhuma imagem foi retornada pela API. A resposta não continha dados de imagem.');
       }
