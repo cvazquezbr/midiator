@@ -37,12 +37,11 @@ async function handler(req, res) {
             });
         }
 
-        // Stream the response body from the Google API to the client
+        // Buffer the response body before sending it to the client
+        const modelsData = await fetchResponse.json();
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
-        // fetchResponse.body is a ReadableStream, pipe it to the response
-        fetchResponse.body.pipe(res);
-
+        res.status(200).json(modelsData);
     } catch (error) {
         console.error('Error fetching from Google API:', error);
         return res.status(500).json({ error: 'Internal Server Error', details: error.message });
