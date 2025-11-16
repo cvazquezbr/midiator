@@ -51,7 +51,13 @@ async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const errorBody = await response.json().catch(() => response.text());
+      const errorText = await response.text();
+      let errorBody;
+      try {
+        errorBody = JSON.parse(errorText);
+      } catch (e) {
+        errorBody = { error: { message: errorText } };
+      }
       console.error('Gemini API request failed:', errorBody);
       const errorMessage = errorBody?.error?.message || JSON.stringify(errorBody);
       return res.status(response.status).json({ error: `Gemini API request failed: ${errorMessage}` });
