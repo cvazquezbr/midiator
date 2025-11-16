@@ -40,7 +40,7 @@ export const SettingsProvider = ({ children }) => {
         .filter(m => m.supportedGenerationMethods.includes('generateContent'))
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       const imgModels = allModels
-        .filter(m => m.name.includes('imagen'))
+        .filter(m => m.name.includes('imagen') && m.supportedGenerationMethods.includes('generateContent'))
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       setModels(textModels);
       setImageModels(imgModels);
