@@ -18,7 +18,7 @@ async function handler(req, res) {
         }
 
         const apiKey = rows[0].settings_data.gemini_api_key;
-        const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+        const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1/models';
 
         const fetchResponse = await fetch(GOOGLE_API_URL, {
             method: 'GET',

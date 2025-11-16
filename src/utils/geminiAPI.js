@@ -1,6 +1,6 @@
 import { getGeminiModel, getGeminiImageModel } from './geminiCredentials';
 
-const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models';
 
 class GeminiAPI {
   constructor() {
