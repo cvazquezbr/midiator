@@ -18,8 +18,8 @@ async function handler(req, res) {
         }
 
         const apiKey = rows[0].settings_data.gemini_api_key;
-        // Adiciona o filtro para garantir que modelos de imagem sejam incluídos
-        const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1/models?filter=supported_generation_methods=generateContent%20OR%20supported_generation_methods=generateImages';
+        // Usa o operador 'has' (:) e corrige o URL-encoding do OR
+        const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1/models?filter=supported_generation_methods:generateContent%20OR%20supported_generation_methods:generateImages';
 
         const fetchResponse = await fetch(GOOGLE_API_URL, {
             method: 'GET',
