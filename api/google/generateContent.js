@@ -1,74 +1,65 @@
-// api/google/generateContent.js
-import fetch from 'node-fetch';
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from '../../middleware/auth.js';
+import { query } from '../../db.js';
 
-async function handler(req, res) {
+const parseBody = async (req) => {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+};
+
+const handler = async (req, res) => {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
-  const { promptString } = req.body;
-
-  if (!promptString) {
-    return res.status(400).json({ error: 'Missing required parameter: promptString' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const userId = req.user.sub;
-    const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
+    const { contents, model } = await parseBody(req);
 
-    if (rows.length === 0 || !rows[0].settings_data) {
-        return res.status(403).json({ error: 'Settings not found for user.' });
+    // Fetch the Gemini API key from the database
+    const dbResult = await query('SELECT settings_data FROM settings WHERE user_id = $1', [req.user.sub]);
+
+    if (dbResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Settings not found for user' });
     }
 
-    const settings = rows[0].settings_data;
-    const geminiApiKey = settings.gemini_api_key;
-    const geminiModel = settings.gemini_model || 'gemini-2.0-flash';
-
+    const geminiApiKey = dbResult.rows[0].settings_data?.gemini_api_key;
     if (!geminiApiKey) {
-      return res.status(500).json({ error: 'The AI service is not configured correctly. Please contact the administrator.' });
+      return res.status(400).json({ error: 'Gemini API key not configured' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-    const response = await fetch(geminiUrl, {
+    const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': geminiApiKey,
       },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: promptString
-          }]
-        }]
-      }),
+      body: JSON.stringify({ contents }),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      const errorMessage = errorBody.error?.message || `Erro ${response.status}`;
-      console.error('Gemini API request failed:', errorBody);
-      return res.status(response.status).json({ error: `Gemini API request failed: ${errorMessage}` });
+    const geminiData = await geminiResponse.json();
+
+    if (!geminiResponse.ok) {
+        console.error('Gemini API Error:', geminiData);
+        return res.status(geminiResponse.status).json({ error: 'Failed to fetch from Gemini API', details: geminiData });
     }
 
-    const data = await response.json();
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!generatedText) {
-      console.error('Invalid response structure from Gemini API:', data);
-      return res.status(500).json({ error: 'Invalid response structure from the AI service.' });
-    }
-
-    res.status(200).json({ generatedText });
-
+    res.status(200).json(geminiData);
   } catch (error) {
-    console.error('Error calling Gemini API proxy:', error);
-    res.status(500).json({ error: 'An unexpected error occurred' });
+    console.error('Error in Gemini proxy:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
-}
+};
 
 export default withAuth(handler);
