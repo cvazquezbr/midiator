@@ -23,57 +23,46 @@ class GeminiAPI {
 
   async generateContent(promptString, purpose = 'Chamada Genérica') {
     if (!this.isInitialized) {
+      // Embora a chave de API não seja mais enviada diretamente,
+      // a inicialização ainda indica que as configurações do usuário foram carregadas.
       throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
     }
     if (!promptString) {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiModel() || 'gemini-1.5-pro';
-    console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
+    console.log(`[${purpose}] Iniciando chamada ao proxy Gemini para geração de conteúdo.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent`;
-
     try {
-      const response = await fetch(apiUrl, {
+      // Chamar nosso próprio endpoint de proxy para geração de conteúdo
+      const response = await fetchWithAuth('/api/google/generateContent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': this.apiKey,
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: promptString
-            }]
-          }],
-        }),
+        body: JSON.stringify({ promptString: promptString }),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        const errorMessage = errorData.error?.message || `Erro ${response.status}`;
-        console.error('Erro da API Gemini:', errorData);
-        throw new Error(`Erro da API Gemini: ${errorMessage}`);
+        const errorMessage = responseData.error || `Erro ${response.status}`;
+        console.error('Erro do proxy Gemini (Conteúdo):', responseData);
+        // O erro do proxy já deve ser amigável, então apenas o lançamos.
+        throw new Error(errorMessage);
       }
 
-      const responseData = await response.json();
-      console.log(`[${purpose}] Resposta da API Gemini (bruta):`, responseData);
-
-      if (responseData.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const resultText = responseData.candidates[0].content.parts[0].text.trim();
-        console.log(`[${purpose}] Resposta extraída:`, resultText);
-        return resultText;
+      if (responseData.generatedText) {
+        console.log(`[${purpose}] Resposta extraída do proxy:`, responseData.generatedText);
+        return responseData.generatedText;
       } else {
-        console.error('Formato de resposta inesperado da API Gemini:', responseData);
-        throw new Error('Formato de resposta inesperado da API Gemini.');
+        console.error('Resposta inesperada do proxy Gemini (Conteúdo):', responseData);
+        throw new Error('Nenhum texto foi retornado pelo serviço de proxy.');
       }
     } catch (error) {
-      console.error('Erro ao chamar a API Gemini:', error);
-      if (error instanceof Error && error.message.startsWith('Erro da API Gemini:')) {
-        throw error;
-      }
+      console.error('Erro ao chamar o proxy de conteúdo Gemini:', error);
+      // Reformular a mensagem para ser mais clara para o usuário final.
       throw new Error(`Falha na comunicação com a API Gemini: ${error.message}`);
     }
   }
