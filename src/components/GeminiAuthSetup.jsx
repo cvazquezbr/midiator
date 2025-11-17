@@ -44,10 +44,16 @@ const GeminiAuthSetup = () => {
         setTestResult({ severity: 'error', message: 'Por favor, insira uma chave de API para testar.' });
         return;
     }
+    if (!selectedModel) {
+        setTestResult({ severity: 'error', message: 'Por favor, selecione um modelo para testar.' });
+        return;
+    }
     setIsTesting(true);
     try {
+      // While the key is now used by the proxy, initialize is kept for compatibility.
       geminiAPI.initialize(trimmedApiKey);
-      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.');
+      // Pass the selected model from the state to the API call
+      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.', selectedModel);
       setTestResult({ severity: 'success', message: 'Conexão com a API Gemini bem-sucedida!' });
     } catch (err) {
       console.error('Erro no teste de conexão com Gemini:', err);

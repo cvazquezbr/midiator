@@ -1,7 +1,10 @@
-import { getGeminiModel } from './geminiCredentials';
 import fetchWithAuth from './fetchWithAuth';
 
 class GeminiAPI {
+  // The API key is now handled by the backend proxy,
+  // so we don't need to initialize or store it here for text generation.
+  // The initialize method is kept for now as generateImage might still use it
+  // or other parts of the app might depend on it.
   constructor() {
     this.apiKey = null;
     this.isInitialized = false;
@@ -9,21 +12,23 @@ class GeminiAPI {
 
   initialize(apiKey) {
     if (!apiKey) {
-      console.warn("GeminiAPI: A chave da API não foi fornecida. A API usará o proxy backend.");
-      this.isInitialized = false; // It's not truly initialized with a key, but can still function.
+      console.warn("GeminiAPI: A chave da API não foi fornecida. Funções que dependem dela podem falhar.");
+      this.isInitialized = false;
       return;
     }
     this.apiKey = apiKey;
     this.isInitialized = true;
   }
 
-  async generateContent(promptString, purpose = 'Chamada Genérica') {
+  async generateContent(promptString, model, purpose = 'Chamada Genérica') {
     if (!promptString) {
       throw new Error('O prompt não pode ser vazio.');
     }
+    if (!model) {
+      throw new Error('O modelo Gemini deve ser especificado.');
+    }
 
-    const model = getGeminiModel() || 'gemini-1.5-pro';
-    console.log(`[${purpose}] Iniciando chamada ao proxy de conteúdo Gemini com o modelo ${model}.`);
+    console.log(`[${purpose}] Iniciando chamada ao proxy Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
     try {
@@ -32,32 +37,48 @@ class GeminiAPI {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ promptString }),
+        body: JSON.stringify({
+          model: model, // Pass the selected model to the proxy
+          contents: [{
+            parts: [{
+              text: promptString
+            }]
+          }],
+        }),
       });
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        const errorMessage = responseData.error || `Erro ${response.status}`;
-        console.error('Erro do proxy Gemini (Conteúdo):', responseData);
-        throw new Error(errorMessage);
+        const errorMessage = responseData.error?.message || responseData.details?.error?.message || `Erro ${response.status}`;
+        console.error('Erro do proxy Gemini:', responseData);
+        throw new Error(`Erro da API Gemini: ${errorMessage}`);
       }
 
-      if (responseData.generatedText) {
-        const resultText = responseData.generatedText.trim();
+      console.log(`[${purpose}] Resposta da API Gemini (bruta via proxy):`, responseData);
+
+      if (responseData.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const resultText = responseData.candidates[0].content.parts[0].text.trim();
         console.log(`[${purpose}] Resposta extraída:`, resultText);
         return resultText;
       } else {
-        console.error('Resposta inesperada do proxy Gemini (Conteúdo):', responseData);
-        throw new Error('Nenhum texto foi retornado pelo serviço de proxy.');
+        console.error('Formato de resposta inesperado da API Gemini:', responseData);
+        throw new Error('Formato de resposta inesperado da API Gemini.');
       }
     } catch (error) {
-      console.error('Erro ao chamar o proxy de conteúdo Gemini:', error);
+      console.error('Erro ao chamar o proxy Gemini:', error);
+      if (error instanceof Error && error.message.startsWith('Erro da API Gemini:')) {
+        throw error;
+      }
       throw new Error(`Falha na comunicação com a API Gemini: ${error.message}`);
     }
   }
 
+  // generateImage remains unchanged for now
   async generateImage(promptString, purpose = 'Geração de Imagem') {
+    if (!this.isInitialized) {
+      throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
+    }
     if (!promptString) {
       throw new Error('O prompt não pode ser vazio.');
     }
