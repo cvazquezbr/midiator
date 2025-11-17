@@ -33,13 +33,14 @@ class GeminiAPI {
     console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
+    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent`;
 
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': this.apiKey,
         },
         body: JSON.stringify({
           contents: [{
