@@ -1,18 +1,12 @@
-// api/google/generateContent.js
+// api/google/models.js
 import fetch from 'node-fetch';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 
 async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
-  const { promptString } = req.body;
-
-  if (!promptString) {
-    return res.status(400).json({ error: 'Missing required parameter: promptString' });
   }
 
   try {
@@ -25,27 +19,19 @@ async function handler(req, res) {
 
     const settings = rows[0].settings_data;
     const geminiApiKey = settings.gemini_api_key;
-    const geminiModel = settings.gemini_model || 'gemini-2.0-flash';
 
     if (!geminiApiKey) {
       return res.status(500).json({ error: 'The AI service is not configured correctly. Please contact the administrator.' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models`;
 
     const response = await fetch(geminiUrl, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': geminiApiKey,
       },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: promptString
-          }]
-        }]
-      }),
     });
 
     if (!response.ok) {
@@ -56,14 +42,7 @@ async function handler(req, res) {
     }
 
     const data = await response.json();
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!generatedText) {
-      console.error('Invalid response structure from Gemini API:', data);
-      return res.status(500).json({ error: 'Invalid response structure from the AI service.' });
-    }
-
-    res.status(200).json({ generatedText });
+    res.status(200).json(data);
 
   } catch (error) {
     console.error('Error calling Gemini API proxy:', error);

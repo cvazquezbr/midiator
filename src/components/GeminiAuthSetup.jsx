@@ -40,29 +40,18 @@ const GeminiAuthSetup = () => {
   const handleTestConnection = async () => {
     const trimmedApiKey = apiKey.trim();
     setTestResult(null);
-
     if (!trimmedApiKey) {
-      setTestResult({ severity: 'error', message: 'Por favor, insira uma chave de API para testar.' });
-      return;
+        setTestResult({ severity: 'error', message: 'Por favor, insira uma chave de API para testar.' });
+        return;
     }
-    if (!selectedModel) {
-      setTestResult({ severity: 'error', message: 'Por favor, selecione um modelo para testar.' });
-      return;
-    }
-
     setIsTesting(true);
     try {
-      // Passa o ID do modelo selecionado para o método de teste.
-      const response = await geminiAPI.generateContent(
-        'Diga "Olá, mundo!" em português.',
-        'Connection Test',
-        selectedModel // Passa o ID do modelo
-      );
+      geminiAPI.initialize(trimmedApiKey);
+      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.');
       setTestResult({ severity: 'success', message: 'Conexão com a API Gemini bem-sucedida!' });
     } catch (err) {
       console.error('Erro no teste de conexão com Gemini:', err);
-      // A mensagem de erro da geminiAPI já é amigável.
-      setTestResult({ severity: 'error', message: err.message });
+      setTestResult({ severity: 'error', message: `Falha na conexão: ${err.message}` });
     } finally {
       setIsTesting(false);
     }
@@ -126,7 +115,7 @@ const GeminiAuthSetup = () => {
                 onChange={handleModelChange}
             >
               {models.map(model => (
-                <MenuItem key={model.id} value={model.id}>{model.displayName}</MenuItem>
+                <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
               ))}
             </Select>
         </FormControl>
@@ -141,7 +130,7 @@ const GeminiAuthSetup = () => {
                 onChange={handleImageModelChange}
             >
               {imageModels.map(model => (
-                <MenuItem key={model.id} value={model.id}>{model.displayName}</MenuItem>
+                <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
               ))}
             </Select>
         </FormControl>
