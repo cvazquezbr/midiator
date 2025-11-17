@@ -58,28 +58,57 @@ async function handler(req, res) {
         break;
       }
 
-      lastErrorBody = await response.json().catch(() => response.text());
+      // Safely consume the body to prevent "body used already" errors.
+      const errorText = await response.text();
+      try {
+        lastErrorBody = JSON.parse(errorText);
+      } catch (e) {
+        lastErrorBody = { error: { message: errorText } };
+      }
+
       const delay = Math.pow(2, i) * 1000;
       console.log(`Gemini API rate limit exceeded. Retrying in ${delay}ms...`);
       await sleep(delay);
     }
 
-    if (!response.ok) {
-      const errorBody = response.status === 429 ? lastErrorBody : await response.json().catch(() => response.text());
+    if (response.ok) {
+      // Success path: The loop broke with a successful response.
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse successful Gemini API response as JSON:', responseText);
+        return res.status(500).json({ error: 'Invalid response structure from the AI service.' });
+      }
+
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+        console.error('Invalid response structure from Gemini API:', data);
+        return res.status(500).json({ error: 'Invalid response structure from the AI service.' });
+      }
+
+      const generatedText = data.candidates[0].content.parts[0].text;
+      res.status(200).json({ generatedText });
+    } else {
+      // Error path: The final response was not ok.
+      let errorBody;
+
+      if (response.status === 429) {
+        // All retries were exhausted with 429 errors. The body was already read.
+        errorBody = lastErrorBody;
+      } else {
+        // A non-429 error occurred. The body has not been read yet.
+        const errorText = await response.text();
+        try {
+          errorBody = JSON.parse(errorText);
+        } catch (e) {
+          errorBody = { error: { message: errorText } };
+        }
+      }
       console.error('Gemini API request failed:', errorBody);
       const errorMessage = errorBody?.error?.message || JSON.stringify(errorBody);
       return res.status(response.status).json({ error: `Gemini API request failed: ${errorMessage}` });
     }
-
-    const data = await response.json();
-
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        console.error('Invalid response structure from Gemini API:', data);
-        return res.status(500).json({ error: 'Invalid response structure from the AI service.' });
-    }
-
-    const generatedText = data.candidates[0].content.parts[0].text;
-    res.status(200).json({ generatedText });
 
   } catch (error) {
     console.error('Error calling Gemini API:', error);
