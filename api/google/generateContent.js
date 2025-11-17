@@ -1,5 +1,5 @@
-import { withAuth } from './middleware/auth.js';
-import { query } from './db.js';
+import { withAuth } from '../middleware/auth.js';
+import { query } from '../db.js';
 
 const parseBody = async (req) => {
   return new Promise((resolve, reject) => {
@@ -36,7 +36,7 @@ const handler = async (req, res) => {
       return res.status(404).json({ error: 'Settings not found for user' });
     }
 
-    const geminiApiKey = dbResult.rows[0].settings_data?.gemini_api_key;
+    const geminiApiKey = dbResult.rows[0]?.settings_data?.gemini_api_key;
     if (!geminiApiKey) {
       return res.status(400).json({ error: 'Gemini API key not configured' });
     }
