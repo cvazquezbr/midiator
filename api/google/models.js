@@ -1,5 +1,5 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from './middleware/auth.js';
+import { query } from './db.js';
 
 const handler = async (req, res) => {
   if (req.method !== 'GET') {
@@ -7,7 +7,6 @@ const handler = async (req, res) => {
   }
 
   try {
-    // Fetch the Gemini API key from the database
     const dbResult = await query('SELECT settings_data FROM settings WHERE user_id = $1', [req.user.sub]);
 
     if (dbResult.rows.length === 0) {
@@ -29,12 +28,13 @@ const handler = async (req, res) => {
       },
     });
 
-    const geminiData = await geminiResponse.json();
-
     if (!geminiResponse.ok) {
-        console.error('Gemini API Error:', geminiData);
-        return res.status(geminiResponse.status).json({ error: 'Failed to fetch models from Gemini API', details: geminiData });
+        const errorText = await geminiResponse.text();
+        console.error('Gemini API Error:', errorText);
+        return res.status(geminiResponse.status).json({ error: 'Failed to fetch models from Gemini API', details: errorText });
     }
+
+    const geminiData = await geminiResponse.json();
 
     // Filter for models that support 'generateContent'
     const filteredModels = geminiData.models.filter(model =>

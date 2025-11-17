@@ -1,5 +1,5 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from './middleware/auth.js';
+import { query } from './db.js';
 
 const parseBody = async (req) => {
   return new Promise((resolve, reject) => {
@@ -11,7 +11,8 @@ const parseBody = async (req) => {
       try {
         resolve(JSON.parse(body));
       } catch (e) {
-        reject(e);
+        // Return empty object if body is not valid JSON
+        resolve({});
       }
     });
   });
@@ -25,7 +26,10 @@ const handler = async (req, res) => {
   try {
     const { contents, model } = await parseBody(req);
 
-    // Fetch the Gemini API key from the database
+    if (!contents || !model) {
+      return res.status(400).json({ error: 'Missing required parameters: contents and model' });
+    }
+
     const dbResult = await query('SELECT settings_data FROM settings WHERE user_id = $1', [req.user.sub]);
 
     if (dbResult.rows.length === 0) {
@@ -48,14 +52,15 @@ const handler = async (req, res) => {
       body: JSON.stringify({ contents }),
     });
 
-    const geminiData = await geminiResponse.json();
-
     if (!geminiResponse.ok) {
-        console.error('Gemini API Error:', geminiData);
-        return res.status(geminiResponse.status).json({ error: 'Failed to fetch from Gemini API', details: geminiData });
+        const errorText = await geminiResponse.text();
+        console.error('Gemini API Error:', errorText);
+        return res.status(geminiResponse.status).json({ error: 'Failed to fetch from Gemini API', details: errorText });
     }
 
+    const geminiData = await geminiResponse.json();
     res.status(200).json(geminiData);
+
   } catch (error) {
     console.error('Error in Gemini proxy:', error);
     res.status(500).json({ error: 'Internal Server Error', details: error.message });
