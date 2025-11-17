@@ -29,25 +29,48 @@ export const SettingsProvider = ({ children }) => {
   const fetchModels = useCallback(async () => {
     setLoadingModels(true);
     setErrorModels(null);
+
+    // Lista estática de modelos Imagen para garantir que eles apareçam.
+    const hardcodedImageModels = [
+      {
+        name: 'models/imagen-4.0-generate-preview-06-06',
+        displayName: 'Imagen 4.0 Generate Preview',
+        supportedGenerationMethods: ['generateImage'],
+      },
+      {
+        name: 'models/gemini-2.5-flash-image',
+        displayName: 'Gemini 2.5 Flash Image',
+        supportedGenerationMethods: ['generateImage'],
+      },
+    ];
+
     try {
       const response = await fetch('/api/google/models');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      const allModels = data.models || [];
-      // Filter for image models first, using a more robust check.
+      let allModels = data.models || [];
+
+      // Mesclar modelos da API com a lista codificada, removendo duplicatas.
+      const modelMap = new Map();
+      [...allModels, ...hardcodedImageModels].forEach(model => {
+        modelMap.set(model.name, model);
+      });
+      allModels = Array.from(modelMap.values());
+
+      // Filtrar modelos de imagem primeiro, com uma verificação robusta.
       const imgModels = allModels
         .filter(m =>
-          (m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateImages')) ||
+          (m.supportedGenerationMethods && (m.supportedGenerationMethods.includes('generateImage') || m.supportedGenerationMethods.includes('generateImages'))) ||
           (m.displayName && m.displayName.toLowerCase().includes('image'))
         )
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      // Create a set of image model names for efficient lookup.
+      // Criar um conjunto de nomes de modelos de imagem para uma pesquisa eficiente.
       const imageModelNames = new Set(imgModels.map(m => m.name));
 
-      // Filter for text models, excluding any that are already classified as image models.
+      // Filtrar modelos de texto, excluindo os que já foram classificados como de imagem.
       const textModels = allModels
         .filter(m =>
           !imageModelNames.has(m.name) &&
@@ -63,6 +86,8 @@ export const SettingsProvider = ({ children }) => {
       setErrorModels(errorMsg);
       toast.error(errorMsg);
       console.error(e);
+      // Se a API falhar, ainda mostramos os modelos de imagem codificados.
+      setImageModels(hardcodedImageModels);
     } finally {
       setLoadingModels(false);
     }
