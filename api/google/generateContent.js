@@ -32,7 +32,7 @@ async function handler(req, res) {
       return res.status(500).json({ error: 'The AI service is not configured correctly. Please contact the administrator.' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${geminiModel}:generateContent`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`;
 
     let response;
     let lastErrorBody;
