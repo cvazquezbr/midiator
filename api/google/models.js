@@ -18,13 +18,13 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: 'Gemini API key not configured' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`;
 
     const geminiResponse = await fetch(geminiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': geminiApiKey,
+        // 'x-goog-api-key': geminiApiKey, // Removed as per report
       },
     });
 
@@ -36,12 +36,18 @@ const handler = async (req, res) => {
 
     const geminiData = await geminiResponse.json();
 
-    // Filter for models that support 'generateContent'
-    const filteredModels = geminiData.models.filter(model =>
-        model.supportedGenerationMethods.includes('generateContent')
-    );
+    const supportedModels = geminiData.models
+      .filter(model => model.supportedGenerationMethods.includes('generateContent'))
+      .map(model => {
+        const modelName = model.name.split('/').pop();
+        return {
+          name: model.name,
+          displayName: model.displayName,
+          endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`
+        };
+      });
 
-    res.status(200).json({ models: filteredModels });
+    res.status(200).json({ models: supportedModels });
 
   } catch (error) {
     console.error('Error in Gemini models proxy:', error);
