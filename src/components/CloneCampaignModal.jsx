@@ -30,6 +30,8 @@ import { CheckCircle, HourglassEmpty, Error as ErrorIcon, Edit as EditIcon } fro
 import { getTranslatableFields } from '../utils/campaignUtils'; // Import the new utility
 import { traverseState } from '../utils/stateTraversal';
 import RevisaoTextoModal from './RevisaoTextoModal'; // Import the new modal
+import { useSettings } from '../context/SettingsContext';
+import geminiAPI from '../utils/geminiAPI';
 
 const LANGUAGES = [
     { code: 'en', name: 'Inglês' },
@@ -41,6 +43,7 @@ const LANGUAGES = [
 ];
 
 const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
+  const { settings } = useSettings();
   const [activeStep, setActiveStep] = useState(0);
   const [targetLanguage, setTargetLanguage] = useState('');
   const [translatableFields, setTranslatableFields] = useState([]);
@@ -89,39 +92,40 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     setTranslationErrors(prev => ({ ...prev, [index]: null }));
 
     try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: field.value, targetLanguage }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to translate and could not parse error response.' }));
-        throw new Error(errorData.error || 'Failed to translate');
+      const isArray = Array.isArray(field.value);
+      let prompt;
+      if (isArray) {
+        const jsonText = JSON.stringify(field.value);
+        prompt = `Translate each string in the following JSON array to ${targetLanguage}. Return ONLY a valid JSON array string with the translated strings in the same order. Do not include any other text or formatting. Input: ${jsonText}`;
+      } else {
+        prompt = `Translate the following text to ${targetLanguage}, preserving markdown formatting: "${field.value}"`;
       }
 
-      const data = await response.json();
-      const { translatedText } = data;
+      const translatedText = await geminiAPI.generateContent(prompt, settings.gemini_model, 'Campaign Translation');
 
-      setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
+      let result = translatedText;
+      if (isArray) {
+        // The API returns a string representation of a JSON array, so we need to parse it.
+        try {
+          result = JSON.parse(translatedText);
+        } catch (e) {
+          console.error("Failed to parse translated array:", translatedText);
+          throw new Error("A tradução retornou um formato de array inválido.");
+        }
+      }
 
-      field.owner[field.key] = translatedText;
-
+      setTranslatedFields(prev => ({ ...prev, [index]: result }));
+      field.owner[field.key] = result;
       setClonedCampaign(prev => ({ ...prev }));
-
       setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
       return true; // Indicate success
     } catch (error) {
       console.error('Translation error:', error);
-      let userFriendlyError = error.message;
-      if (error.message.includes('GEMINI_API_KEY is not set')) {
-        userFriendlyError = 'O serviço de tradução não está configurado corretamente. Por favor, contate o administrador.';
-      }
-      setTranslationErrors(prev => ({ ...prev, [index]: userFriendlyError }));
+      setTranslationErrors(prev => ({ ...prev, [index]: error.message }));
       setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
       return false; // Indicate failure
     }
-  }, [targetLanguage]);
+  }, [targetLanguage, settings.gemini_model]);
 
   const processTranslationBatch = useCallback(async (fieldIndices, delay) => {
     const failedIndices = [];
