@@ -41,6 +41,29 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: 'Gemini API key not configured' });
     }
 
+    // START: Model compatibility validation
+    const cleanModel = model.replace('models/', '');
+    const modelInfoUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}?key=${geminiApiKey}`;
+
+    const modelInfoResponse = await fetch(modelInfoUrl);
+    if (!modelInfoResponse.ok) {
+        const errorText = await modelInfoResponse.text();
+        console.error('Failed to fetch model info for validation:', errorText);
+        return res.status(modelInfoResponse.status).json({ error: 'Failed to fetch model information for validation', details: errorText });
+    }
+
+    const modelData = await modelInfoResponse.json();
+    const supportedMethods = modelData.supportedGenerationMethods || [];
+
+    if (!supportedMethods.includes('generateContent')) {
+      return res.status(400).json({
+        error: 'Model does not support generateContent',
+        model: cleanModel,
+        supportedMethods: supportedMethods
+      });
+    }
+    // END: Model compatibility validation
+
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${geminiApiKey}`;
 
     const geminiResponse = await fetch(geminiUrl, {

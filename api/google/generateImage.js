@@ -40,6 +40,29 @@ async function handler(req, res) {
     }
 
     const generationMethod = cleanModel.includes('imagen') ? 'generateImage' : 'generateContent';
+
+    // START: Model compatibility validation
+    const modelInfoUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}?key=${geminiApiKey}`;
+
+    const modelInfoResponse = await fetch(modelInfoUrl);
+    if (!modelInfoResponse.ok) {
+        const errorText = await modelInfoResponse.text();
+        console.error('Failed to fetch model info for validation:', errorText);
+        return res.status(modelInfoResponse.status).json({ error: 'Failed to fetch model information for validation', details: errorText });
+    }
+
+    const modelData = await modelInfoResponse.json();
+    const supportedMethods = modelData.supportedGenerationMethods || [];
+
+    if (!supportedMethods.includes(generationMethod)) {
+      return res.status(400).json({
+        error: `Model does not support ${generationMethod}`,
+        model: cleanModel,
+        supportedMethods: supportedMethods
+      });
+    }
+    // END: Model compatibility validation
+
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:${generationMethod}?key=${geminiApiKey}`;
 
     console.log(`[generateImage] URL: ${apiUrl}`);
