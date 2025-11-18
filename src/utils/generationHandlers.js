@@ -200,7 +200,11 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
       colorPalettePrompt: colorPalettePrompt,
     });
 
-    const imagePrompt = await geminiAPI.generateContent(prompt, 'Geração de Prompt de Imagem de Campanha');
+    const selectedModel = getGeminiModel();
+    if (!selectedModel) {
+      throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+    }
+    const imagePrompt = await geminiAPI.generateContent(prompt, selectedModel, 'Geração de Prompt de Imagem de Campanha');
     return imagePrompt.trim();
 };
 
@@ -275,7 +279,11 @@ export const generateFormattedContent = async ({ content }) => {
       cta: stripHtml(content.cta),
   });
 
-  const rawContent = await geminiAPI.generateContent(prompt, 'Formatação de Conteúdo para HTML');
+  const selectedModel = getGeminiModel();
+  if (!selectedModel) {
+    throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+  }
+  const rawContent = await geminiAPI.generateContent(prompt, selectedModel, 'Formatação de Conteúdo para HTML');
   const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
   return match && match[1] ? match[1].trim() : rawContent.trim();
 };
@@ -320,7 +328,11 @@ ${existingPosts.map(p => `- Título: "${p.titulo}", Etapa AIDA: ${p.etapa_aida}`
     existingPostsString: existingPostsString,
   });
 
-  const response = await geminiAPI.generateContent(prompt, 'Geração de Plano de Follow-up');
+  const selectedModel = getGeminiModel();
+  if (!selectedModel) {
+    throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+  }
+  const response = await geminiAPI.generateContent(prompt, selectedModel, 'Geração de Plano de Follow-up');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     try {
@@ -382,10 +394,14 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
     });
 
     let postGenerated = false;
+    const selectedModel = getGeminiModel();
+    if (!selectedModel) {
+      throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+    }
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         console.log(`Gerando post de follow-up #${postPlan.post_numero}, tentativa ${attempt}...`);
-        const response = await geminiAPI.generateContent(prompt, `Geração Post Follow-up #${postPlan.post_numero} (Tentativa ${attempt})`);
+        const response = await geminiAPI.generateContent(prompt, selectedModel, `Geração Post Follow-up #${postPlan.post_numero} (Tentativa ${attempt})`);
 
         const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
         let parsedResponse;
@@ -468,7 +484,11 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
     problema: problema,
   });
 
-  const response = await geminiAPI.generateContent(prompt, 'Geração de Soluções Comuns');
+  const selectedModel = getGeminiModel();
+  if (!selectedModel) {
+    throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+  }
+  const response = await geminiAPI.generateContent(prompt, selectedModel, 'Geração de Soluções Comuns');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     try {
@@ -516,7 +536,11 @@ export const generateCommonProblems = async ({ persona, autor }) => {
       autorString: autorString,
   });
 
-  const response = await geminiAPI.generateContent(prompt, 'Geração de Problemas Comuns da Persona');
+  const selectedModel = getGeminiModel();
+  if (!selectedModel) {
+    throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+  }
+  const response = await geminiAPI.generateContent(prompt, selectedModel, 'Geração de Problemas Comuns da Persona');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     try {
@@ -557,7 +581,11 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
     promptText: stripHtml(promptText),
   });
 
-  const iaResponseText = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo CSV com IA');
+  const selectedModel = getGeminiModel();
+  if (!selectedModel) {
+    throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+  }
+  const iaResponseText = await geminiAPI.generateContent(finalPrompt, selectedModel, 'Geração de Conteúdo CSV com IA');
   return iaResponseText;
 };
 
