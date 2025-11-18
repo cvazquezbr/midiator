@@ -31,11 +31,15 @@ async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini image generation is not configured. Please select an image model in the settings.' });
     }
 
-    // Lógica condicional para determinar o método de geração correto.
-    // Modelos "imagen" usam :generateImage, outros (Gemini) usam :generateContent.
-    const generationMethod = geminiImageModel.includes('imagen') ? 'generateImage' : 'generateContent';
+    const cleanModel = geminiImageModel.replace(/^models\//, '').trim();
+    if (!cleanModel) {
+      return res.status(400).json({ error: 'Invalid image model name' });
+    }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${geminiImageModel}:${generationMethod}`;
+    const generationMethod = cleanModel.includes('imagen') ? 'generateImage' : 'generateContent';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:${generationMethod}?key=${geminiApiKey}`;
+
+    console.log(`[generateImage] URL: ${apiUrl}`);
 
     // O corpo da requisição também muda para modelos "imagen".
     const requestBody = generationMethod === 'generateImage'
@@ -46,7 +50,6 @@ async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': geminiApiKey,
       },
       body: requestBody,
     });
