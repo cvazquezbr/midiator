@@ -121,8 +121,16 @@ export const SettingsProvider = ({ children }) => {
   }, [loadSettings]);
 
   const updateSetting = useCallback((key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  }, []);
+    setSettings(prev => {
+      const newSettings = { ...prev, [key]: value };
+      // Se a chave da API Gemini for atualizada e tiver um valor,
+      // busca os modelos imediatamente.
+      if (key === 'gemini_api_key' && value) {
+        fetchModels();
+      }
+      return newSettings;
+    });
+  }, [fetchModels]);
 
   const saveSettings = useCallback(async () => {
     setIsLoading(true);
