@@ -36,7 +36,10 @@ const handler = async (req, res) => {
     const geminiData = await geminiResponse.json();
 
     const supportedModels = geminiData.models
-      .filter(model => model.supportedGenerationMethods.includes('generateImage'))
+      .filter(model =>
+        model.supportedGenerationMethods.includes('generateImage') ||
+        (model.name.includes('image') && model.supportedGenerationMethods.includes('generateContent'))
+      )
       .map(model => {
         const modelName = model.name.split('/').pop();
         const generationMethod = modelName.includes('imagen') ? 'generateImage' : 'generateContent';
