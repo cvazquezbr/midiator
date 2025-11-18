@@ -29,65 +29,36 @@ export const SettingsProvider = ({ children }) => {
   const fetchModels = useCallback(async () => {
     setLoadingModels(true);
     setErrorModels(null);
-
-    // Lista estática de modelos Imagen para garantir que eles apareçam.
-    const hardcodedImageModels = [
-      {
-        name: 'models/imagen-4.0-generate-preview-06-06',
-        displayName: 'Imagen 4.0 Generate Preview',
-        supportedGenerationMethods: ['generateImage'],
-      },
-      {
-        name: 'models/gemini-2.5-flash-image',
-        displayName: 'Gemini 2.5 Flash Image',
-        supportedGenerationMethods: ['generateImage'],
-      },
-    ];
+    setModels([]);
+    setImageModels([]);
 
     try {
-      const response = await fetch('/api/google/models');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const [textResponse, imageResponse] = await Promise.all([
+        fetch('/api/google/models/text'),
+        fetch('/api/google/models/image')
+      ]);
+
+      if (!textResponse.ok) {
+        throw new Error(`Failed to fetch text models: ${textResponse.status}`);
       }
-      const data = await response.json();
-      let allModels = data.models || [];
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image models: ${imageResponse.status}`);
+      }
 
-      // Mesclar modelos da API com a lista codificada, removendo duplicatas.
-      const modelMap = new Map();
-      [...allModels, ...hardcodedImageModels].forEach(model => {
-        modelMap.set(model.name, model);
-      });
-      allModels = Array.from(modelMap.values());
+      const textData = await textResponse.json();
+      const imageData = await imageResponse.json();
 
-      // Filtrar modelos de imagem primeiro, com uma verificação robusta.
-      const imgModels = allModels
-        .filter(m =>
-          (m.supportedGenerationMethods && (m.supportedGenerationMethods.includes('generateImage') || m.supportedGenerationMethods.includes('generateImages'))) ||
-          (m.displayName && m.displayName.toLowerCase().includes('image'))
-        )
-        .sort((a, b) => a.displayName.localeCompare(b.displayName));
-
-      // Criar um conjunto de nomes de modelos de imagem para uma pesquisa eficiente.
-      const imageModelNames = new Set(imgModels.map(m => m.name));
-
-      // Filtrar modelos de texto, excluindo os que já foram classificados como de imagem.
-      const textModels = allModels
-        .filter(m =>
-          !imageModelNames.has(m.name) &&
-          m.supportedGenerationMethods &&
-          m.supportedGenerationMethods.includes('generateContent')
-        )
-        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      const textModels = (textData.models || []).sort((a, b) => a.displayName.localeCompare(b.displayName));
+      const imageModels = (imageData.models || []).sort((a, b) => a.displayName.localeCompare(b.displayName));
 
       setModels(textModels);
-      setImageModels(imgModels);
+      setImageModels(imageModels);
+
     } catch (e) {
       const errorMsg = `Failed to load models: ${e.message}`;
       setErrorModels(errorMsg);
       toast.error(errorMsg);
       console.error(e);
-      // Se a API falhar, ainda mostramos os modelos de imagem codificados.
-      setImageModels(hardcodedImageModels);
     } finally {
       setLoadingModels(false);
     }
