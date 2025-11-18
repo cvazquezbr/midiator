@@ -14,8 +14,10 @@ import AutorWizard, { emptyAutorWizardData } from '../components/AutorWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
+import { useSettings } from '../context/SettingsContext';
 
 const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate, startInCreateMode, onAutorCreated, onCreationCancelled }) => {
+  const { settings } = useSettings();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -148,7 +150,7 @@ ${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
 Retorne apenas um único objeto JSON.`;
         let cleanedResponse = '';
         try {
-            const response = await geminiAPI.generateContent(prompt);
+            const response = await geminiAPI.generateContent(prompt, settings.gemini_model, 'Gerar Biografia de Autor');
             const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
             const generatedAutor = JSON.parse(cleanedResponse);
             if (callback) callback(generatedAutor);

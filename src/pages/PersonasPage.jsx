@@ -13,6 +13,7 @@ import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWiza
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
+import { useSettings } from '../context/SettingsContext';
 
 /**
  * @component PersonasPage
@@ -23,6 +24,7 @@ import geminiAPI from '../utils/geminiAPI';
  * all its state and API interactions.
  */
 const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate, startInCreateMode, onPersonaCreated, onCreationCancelled, onPersonaSelected }) => {
+  const { settings } = useSettings();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -168,7 +170,7 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
         const prompt = `Crie um objeto JSON para uma persona de marketing detalhada com base na seguinte descrição: '${description}'. O JSON deve ter as seguintes chaves: 'nome' (string), 'posicaoCargo' (array de strings), 'segmentoEmpresa' (array de strings), 'responsabilidadesChave' (array de strings), 'doresEstrategicos' (array de strings), 'doresOperacionais' (array de strings), 'doresPessoas' (array de strings), 'doresRegulatorios' (array de strings), 'gatilhosCompra' (array de strings), 'barreirasAdocao' (array de strings), 'mentalidadeValores' (string), e 'contextoCultural' (string).`;
         let cleanedResponse = '';
         try {
-            const response = await geminiAPI.generateContent(prompt);
+            const response = await geminiAPI.generateContent(prompt, settings.gemini_model, 'Gerar Descrição de Persona');
             cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
             if (callback) callback(JSON.parse(cleanedResponse));
         } catch (error) {
