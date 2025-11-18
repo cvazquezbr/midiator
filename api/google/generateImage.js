@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from '../../middleware/auth.js';
+import { query } from '../../db.js';
 
 async function handler(req, res) {
   if (req.method !== 'POST') {

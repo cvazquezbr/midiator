@@ -1,5 +1,5 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from '../../middleware/auth.js';
+import { query } from '../../db.js';
 
 const handler = async (req, res) => {
   if (req.method !== 'GET') {
