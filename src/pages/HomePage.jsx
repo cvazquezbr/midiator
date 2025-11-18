@@ -716,7 +716,7 @@ function HomePage() {
     setLoading(true);
     try {
       const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(sourceContent.conteudo)}"`;
-      const summary = await geminiAPI.generateContent(summaryPrompt);
+      const summary = await geminiAPI.generateContent(summaryPrompt, settings.gemini_model, 'Gerar Resumo');
       const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno';
 
       // Use a functional update on setCampaignState to prevent race conditions.

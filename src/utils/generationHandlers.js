@@ -577,7 +577,11 @@ export const generateColorPalette = async (briefing) => {
   const prompt = fillPrompt(promptTemplate, { briefing: briefing });
 
   try {
-    const response = await geminiAPI.generateContent(prompt, 'Geração de Paleta de Cores');
+    const selectedModel = getGeminiModel();
+    if (!selectedModel) {
+      throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
+    }
+    const response = await geminiAPI.generateContent(prompt, selectedModel, 'Geração de Paleta de Cores');
 
     // More robust JSON parsing
     const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
