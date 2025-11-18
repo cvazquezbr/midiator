@@ -18,7 +18,7 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: 'Gemini API key not configured' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models?key=${geminiApiKey}`;
 
     const geminiResponse = await fetch(geminiUrl, {
       method: 'GET',
@@ -36,18 +36,14 @@ const handler = async (req, res) => {
     const geminiData = await geminiResponse.json();
 
     const supportedModels = geminiData.models
-      .filter(model =>
-        model.supportedGenerationMethods.includes('generateImage') ||
-        (model.name.includes('image') && model.supportedGenerationMethods.includes('generateContent'))
-      )
+      .filter(model => model.supportedGenerationMethods.includes('generateImage'))
       .map(model => {
         const modelName = model.name.split('/').pop();
-        const generationMethod = modelName.includes('imagen') ? 'generateImage' : 'generateContent';
         return {
           name: model.name,
           displayName: model.displayName,
           supportedGenerationMethods: model.supportedGenerationMethods,
-          endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:${generationMethod}`
+          endpoint: `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateImage`
         };
       });
 
