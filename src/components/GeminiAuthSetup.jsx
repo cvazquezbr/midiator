@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import geminiAPI from '../utils/geminiAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
@@ -18,10 +18,6 @@ const GeminiAuthSetup = () => {
   const apiKey = settings.gemini_api_key || '';
   const selectedModel = settings.gemini_model || '';
   const selectedImageModel = settings.gemini_image_model || '';
-
-  useEffect(() => {
-    console.log('[GeminiAuthSetup] Models received from context:', models);
-  }, [models]);
 
   const handleApiKeyChange = (e) => {
     updateSetting('gemini_api_key', e.target.value);
