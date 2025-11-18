@@ -10,6 +10,8 @@ async function handler(req, res) {
 
   const { prompt, model } = req.body;
 
+  console.log('[generateImage] Received request with model:', model, 'and prompt:', prompt ? 'Yes' : 'No');
+
   if (!prompt) {
     return res.status(400).json({ error: 'Missing required parameter: prompt' });
   }

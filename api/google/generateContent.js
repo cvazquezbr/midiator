@@ -1,30 +1,13 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 
-const parseBody = async (req) => {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(body));
-      } catch (e) {
-        // Return empty object if body is not valid JSON
-        resolve({});
-      }
-    });
-  });
-};
-
 const handler = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { contents, model } = await parseBody(req);
+    const { contents, model } = req.body;
 
     if (!contents || !model) {
       return res.status(400).json({ error: 'Missing required parameters: contents and model' });
@@ -64,7 +47,7 @@ const handler = async (req, res) => {
     }
     // END: Model compatibility validation
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${geminiApiKey}`;
 
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
