@@ -1,5 +1,5 @@
 import geminiAPI from './geminiAPI.js';
-import { getGeminiApiKey } from './geminiCredentials.js';
+import { getGeminiApiKey, getGeminiModel } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 import fetchWithAuth from './fetchWithAuth.js';
 
@@ -122,7 +122,12 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
     tomDeVoz: stripHtml(tomDeVoz)
   });
 
-  const response = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo de Campanha');
+  const selectedModel = getGeminiModel();
+  if (!selectedModel) {
+    throw new Error('Nenhum modelo de texto foi selecionado. Por favor, configure um modelo em Configurações.');
+  }
+
+  const response = await geminiAPI.generateContent(finalPrompt, selectedModel, 'Geração de Conteúdo de Campanha');
 
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   let parsedContent;
