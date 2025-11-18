@@ -24,7 +24,6 @@ const handler = async (req, res) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        // 'x-goog-api-key': geminiApiKey, // Removed as per report
       },
     });
 
@@ -43,7 +42,7 @@ const handler = async (req, res) => {
         return {
           name: model.name,
           displayName: model.displayName,
-          supportedGenerationMethods: model.supportedGenerationMethods, // Keep this property
+          supportedGenerationMethods: model.supportedGenerationMethods,
           endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`
         };
       });
