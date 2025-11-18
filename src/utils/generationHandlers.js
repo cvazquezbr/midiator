@@ -1,5 +1,5 @@
 import geminiAPI from './geminiAPI.js';
-import { getGeminiApiKey, getGeminiModel } from './geminiCredentials.js';
+import { getGeminiApiKey, getGeminiModel, getGeminiImageModel } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 import fetchWithAuth from './fetchWithAuth.js';
 
@@ -233,7 +233,12 @@ export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }
     finalImagePrompt = `${finalImagePrompt.trim()} --ar ${aspectRatio}`;
   }
 
-  const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
+  const selectedImageModel = getGeminiImageModel();
+  if (!selectedImageModel) {
+    throw new Error('Nenhum modelo de imagem foi selecionado. Por favor, configure um modelo em Configurações.');
+  }
+
+  const base64Image = await geminiAPI.generateImage(finalImagePrompt, selectedImageModel, 'Geração de Imagem de Campanha');
 
   // --- NEW VALIDATION BLOCK ---
   // A very short response is likely an error message from the API, not an image.

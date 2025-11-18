@@ -74,16 +74,18 @@ class GeminiAPI {
     }
   }
 
-  // generateImage remains unchanged for now
-  async generateImage(promptString, purpose = 'Geração de Imagem') {
+  async generateImage(promptString, model, purpose = 'Geração de Imagem') {
     if (!this.isInitialized) {
       throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
     }
     if (!promptString) {
       throw new Error('O prompt não pode ser vazio.');
     }
+    if (!model) {
+      throw new Error('O modelo de imagem deve ser especificado.');
+    }
 
-    console.log(`[${purpose}] Iniciando chamada ao proxy de imagem Gemini.`);
+    console.log(`[${purpose}] Iniciando chamada ao proxy de imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
     try {
@@ -92,7 +94,7 @@ class GeminiAPI {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: promptString }),
+        body: JSON.stringify({ prompt: promptString, model: model }),
       });
 
       const responseData = await response.json();
