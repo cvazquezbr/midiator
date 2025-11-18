@@ -47,6 +47,7 @@ const handler = async (req, res) => {
         };
       });
 
+    console.log('[api/google/models] Sending supported models to frontend:', JSON.stringify(supportedModels, null, 2));
     res.status(200).json({ models: supportedModels });
 
   } catch (error) {
