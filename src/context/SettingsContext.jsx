@@ -50,7 +50,6 @@ export const SettingsProvider = ({ children }) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('[SettingsContext] Raw data received from /api/google/models:', data);
       let allModels = data.models || [];
 
       // Mesclar modelos da API com a lista codificada, removendo duplicatas.
@@ -80,8 +79,6 @@ export const SettingsProvider = ({ children }) => {
         )
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      console.log('[SettingsContext] Filtered text models:', textModels);
-      console.log('[SettingsContext] Filtered image models:', imgModels);
       setModels(textModels);
       setImageModels(imgModels);
     } catch (e) {
