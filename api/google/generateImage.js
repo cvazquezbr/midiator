@@ -8,7 +8,7 @@ async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  const { prompt } = req.body;
+  const { prompt, model } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing required parameter: prompt' });
@@ -25,10 +25,13 @@ async function handler(req, res) {
 
     const settings = rows[0].settings_data;
     const geminiApiKey = settings.gemini_api_key;
-    const geminiImageModel = settings.gemini_image_model;
+    const geminiImageModel = model || settings.gemini_image_model;
 
-    if (!geminiApiKey || !geminiImageModel) {
-      return res.status(500).json({ error: 'Gemini image generation is not configured. Please select an image model in the settings.' });
+    if (!geminiApiKey) {
+        return res.status(500).json({ error: 'Gemini API key not configured.' });
+    }
+    if (!geminiImageModel) {
+      return res.status(400).json({ error: 'No image model specified' });
     }
 
     const cleanModel = geminiImageModel.replace(/^models\//, '').trim();
