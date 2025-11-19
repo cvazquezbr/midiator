@@ -76,6 +76,8 @@ class GeminiAPI {
 
   async generateImage(promptString, model, purpose = 'Geração de Imagem') {
     if (!this.isInitialized) {
+      // Although the API key is handled by the backend, this check ensures
+      // that the overall settings (which include the key) have been loaded.
       throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
     }
     if (!promptString) {
@@ -114,6 +116,7 @@ class GeminiAPI {
       }
     } catch (error) {
       console.error('Erro ao chamar o proxy de imagem Gemini:', error);
+      // Re-throw a more user-friendly error message, but log the original for debugging
       throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
     }
   }
