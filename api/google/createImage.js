@@ -38,78 +38,47 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid image model name' });
     }
 
-    // Conditional logic for Imagen 3.0 model
-    if (cleanModel.includes('imagen-3.0-generate-002')) {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages`;
-      const requestBody = JSON.stringify({
-        prompt: prompt,
-        config: {
-          number_of_images: 1,
-          output_mime_type: "image/png",
-          aspect_ratio: "1:1"
-        }
-      });
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': geminiApiKey,
-        },
-        body: requestBody,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorDetail = 'Nenhum detalhe de erro retornado pela API.';
-        if (errorText) {
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorDetail = errorJson.error?.message || errorText;
-            } catch (e) {
-                errorDetail = errorText;
-            }
-        }
-        return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Gemini: ${errorDetail}` });
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages`;
+    const requestBody = JSON.stringify({
+      prompt: prompt,
+      config: {
+        number_of_images: 1,
+        output_mime_type: "image/png",
+        aspect_ratio: "1:1"
       }
+    });
 
-      const data = await response.json();
-      const base64Image = data.generated_images?.[0]?.image?.image_bytes;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': geminiApiKey,
+      },
+      body: requestBody,
+    });
 
-      if (base64Image) {
-        return res.status(200).json({ base64Image });
-      } else {
-        return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorDetail = 'Nenhum detalhe de erro retornado pela API.';
+      if (errorText) {
+          console.error("Erro da API Gemini (imagem):", errorText);
+          try {
+              const errorJson = JSON.parse(errorText);
+              errorDetail = errorJson.error?.message || errorText;
+          } catch (e) {
+              errorDetail = errorText;
+          }
       }
+      return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Gemini: ${errorDetail}` });
+    }
 
+    const data = await response.json();
+    const base64Image = data.generated_images?.[0]?.image?.image_bytes;
+
+    if (base64Image) {
+      return res.status(200).json({ base64Image });
     } else {
-      // Existing logic for other models
-      const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${cleanModel}:generateContent?key=${geminiApiKey}`;
-      const requestBody = JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      });
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return res.status(response.status).json({ error: `Falha na comunicação com a API Gemini: ${errorText}` });
-      }
-
-      const data = await response.json();
-      const imagePart = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-
-      if (imagePart) {
-        return res.status(200).json({ base64Image: imagePart.inlineData.data });
-      } else {
-        return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
-      }
+      return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
     }
 
   } catch (error) {
