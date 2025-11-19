@@ -58,7 +58,7 @@ async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Erro da API Gemini (imagem):", errorText);
+      console.error(`Erro da API Gemini (imagem) - Status: ${response.status}`, errorText);
       let errorDetail = 'Nenhum detalhe de erro retornado pela API.';
       if (errorText) {
           try {
