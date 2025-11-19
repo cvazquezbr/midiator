@@ -53,14 +53,24 @@ async function handler(req, res) {
         }
       });
 
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': geminiApiKey,
+      };
+
+      console.log('[Debug] Request URL:', apiUrl);
+      console.log('[Debug] Request Body:', requestBody);
+      // Mask the API key for security before logging headers
+      const maskedHeaders = { ...headers, 'x-goog-api-key': '...key...' };
+      console.log('[Debug] Request Headers:', maskedHeaders);
+
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': geminiApiKey,
-        },
+        headers: headers,
         body: requestBody,
       });
+
+      console.log(`[Debug] Google API Response Status: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
         const errorText = await response.text();
