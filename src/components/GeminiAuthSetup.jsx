@@ -15,14 +15,14 @@ const GeminiAuthSetup = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
-  const apiKey = settings.gemini_api_key || '';
+  const serviceAccount = settings.gemini_service_account || '';
   const projectId = settings.gemini_project_id || '';
   const region = settings.gemini_region || '';
   const selectedModel = settings.gemini_model || '';
   const selectedImageModel = settings.gemini_image_model || '';
 
-  const handleApiKeyChange = (e) => {
-    updateSetting('gemini_api_key', e.target.value);
+  const handleServiceAccountChange = (e) => {
+    updateSetting('gemini_service_account', e.target.value);
     if (error) setError('');
   };
 
@@ -42,45 +42,48 @@ const GeminiAuthSetup = () => {
     updateSetting('gemini_image_model', e.target.value);
   };
 
-  const handleRemove = () => {
-    updateSetting('gemini_api_key', '');
-    toast.info('Chave da API Gemini removida.');
-  };
-
   const handleTestConnection = async () => {
-    const trimmedApiKey = apiKey.trim();
     setTestResult(null);
-    if (!trimmedApiKey) {
-        setTestResult({ severity: 'error', message: 'Por favor, insira uma chave de API para testar.' });
+    if (!serviceAccount || !projectId) {
+        setTestResult({ severity: 'error', message: 'Por favor, preencha a Conta de Serviço e o ID do Projeto para testar.' });
         return;
     }
-    if (!selectedModel) {
-        setTestResult({ severity: 'error', message: 'Por favor, selecione um modelo para testar.' });
+
+    // Basic check for JSON format
+    try {
+        JSON.parse(serviceAccount);
+    } catch (e) {
+        setTestResult({ severity: 'error', message: 'O conteúdo da Conta de Serviço não parece ser um JSON válido.' });
         return;
     }
+
     setIsTesting(true);
     try {
-      // While the key is now used by the proxy, initialize is kept for compatibility.
-      geminiAPI.initialize(trimmedApiKey);
-      // Pass the selected model from the state to the API call
-      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.', selectedModel);
-      setTestResult({ severity: 'success', message: 'Conexão com a API Gemini bem-sucedida!' });
+      const response = await fetch('/api/google/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceAccount: serviceAccount,
+          projectId: projectId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha na verificação.');
+      }
+
+      setTestResult({ severity: 'success', message: result.message });
     } catch (err) {
-      console.error('Erro no teste de conexão com Gemini:', err);
+      console.error('Erro no teste de conexão da Conta de Serviço:', err);
       setTestResult({ severity: 'error', message: `Falha na conexão: ${err.message}` });
     } finally {
       setIsTesting(false);
     }
   };
-
-  const toggleShowKey = () => {
-    setShowKey(!showKey);
-  };
-
-  const getMaskedKey = (key) => {
-    if (!key || key.length < 8) return 'Chave muito curta para mascarar';
-    return `...${key.substring(key.length - 6)}`;
-  }
 
   return (
     <>
@@ -92,32 +95,28 @@ const GeminiAuthSetup = () => {
             </IconButton>
         </Box>
         <Typography variant="body2" gutterBottom sx={{mt: 2}}>
-          Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
+          Cole o conteúdo do seu arquivo JSON de Chave de Conta de Serviço do Google Cloud. Esta credencial é necessária para autenticação segura na API Vertex AI.
+          {' '}
+          <a href="https://cloud.google.com/iam/docs/keys-create-delete#creating" target="_blank" rel="noopener noreferrer">
+            Aprenda a criar uma chave aqui.
+          </a>
         </Typography>
 
-        {apiKey && (
-          <Typography variant="caption" color="textSecondary" gutterBottom>
-            Chave atual configurada: {getMaskedKey(apiKey)}
-          </Typography>
-        )}
-
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: apiKey ? 1 : 2, mb: 2 }}>
-          <TextField
+        <TextField
             autoFocus
             margin="dense"
-            id="gemini-api-key"
-            label="Chave da API Gemini"
-            type={showKey ? 'text' : 'password'}
+            id="gemini-service-account"
+            label="Chave da Conta de Serviço (JSON)"
+            type="text"
+            multiline
+            rows={8}
             fullWidth
             variant="outlined"
-            value={apiKey}
-            onChange={handleApiKeyChange}
-            placeholder="Sua chave da API Gemini..."
-          />
-          <IconButton onClick={toggleShowKey} edge="end" sx={{ ml: 1 }}>
-            {showKey ? <VisibilityOff /> : <Visibility />}
-          </IconButton>
-        </Box>
+            value={serviceAccount}
+            onChange={handleServiceAccountChange}
+            placeholder="Cole o conteúdo do seu arquivo JSON aqui..."
+            sx={{ mt: 2, mb: 2, fontFamily: 'monospace' }}
+        />
 
         <TextField
           margin="dense"
@@ -182,17 +181,10 @@ const GeminiAuthSetup = () => {
           <Alert severity="error">{error}</Alert>
         )}
 
-        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
-            {isTesting ? 'Testando...' : 'Testar Conexão'}
-          </Button>
-          <Box>
-            {apiKey && (
-              <Button onClick={handleRemove} color="error">
-                Remover
-              </Button>
-            )}
-          </Box>
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+            <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
+                {isTesting ? 'Testando...' : 'Testar Credenciais'}
+            </Button>
         </Box>
 
         {testResult && (

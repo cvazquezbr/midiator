@@ -1,3 +1,4 @@
+import { GoogleAuth } from 'google-auth-library';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 
@@ -22,19 +23,27 @@ async function handler(req, res) {
     }
 
     const settings = rows[0].settings_data;
-    const geminiApiKey = settings.gemini_api_key;
+    const serviceAccount = settings.gemini_service_account;
     const geminiProjectId = settings.gemini_project_id;
     const geminiRegion = settings.gemini_region || 'us-central1';
     const geminiImageModel = model || settings.gemini_image_model || 'imagen-3.0-generate-002';
 
-    if (!geminiApiKey || !geminiProjectId) {
-      return res.status(500).json({ error: 'A chave de API e o ID do Projeto Google Cloud devem ser configurados.' });
+    if (!serviceAccount || !geminiProjectId) {
+      return res.status(500).json({ error: 'A Conta de Serviço e o ID do Projeto Google Cloud devem ser configurados.' });
     }
 
     const cleanModel = geminiImageModel.replace(/^models\//, '').trim();
     if (!cleanModel) {
       return res.status(400).json({ error: 'Nome do modelo de imagem inválido.' });
     }
+
+    // Authenticate using the service account
+    const auth = new GoogleAuth({
+      credentials: JSON.parse(serviceAccount),
+      scopes: 'https://www.googleapis.com/auth/cloud-platform',
+    });
+    const client = await auth.getClient();
+    const accessToken = (await client.getAccessToken()).token;
 
     const apiUrl = `https://${geminiRegion}-aiplatform.googleapis.com/v1/projects/${geminiProjectId}/locations/${geminiRegion}/publishers/google/models/${cleanModel}:predict`;
 
@@ -53,7 +62,7 @@ async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': geminiApiKey,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: requestBody,
     });
