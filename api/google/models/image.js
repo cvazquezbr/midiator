@@ -7,15 +7,10 @@ const handler = async (req, res) => {
   }
 
   try {
+    // Basic auth check to ensure a user context exists
     const dbResult = await query('SELECT settings_data FROM settings WHERE user_id = $1', [req.user.sub]);
-
     if (dbResult.rows.length === 0) {
       return res.status(404).json({ error: 'Settings not found for user' });
-    }
-
-    const geminiApiKey = dbResult.rows[0]?.settings_data?.gemini_api_key;
-    if (!geminiApiKey) {
-      return res.status(400).json({ error: 'Gemini API key not configured' });
     }
 
     const supportedModels = [
@@ -24,7 +19,6 @@ const handler = async (req, res) => {
         displayName: 'imagen-3.0-generate-002',
         description: 'O modelo de geração de imagem mais avançado do Google.',
         supportedGenerationMethods: ['generateImages'],
-        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages'
       }
     ];
     res.status(200).json({ models: supportedModels });
