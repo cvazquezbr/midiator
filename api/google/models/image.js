@@ -23,8 +23,8 @@ const handler = async (req, res) => {
         name: 'models/imagen-3.0-generate-002',
         displayName: 'imagen-3.0-generate-002',
         description: 'O modelo de geração de imagem mais avançado do Google.',
-        supportedGenerationMethods: ['generateContent'],
-        endpoint: 'https://generativelanguage.googleapis.com/v1/models/imagen-3.0-generate-002:generateContent'
+        supportedGenerationMethods: ['generateImages'],
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages'
       }
     ];
     res.status(200).json({ models: supportedModels });
