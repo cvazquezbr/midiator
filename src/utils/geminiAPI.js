@@ -114,6 +114,9 @@ class GeminiAPI {
       }
     } catch (error) {
       console.error('Erro ao chamar o proxy de imagem Gemini:', error);
+      if (error.message.includes('Falha na comunicação com a API de imagem Gemini:')) {
+        throw error;
+      }
       throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
     }
   }
