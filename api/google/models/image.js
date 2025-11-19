@@ -30,22 +30,31 @@ const handler = async (req, res) => {
     if (!geminiResponse.ok) {
         const errorText = await geminiResponse.text();
         console.error('Gemini API Error:', errorText);
-        return res.status(geminiResponse.status).json({ error: 'Failed to fetch models from Gemini API', details: errorText });
+        return res.status(geminiResponse.status).json({
+          error: 'Failed to fetch models from Gemini API',
+          details: errorText
+        });
     }
 
     const geminiData = await geminiResponse.json();
 
+    // ✅ CORREÇÃO: Filtrar modelos que suportam geração de conteúdo
     const supportedModels = geminiData.models
-      .filter(model => model.supportedGenerationMethods.includes('generateImage'))
+      .filter(model => model.supportedGenerationMethods &&
+                      model.supportedGenerationMethods.includes('generateContent'))
       .map(model => {
         const modelName = model.name.split('/').pop();
         return {
           name: model.name,
           displayName: model.displayName,
+          description: model.description || '',
           supportedGenerationMethods: model.supportedGenerationMethods,
-          endpoint: `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateImage`
+          // Endpoint correto para geração de conteúdo
+          endpoint: `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`
         };
       });
+
+    console.log(`Found ${supportedModels.length} supported models`);
 
     res.status(200).json({ models: supportedModels });
 
