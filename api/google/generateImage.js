@@ -23,13 +23,10 @@ async function handler(req, res) {
 
     const settings = rows[0].settings_data;
     const geminiApiKey = settings.gemini_api_key;
-    const geminiImageModel = model || settings.gemini_image_model;
+    const geminiImageModel = model || 'imagen-3.0-generate-002';
 
     if (!geminiApiKey) {
         return res.status(500).json({ error: 'Gemini API key not configured.' });
-    }
-    if (!geminiImageModel) {
-      return res.status(400).json({ error: 'No image model specified' });
     }
 
     const cleanModel = geminiImageModel.replace(/^models\//, '').trim();
@@ -37,7 +34,10 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid image model name' });
     }
 
+    // Correct endpoint structure for Generative Language API
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages`;
+
+    // Correct payload structure for the :generateImages method
     const requestBody = JSON.stringify({
       prompt: prompt,
       config: {
@@ -72,7 +72,9 @@ async function handler(req, res) {
     }
 
     const data = await response.json();
+    // Correct response parsing for the :generateImages method
     const base64Image = data.generated_images?.[0]?.image?.image_bytes;
+
 
     if (base64Image) {
       return res.status(200).json({ base64Image });
