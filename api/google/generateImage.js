@@ -39,7 +39,7 @@ async function handler(req, res) {
 
     // Correct payload structure for the :generateImages method
     const requestBody = JSON.stringify({
-      prompt: prompt,
+      prompt: prompt, // The prompt is a simple string
       config: {
         number_of_images: 1,
         output_mime_type: "image/png",
@@ -74,7 +74,6 @@ async function handler(req, res) {
     const data = await response.json();
     // Correct response parsing for the :generateImages method
     const base64Image = data.generated_images?.[0]?.image?.image_bytes;
-
 
     if (base64Image) {
       return res.status(200).json({ base64Image });
