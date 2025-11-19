@@ -15,7 +15,6 @@ async function handler(req, res) {
 
   try {
     const userId = req.user.sub;
-
     const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
 
     if (rows.length === 0 || !rows[0].settings_data) {
@@ -59,9 +58,9 @@ async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("Erro da API Gemini (imagem):", errorText);
       let errorDetail = 'Nenhum detalhe de erro retornado pela API.';
       if (errorText) {
-          console.error("Erro da API Gemini (imagem):", errorText);
           try {
               const errorJson = JSON.parse(errorText);
               errorDetail = errorJson.error?.message || errorText;
@@ -78,6 +77,7 @@ async function handler(req, res) {
     if (base64Image) {
       return res.status(200).json({ base64Image });
     } else {
+      console.error("Resposta inesperada da API Gemini (imagem), sem imagem:", data);
       return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
     }
 
