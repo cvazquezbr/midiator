@@ -89,7 +89,7 @@ class GeminiAPI {
     console.log(`[${purpose}] Prompt:`, promptString);
 
     try {
-      const response = await fetchWithAuth('/api/google/generateImage', {
+      const response = await fetchWithAuth('/api/google/createImage', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
