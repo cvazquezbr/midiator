@@ -23,27 +23,29 @@ async function handler(req, res) {
 
     const settings = rows[0].settings_data;
     const geminiApiKey = settings.gemini_api_key;
-    const geminiImageModel = model || 'imagen-3.0-generate-002';
+    const geminiProjectId = settings.gemini_project_id;
+    const geminiRegion = settings.gemini_region || 'us-central1';
+    const geminiImageModel = model || settings.gemini_image_model || 'imagen-3.0-generate-002';
 
-    if (!geminiApiKey) {
-        return res.status(500).json({ error: 'Gemini API key not configured.' });
+    if (!geminiApiKey || !geminiProjectId) {
+      return res.status(500).json({ error: 'A chave de API e o ID do Projeto Google Cloud devem ser configurados.' });
     }
 
     const cleanModel = geminiImageModel.replace(/^models\//, '').trim();
     if (!cleanModel) {
-      return res.status(400).json({ error: 'Invalid image model name' });
+      return res.status(400).json({ error: 'Nome do modelo de imagem inválido.' });
     }
 
-    // Correct endpoint structure for Generative Language API
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages`;
+    const apiUrl = `https://${geminiRegion}-aiplatform.googleapis.com/v1/projects/${geminiProjectId}/locations/${geminiRegion}/publishers/google/models/${cleanModel}:predict`;
 
-    // Correct payload structure for the :generateImages method
     const requestBody = JSON.stringify({
-      prompt: prompt, // The prompt is a simple string
-      config: {
-        number_of_images: 1,
-        output_mime_type: "image/png",
-        aspect_ratio: "1:1"
+      instances: [
+        {
+          prompt: prompt
+        }
+      ],
+      parameters: {
+        sampleCount: 1
       }
     });
 
@@ -58,7 +60,7 @@ async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Erro da API Gemini (imagem) - Status: ${response.status}`, errorText);
+      console.error(`Erro da API Vertex AI (imagem) - Status: ${response.status}`, errorText);
       let errorDetail = 'Nenhum detalhe de erro retornado pela API.';
       if (errorText) {
           try {
@@ -68,17 +70,16 @@ async function handler(req, res) {
               errorDetail = errorText;
           }
       }
-      return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Gemini: ${errorDetail}` });
+      return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Vertex AI: ${errorDetail}` });
     }
 
     const data = await response.json();
-    // Correct response parsing for the :generateImages method
-    const base64Image = data.generated_images?.[0]?.image?.image_bytes;
+    const base64Image = data.predictions?.[0]?.bytesBase64Encoded;
 
     if (base64Image) {
       return res.status(200).json({ base64Image });
     } else {
-      console.error("Resposta inesperada da API Gemini (imagem), sem imagem:", data);
+      console.error("Resposta inesperada da API Vertex AI (imagem), sem imagem:", data);
       return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
     }
 

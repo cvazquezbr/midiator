@@ -16,12 +16,22 @@ const GeminiAuthSetup = () => {
   const [testResult, setTestResult] = useState(null);
 
   const apiKey = settings.gemini_api_key || '';
+  const projectId = settings.gemini_project_id || '';
+  const region = settings.gemini_region || '';
   const selectedModel = settings.gemini_model || '';
   const selectedImageModel = settings.gemini_image_model || '';
 
   const handleApiKeyChange = (e) => {
     updateSetting('gemini_api_key', e.target.value);
     if (error) setError('');
+  };
+
+  const handleProjectIdChange = (e) => {
+    updateSetting('gemini_project_id', e.target.value);
+  };
+
+  const handleRegionChange = (e) => {
+    updateSetting('gemini_region', e.target.value);
   };
 
   const handleModelChange = (e) => {
@@ -108,6 +118,33 @@ const GeminiAuthSetup = () => {
             {showKey ? <VisibilityOff /> : <Visibility />}
           </IconButton>
         </Box>
+
+        <TextField
+          margin="dense"
+          id="gemini-project-id"
+          label="Google Cloud Project ID"
+          type="text"
+          fullWidth
+          variant="outlined"
+          value={projectId}
+          onChange={handleProjectIdChange}
+          placeholder="Seu ID do projeto no Google Cloud..."
+          sx={{ mb: 2 }}
+        />
+
+        <TextField
+          margin="dense"
+          id="gemini-region"
+          label="Região (ex: us-central1)"
+          type="text"
+          fullWidth
+          variant="outlined"
+          value={region}
+          onChange={handleRegionChange}
+          placeholder="us-central1"
+          sx={{ mb: 2 }}
+        />
+
         {loadingModels && <CircularProgress size={20} />}
         {errorModels && <Alert severity="error">{errorModels}</Alert>}
 
