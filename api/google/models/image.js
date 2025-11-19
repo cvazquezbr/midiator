@@ -18,44 +18,15 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: 'Gemini API key not configured' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models?key=${geminiApiKey}`;
-
-    const geminiResponse = await fetch(geminiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!geminiResponse.ok) {
-        const errorText = await geminiResponse.text();
-        console.error('Gemini API Error:', errorText);
-        return res.status(geminiResponse.status).json({
-          error: 'Failed to fetch models from Gemini API',
-          details: errorText
-        });
-    }
-
-    const geminiData = await geminiResponse.json();
-
-    // ✅ CORREÇÃO: Filtrar modelos que suportam geração de conteúdo
-    const supportedModels = geminiData.models
-      .filter(model => model.supportedGenerationMethods &&
-                      model.supportedGenerationMethods.includes('generateContent'))
-      .map(model => {
-        const modelName = model.name.split('/').pop();
-        return {
-          name: model.name,
-          displayName: model.displayName,
-          description: model.description || '',
-          supportedGenerationMethods: model.supportedGenerationMethods,
-          // Endpoint correto para geração de conteúdo
-          endpoint: `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`
-        };
-      });
-
-    console.log(`Found ${supportedModels.length} supported models`);
-
+    const supportedModels = [
+      {
+        name: 'models/imagen-3.0-generate-002',
+        displayName: 'imagen-3.0-generate-002',
+        description: 'O modelo de geração de imagem mais avançado do Google.',
+        supportedGenerationMethods: ['generateContent'],
+        endpoint: 'https://generativelanguage.googleapis.com/v1/models/imagen-3.0-generate-002:generateContent'
+      }
+    ];
     res.status(200).json({ models: supportedModels });
 
   } catch (error) {
