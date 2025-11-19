@@ -43,7 +43,7 @@ async function handler(req, res) {
 
     // Conditional logic for Imagen 3.0 model
     if (cleanModel.includes('imagen-3.0-generate-002')) {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages?key=${geminiApiKey}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages`;
       const requestBody = JSON.stringify({
         prompt: prompt,
         config: {
@@ -57,13 +57,23 @@ async function handler(req, res) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': geminiApiKey,
         },
         body: requestBody,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Gemini: ${errorText}` });
+        let errorDetail = 'Nenhum detalhe de erro retornado pela API.';
+        if (errorText) {
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorDetail = errorJson.error?.message || errorText;
+            } catch (e) {
+                errorDetail = errorText;
+            }
+        }
+        return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Gemini: ${errorDetail}` });
       }
 
       const data = await response.json();
