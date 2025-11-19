@@ -41,72 +41,68 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid image model name' });
     }
 
-    const generationMethod = cleanModel.includes('imagen') ? 'generateImage' : 'generateContent';
-
-    // START: Model compatibility validation
-    const modelInfoUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}?key=${geminiApiKey}`;
-
-    const modelInfoResponse = await fetch(modelInfoUrl);
-    if (!modelInfoResponse.ok) {
-        const errorText = await modelInfoResponse.text();
-        console.error('Failed to fetch model info for validation:', errorText);
-        return res.status(modelInfoResponse.status).json({ error: 'Failed to fetch model information for validation', details: errorText });
-    }
-
-    const modelData = await modelInfoResponse.json();
-    const supportedMethods = modelData.supportedGenerationMethods || [];
-
-    if (!supportedMethods.includes(generationMethod)) {
-      return res.status(400).json({
-        error: `Model does not support ${generationMethod}`,
-        model: cleanModel,
-        supportedMethods: supportedMethods
+    // Conditional logic for Imagen 3.0 model
+    if (cleanModel.includes('imagen-3.0-generate-002')) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImages?key=${geminiApiKey}`;
+      const requestBody = JSON.stringify({
+        prompt: prompt,
+        config: {
+          number_of_images: 1,
+          output_mime_type: "image/png",
+          aspect_ratio: "1:1"
+        }
       });
-    }
-    // END: Model compatibility validation
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:${generationMethod}?key=${geminiApiKey}`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      });
 
-    console.log(`[generateImage] URL: ${apiUrl}`);
-
-    // O corpo da requisição também muda para modelos "imagen".
-    const requestBody = generationMethod === 'generateImage'
-      ? JSON.stringify({ prompt: { text: prompt } })
-      : JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: requestBody,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorBody;
-      try {
-        errorBody = JSON.parse(errorText);
-      } catch (e) {
-        errorBody = { error: { message: errorText } };
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(response.status).json({ error: `Falha na comunicação com a API de imagem Gemini: ${errorText}` });
       }
-      console.error('Gemini API request failed:', errorBody);
-      const errorMessage = errorBody?.error?.message || JSON.stringify(errorBody);
-      return res.status(response.status).json({ error: `Gemini API request failed: ${errorMessage}` });
-    }
 
-    const data = await response.json();
+      const data = await response.json();
+      const base64Image = data.generated_images?.[0]?.image?.image_bytes;
 
-    if (data.promptFeedback && data.promptFeedback.blockReason) {
-        return res.status(400).json({ error: `Image generation was blocked for safety reasons: ${data.promptFeedback.blockReason}`});
-    }
+      if (base64Image) {
+        return res.status(200).json({ base64Image });
+      } else {
+        return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
+      }
 
-    const imagePart = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-    if (imagePart) {
-        res.status(200).json({ base64Image: imagePart.inlineData.data });
     } else {
-        console.error('Unexpected response format from Gemini Image API:', data);
-        res.status(500).json({ error: 'No image was returned from the API.' });
+      // Existing logic for other models
+      const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${cleanModel}:generateContent?key=${geminiApiKey}`;
+      const requestBody = JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      });
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(response.status).json({ error: `Falha na comunicação com a API Gemini: ${errorText}` });
+      }
+
+      const data = await response.json();
+      const imagePart = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+
+      if (imagePart) {
+        return res.status(200).json({ base64Image: imagePart.inlineData.data });
+      } else {
+        return res.status(500).json({ error: 'Nenhuma imagem foi retornada pela API.' });
+      }
     }
 
   } catch (error) {
