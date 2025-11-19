@@ -89,12 +89,12 @@ class GeminiAPI {
     console.log(`[${purpose}] Prompt:`, promptString);
 
     try {
-      const response = await fetchWithAuth('/api/google/credentials', {
+      const response = await fetchWithAuth('/api/google/generateImage', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: 'generateImage', prompt: promptString, model: model }),
+        body: JSON.stringify({ prompt: promptString, model: model }),
       });
 
       const responseData = await response.json();
@@ -114,9 +114,6 @@ class GeminiAPI {
       }
     } catch (error) {
       console.error('Erro ao chamar o proxy de imagem Gemini:', error);
-      if (error.message.includes('Falha na comunicação com a API de imagem Gemini:')) {
-        throw error;
-      }
       throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
     }
   }
