@@ -47,6 +47,8 @@ const handler = async (req, res) => {
     }
     // END: Model compatibility validation
 
+    console.log(`Using Gemini model: ${cleanModel}`);
+
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${geminiApiKey}`;
 
     const geminiResponse = await fetch(geminiUrl, {
