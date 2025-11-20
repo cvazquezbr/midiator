@@ -71,7 +71,7 @@ const GeminiAuthSetup = () => {
     <>
       <Box sx={{ p: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">API Gemini</Typography>
+            <Typography variant="h6">Geração de Texto (Gemini)</Typography>
             <IconButton onClick={() => setShowInfobox(true)}>
                 <InfoIcon />
             </IconButton>
@@ -118,10 +118,8 @@ const GeminiAuthSetup = () => {
               {models.map(model => (
                 <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
               ))}
-              <MenuItem value="models/gemini-2.0-flash-lite">gemini-2.0-flash-lite (Grátis)</MenuItem>
-              <MenuItem value="models/gemini-2.0-flash">gemini-2.0-flash (Grátis)</MenuItem>
-              <MenuItem value="models/gemini-2.5-flash">gemini-2.5-flash (Grátis Lim.)</MenuItem>
-              <MenuItem value="models/gemma-3">gemma-3 (Grátis)</MenuItem>
+              <MenuItem value="models/gemini-1.5-flash-latest">gemini-1.5-flash-latest (Recomendado)</MenuItem>
+              <MenuItem value="models/gemini-1.5-pro-latest">gemini-1.5-pro-latest</MenuItem>
             </Select>
         </FormControl>
 

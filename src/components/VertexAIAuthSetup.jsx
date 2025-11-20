@@ -80,7 +80,7 @@ const VertexAIAuthSetup = () => {
     <>
       <Box sx={{ p: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">Vertex AI (Geração de Imagem)</Typography>
+            <Typography variant="h6">Geração de Imagem (Vertex AI)</Typography>
             <IconButton onClick={() => setShowInfobox(true)}>
                 <InfoIcon />
             </IconButton>
@@ -92,6 +92,10 @@ const VertexAIAuthSetup = () => {
             Aprenda a criar uma chave aqui.
           </a>
         </Typography>
+
+        <Alert severity="info" sx={{ mt: 2 }}>
+          <strong>Nota:</strong> Para uma alternativa de menor custo, configure a <strong>API Gemini</strong> na aba anterior e utilize o modelo de imagem disponível lá. A API Vertex AI é mais cara.
+        </Alert>
 
         <TextField
             autoFocus
@@ -147,10 +151,11 @@ const VertexAIAuthSetup = () => {
                 label="Modelo de Imagem (Vertex AI)"
                 onChange={handleImageModelChange}
             >
-              <MenuItem value="models/gemini-2.5-flash-image">gemini-2.5-flash-image (Grátis Lim.)</MenuItem>
+              <MenuItem value="models/gemini-2.5-flash-image">gemini-2.5-flash-image (Recomendado, via Gemini API)</MenuItem>
               {imageModels.map(model => (
                 <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
               ))}
+               <MenuItem value="models/imagen-3.0-generate-preview-005">imagen-3.0-generate-preview-005 (Maior Custo)</MenuItem>
             </Select>
         </FormControl>
 
