@@ -513,7 +513,27 @@ function HomePage() {
         const { newPositions, newStyles } = autoArrangeFields({
           csvHeaders: newHeaders, fieldPositions: {}, fieldStyles: {}, csvData: dataWithIds, effectiveImageSize: originalImageSize,
         });
-        setCampaignState(prev => ({ ...prev, csvData: dataWithIds, csvHeaders: newHeaders, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles }));
+
+        // Ensure dependent data arrays are also initialized
+        const newGeneratedPagesData = dataWithIds.map((record, index) => ({
+          index,
+          record,
+          blob: null,
+          url: null,
+          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
+        }));
+        const newGeneratedAudioData = dataWithIds.map(record => ({ record }));
+
+        setCampaignState(prev => ({
+          ...prev,
+          csvData: dataWithIds,
+          csvHeaders: newHeaders,
+          fieldPositions: newPositions,
+          fieldStyles: newStyles,
+          initialFieldStyles: newStyles,
+          generatedPagesData: newGeneratedPagesData,
+          generatedAudioData: newGeneratedAudioData,
+        }));
         setInputMethod('manual');
       }
     } catch (error) {
@@ -844,7 +864,7 @@ function HomePage() {
         effectiveImageSize: originalImageSize
       });
 
-      // 2. Synchronize generatedPagesData with the sanitized data.
+      // 2. Synchronize generatedPagesData and generatedAudioData with the sanitized data.
       const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({
         index,
         record,
@@ -852,6 +872,8 @@ function HomePage() {
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
       }));
+      const newGeneratedAudioData = sanitizedCsvData.map(record => ({ record }));
+
 
       setCampaignState(prev => {
         const updates = {
@@ -861,9 +883,9 @@ function HomePage() {
           fieldStyles: newStyles,
           initialFieldStyles: newStyles,
           generatedPagesData: newGeneratedPagesData,
+          generatedAudioData: newGeneratedAudioData,
           // Preserve media data
           generatedVideos: prev.generatedVideos || [],
-          generatedAudioData: prev.generatedAudioData || [],
         };
         return { ...prev, ...updates };
       });
