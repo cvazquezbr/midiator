@@ -21,7 +21,7 @@ const VertexAIInfobox = () => {
             primary="1. Acesse o Google Cloud Console"
             secondary={
               <>
-                Navegue até a seção "IAM & Admin" > "Service Accounts" ou clique neste {' '}
+                Navegue até a seção "IAM & Admin" &gt; "Service Accounts" ou clique neste {' '}
                 <Link href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noopener noreferrer">
                   link direto
                 </Link>.
