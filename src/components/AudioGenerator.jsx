@@ -38,9 +38,10 @@ import { getPlayableBlob } from '../utils/fileUtils';
 import ProgressModal from './ProgressModal';
 import { toast } from 'sonner';
 
-const AudioGenerator = ({ csvData, fieldPositions }) => {
+const AudioGenerator = ({ fieldPositions }) => {
   const { campaignState, setCampaignState, pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
-  const { generatedAudioData: audioData } = campaignState;
+  // Agora, `generatedAudioData` é a única fonte da verdade, já sincronizada com o `csvData` pelo `HomePage`.
+  const { generatedAudioData: audioData = [] } = campaignState;
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -93,6 +94,7 @@ const AudioGenerator = ({ csvData, fieldPositions }) => {
   };
 
   const removeFormatting = (text) => {
+    if (!text) return '';
     // Decodifica entidades HTML
     const decoded = text
       .replace(/&lt;/g, '<')
@@ -172,23 +174,25 @@ const AudioGenerator = ({ csvData, fieldPositions }) => {
     isCancelledRef.current = false;
     const generatedAudios = [];
     
-    // Clean up old assets before generating new ones
-    audioData.forEach(audio => {
-      if (audio.url && audio.url.startsWith('blob:')) {
+    // Limpa os ativos antigos antes de gerar novos.
+    (audioData || []).forEach(audio => {
+      if (audio && audio.url && audio.url.startsWith('blob:')) {
         removePendingAsset(audio.url);
       }
     });
 
-    for (let i = 0; i < csvData.length; i++) {
+    const sourceData = audioData.map(a => a.record).filter(Boolean);
+
+    for (let i = 0; i < sourceData.length; i++) {
       if (isCancelledRef.current) {
         break;
       }
       setProgress(i + 1);
-      const record = csvData[i];
+      const record = sourceData[i];
       const visibleFields = Object.keys(record).filter(
         (field) => fieldPositions[field]?.visible
       );
-      const textToSpeak = visibleFields.map((field) => record[field]).join('. ');
+      const textToSpeak = visibleFields.map((field) => record[field] || '').join('. ');
       
       try {
         let audio;
@@ -429,7 +433,7 @@ const AudioGenerator = ({ csvData, fieldPositions }) => {
                   };
                   handleGenerateAllAudio(voiceMap[audioMode]);
                 }}
-                disabled={isGenerating || csvData.length === 0}
+                disabled={isGenerating || !audioData || audioData.length === 0}
                 startIcon={isGenerating ? <CircularProgress size={20} /> : <GraphicEq />}
               >
                 {isGenerating ? 'Gerando Áudios...' : 'Gerar Áudio para Todos os Slides'}
@@ -556,10 +560,10 @@ const AudioGenerator = ({ csvData, fieldPositions }) => {
       <ProgressModal
         open={showProgressModal}
         progress={progress}
-        total={csvData.length}
+        total={audioData.length}
         onCancel={handleCancel}
         title="Gerando Áudios"
-        progressText={`Progresso: ${progress} de ${csvData.length} áudios gerados.`}
+        progressText={`Progresso: ${progress} de ${audioData.length} áudios gerados.`}
       />
     </Box>
   );
