@@ -25,6 +25,7 @@ import {
   Audiotrack,
   LinkedIn,
   AutoAwesome,
+  Image,
   DriveFolderUpload,
   Language,
   AccountCircle,
@@ -33,6 +34,7 @@ import { toast } from 'sonner';
 
 import { IANA_TIMEZONES } from '../lib/timezones';
 import GeminiAuthSetup from './GeminiAuthSetup';
+import VertexAIAuthSetup from './VertexAIAuthSetup';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
@@ -176,10 +178,11 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
           }}
         >
           <Tab icon={<AccountCircle />} iconPosition="start" label="Geral" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />
-          <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(1)} />
-          <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
-          <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
-          <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
+          <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini (Texto)" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(1)} />
+          <Tab icon={<Image />} iconPosition="start" label="Vertex AI (Imagem)" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(2)} />
+          <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(3)} />
+          <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(4)} />
+          <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
         </Tabs>
         <TabPanel value={value} index={0}>
           <GeneralSettings />
@@ -188,12 +191,15 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
           <GeminiAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={2}>
-          <GoogleCloudTTSAuth />
+          <VertexAIAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={3}>
-          <WordpressAuthSetup />
+          <GoogleCloudTTSAuth />
         </TabPanel>
         <TabPanel value={value} index={4}>
+          <WordpressAuthSetup />
+        </TabPanel>
+        <TabPanel value={value} index={5}>
           <LinkedinAuthSetup onBeforeRedirect={handleSaveForRedirect} />
         </TabPanel>
       </DialogContent>
