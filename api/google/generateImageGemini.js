@@ -32,10 +32,7 @@ const handler = async (req, res) => {
         parts: [
           { text: prompt }
         ]
-      }],
-      generationConfig: {
-        responseMimeType: "image/png",
-      }
+      }]
     };
 
     const geminiResponse = await fetch(geminiUrl, {
