@@ -599,27 +599,54 @@ function HomePage() {
         Título: (record || {}).Título || `Página ${index + 1}`,
       }));
 
+      // Sincroniza os dados das páginas geradas com os posts curtos (fonte da verdade).
+      // Usa o ID do registro para garantir que os ativos existentes (imagens) não sejam perdidos.
+      const newGeneratedPagesData = sanitizedRegistros.map((record, index) => {
+        // Encontra a página existente correspondente pelo ID do registro, não pelo índice.
+        const existingPage = (prev.generatedPagesData || []).find(p => p.record?.id === record.id);
+
+        if (existingPage) {
+          // Se a página já existe, atualiza o 'record' com os novos dados do post,
+          // mas preserva a URL da imagem e outros metadados.
+          return {
+            ...existingPage,
+            record: record, // Atualiza os dados do post
+            index: index,   // Atualiza o índice em caso de reordenação
+          };
+        } else {
+          // Se for um novo post, cria um novo objeto de página.
+          return {
+            index,
+            record,
+            url: null,
+            blob: null,
+            filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
+          };
+        }
+      });
+
+      // Aplica a mesma lógica de sincronização para os dados de áudio.
+      const newGeneratedAudioData = sanitizedRegistros.map((record) => {
+        const existingAudio = (prev.generatedAudioData || []).find(a => a.record?.id === record.id);
+        if (existingAudio) {
+          // Preserva o áudio gerado (blob, url, duration) e apenas atualiza o texto.
+          return { ...existingAudio, record };
+        }
+        // Cria um placeholder para um novo áudio, associado ao novo post.
+        return { record };
+      });
+
       const updates = {
         csvData: sanitizedRegistros,
-        // Preserve existing media data to prevent data loss on CSV update
+        generatedPagesData: newGeneratedPagesData,
+        generatedAudioData: newGeneratedAudioData,
+        // Preserva outros dados de mídia
         generatedVideos: prev.generatedVideos || [],
-        generatedAudioData: prev.generatedAudioData || [],
       };
 
       if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
         updates.csvHeaders = novasColunas;
       }
-
-      updates.generatedPagesData = sanitizedRegistros.map((record, index) => {
-        const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
-        return {
-          ...existingPage,
-          index,
-          record,
-          url: null,
-          blob: null
-        };
-      });
 
       return { ...prev, ...updates };
     });
