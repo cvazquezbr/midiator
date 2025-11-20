@@ -37,13 +37,9 @@ const RecordForm = ({
 
     useEffect(() => {
         if (!isPrimeiroRegistro && dadosIniciais) {
-            // Inicia com uma cópia completa dos dados para preservar o ID e outros metadados.
-            const initialState = { ...dadosIniciais };
-            // Garante que todas as colunas visíveis tenham um valor.
+            const initialState = {};
             colunas.forEach(col => {
-                if (initialState[col] === undefined || initialState[col] === null) {
-                    initialState[col] = '';
-                }
+                initialState[col] = dadosIniciais[col] || '';
             });
             setFormData(initialState);
         } else if (!isPrimeiroRegistro) {

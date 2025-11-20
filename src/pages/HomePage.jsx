@@ -67,6 +67,7 @@ import { autoArrangeFields } from '../utils/autoArrange.js';
 import { createNewImageElement } from '../utils/elementFactory.js';
 import PageGenerationService from '../services/PageGenerationService.js';
 import { useParams, useNavigate } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter } from '../utils/googleApi';
 
@@ -443,6 +444,15 @@ function HomePage() {
             pendingAssets: loadedCampaign.pendingAssets, // Pass the pending assets
         };
 
+        // **MIGRATION**: Ensure all records have a stable ID for editing.
+        // This handles campaigns saved before the ID logic was implemented.
+        if (finalCampaignData.csvData && finalCampaignData.csvData.some(record => !record.id)) {
+          finalCampaignData.csvData = finalCampaignData.csvData.map(record => ({
+            ...record,
+            id: record.id || uuidv4(),
+          }));
+        }
+
         applyLoadedCampaign(campaignToApply);
 
         // If the loaded campaign has CSV data, set the input method to manual
@@ -497,11 +507,13 @@ function HomePage() {
     if (!file) return;
     try {
       const { data: newCsvData, headers: newHeaders } = await parseCsv(file);
+
       if (newCsvData?.length > 0) {
+        const dataWithIds = newCsvData.map(record => ({ ...record, id: uuidv4() }));
         const { newPositions, newStyles } = autoArrangeFields({
-          csvHeaders: newHeaders, fieldPositions: {}, fieldStyles: {}, csvData: newCsvData, effectiveImageSize: originalImageSize,
+          csvHeaders: newHeaders, fieldPositions: {}, fieldStyles: {}, csvData: dataWithIds, effectiveImageSize: originalImageSize,
         });
-        setCampaignState(prev => ({ ...prev, csvData: newCsvData, csvHeaders: newHeaders, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles }));
+        setCampaignState(prev => ({ ...prev, csvData: dataWithIds, csvHeaders: newHeaders, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles }));
         setInputMethod('manual');
       }
     } catch (error) {
@@ -817,9 +829,10 @@ function HomePage() {
 
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
 
-      // 1. Sanitize the AI-generated records.
+      // 1. Sanitize the AI-generated records and add stable IDs
       const sanitizedCsvData = csvDataResult.map((record, index) => ({
         ...record,
+        id: uuidv4(),
         Título: record.Título || `Página ${index + 1}`,
       }));
 
