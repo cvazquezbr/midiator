@@ -41,6 +41,10 @@ const RecordForm = ({
             colunas.forEach(col => {
                 initialState[col] = dadosIniciais[col] || '';
             });
+            // Mantém o ID original para garantir que a atualização funcione corretamente.
+            if (dadosIniciais.id) {
+                initialState.id = dadosIniciais.id;
+            }
             setFormData(initialState);
         } else if (!isPrimeiroRegistro) {
             const initialState = {};
