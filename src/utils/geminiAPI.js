@@ -76,8 +76,6 @@ class GeminiAPI {
 
   async generateImage(promptString, model, purpose = 'Geração de Imagem') {
     if (!this.isInitialized) {
-      // Although the API key is handled by the backend, this check ensures
-      // that the overall settings (which include the key) have been loaded.
       throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
     }
     if (!promptString) {
@@ -90,8 +88,14 @@ class GeminiAPI {
     console.log(`[${purpose}] Iniciando chamada ao proxy de imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
+    // Determina qual endpoint usar com base no nome do modelo
+    const isGeminiFlashImage = model.includes('gemini-2.5-flash-image');
+    const endpoint = isGeminiFlashImage ? '/api/google/generateImageGemini' : '/api/google/generateImage';
+
+    console.log(`[${purpose}] Usando o endpoint: ${endpoint}`);
+
     try {
-      const response = await fetchWithAuth('/api/google/generateImage', {
+      const response = await fetchWithAuth(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,8 +106,8 @@ class GeminiAPI {
       const responseData = await response.json();
 
       if (!response.ok) {
-        const errorMessage = responseData.error || `Erro ${response.status}`;
-        console.error('Erro do proxy Gemini (Imagem):', responseData);
+        const errorMessage = responseData.error || responseData.details || `Erro ${response.status}`;
+        console.error(`Erro do proxy Gemini (${endpoint}):`, responseData);
         throw new Error(errorMessage);
       }
 
@@ -111,12 +115,11 @@ class GeminiAPI {
         console.log(`[${purpose}] Imagem Base64 recebida do proxy (tamanho: ${responseData.base64Image.length} bytes).`);
         return responseData.base64Image;
       } else {
-        console.error('Resposta inesperada do proxy Gemini (Imagem):', responseData);
+        console.error(`Resposta inesperada do proxy Gemini (${endpoint}):`, responseData);
         throw new Error('Nenhuma imagem foi retornada pelo serviço de proxy.');
       }
     } catch (error) {
-      console.error('Erro ao chamar o proxy de imagem Gemini:', error);
-      // Re-throw a more user-friendly error message, but log the original for debugging
+      console.error(`Erro ao chamar o proxy de imagem Gemini (${endpoint}):`, error);
       throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
     }
   }

@@ -15,9 +15,15 @@ const handler = async (req, res) => {
 
     const supportedModels = [
       {
+        name: 'models/gemini-2.5-flash-image',
+        displayName: 'Gemini 2.5 Flash Image',
+        description: 'Modelo de geração de imagem rápido e de baixo custo da família Gemini.',
+        supportedGenerationMethods: ['generateContent'], // Usa a mesma API do texto
+      },
+      {
         name: 'models/imagen-3.0-generate-002',
-        displayName: 'imagen-3.0-generate-002',
-        description: 'O modelo de geração de imagem mais avançado do Google.',
+        displayName: 'Imagen 3.0 Generate 002',
+        description: 'O modelo de geração de imagem mais avançado do Google (Vertex AI).',
         supportedGenerationMethods: ['generateImages'],
       }
     ];

@@ -79,11 +79,15 @@ const ConfigPage = () => {
                                 onChange={handleModelChange}
                                 disabled={models.length === 0}
                             >
-                                {models.map((model) => (
-                                    <MenuItem key={model.name} value={model.name}>
-                                        {model.displayName} ({model.name.replace('models/', '')})
-                                    </MenuItem>
-                                ))}
+                                {models.map((model) => {
+                                    const isFlash = model.displayName.toLowerCase().includes('flash');
+                                    const displayName = `${model.displayName} (${model.name.replace('models/', '')})`;
+                                    return (
+                                        <MenuItem key={model.name} value={model.name}>
+                                            {displayName} {isFlash && <em style={{ marginLeft: '8px', color: '#666' }}>(Baixo Custo)</em>}
+                                        </MenuItem>
+                                    );
+                                })}
                             </Select>
                         </FormControl>
 
@@ -96,11 +100,15 @@ const ConfigPage = () => {
                                 onChange={handleImageModelChange}
                                 disabled={imageModels.length === 0}
                             >
-                                {imageModels.map((model) => (
-                                    <MenuItem key={model.name} value={model.name}>
-                                        {model.displayName} ({model.name.replace('models/', '')})
-                                    </MenuItem>
-                                ))}
+                                {imageModels.map((model) => {
+                                    const isFlash = model.displayName.toLowerCase().includes('flash');
+                                    const displayName = `${model.displayName} (${model.name.replace('models/', '')})`;
+                                    return (
+                                        <MenuItem key={model.name} value={model.name}>
+                                            {displayName} {isFlash && <em style={{ marginLeft: '8px', color: '#666' }}>(Recomendado, Baixo Custo)</em>}
+                                        </MenuItem>
+                                    );
+                                })}
                             </Select>
                         </FormControl>
                     </Box>
