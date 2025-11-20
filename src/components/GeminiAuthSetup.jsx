@@ -17,7 +17,6 @@ const GeminiAuthSetup = () => {
 
   const apiKey = settings.gemini_api_key || '';
   const selectedModel = settings.gemini_model || '';
-  const selectedImageModel = settings.gemini_image_model || '';
 
   const handleApiKeyChange = (e) => {
     updateSetting('gemini_api_key', e.target.value);
@@ -26,10 +25,6 @@ const GeminiAuthSetup = () => {
 
   const handleModelChange = (e) => {
     updateSetting('gemini_model', e.target.value);
-  };
-
-  const handleImageModelChange = (e) => {
-    updateSetting('gemini_image_model', e.target.value);
   };
 
   const handleRemove = () => {
@@ -123,9 +118,12 @@ const GeminiAuthSetup = () => {
               {models.map(model => (
                 <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
               ))}
+              <MenuItem value="models/gemini-2.0-flash-lite">gemini-2.0-flash-lite (Grátis)</MenuItem>
+              <MenuItem value="models/gemini-2.0-flash">gemini-2.0-flash (Grátis)</MenuItem>
+              <MenuItem value="models/gemini-2.5-flash">gemini-2.5-flash (Grátis Lim.)</MenuItem>
+              <MenuItem value="models/gemma-3">gemma-3 (Grátis)</MenuItem>
             </Select>
         </FormControl>
-
 
         {error && (
           <Alert severity="error">{error}</Alert>
