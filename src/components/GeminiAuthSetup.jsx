@@ -82,7 +82,7 @@ const GeminiAuthSetup = () => {
             </IconButton>
         </Box>
         <Typography variant="body2" gutterBottom sx={{mt: 2}}>
-          Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
+          Insira sua chave da API Gemini (Google AI Studio) para usar os recursos de geração de texto. A chave será armazenada de forma segura.
         </Typography>
 
         {apiKey && (
@@ -126,20 +126,6 @@ const GeminiAuthSetup = () => {
             </Select>
         </FormControl>
 
-        <FormControl fullWidth sx={{ mt: 2 }} disabled={loadingModels || errorModels}>
-            <InputLabel id="gemini-image-model-select-label">Modelo Gemini (imagem)</InputLabel>
-            <Select
-                labelId="gemini-image-model-select-label"
-                id="gemini-image-model-select"
-                value={selectedImageModel}
-                label="Modelo Gemini (imagem)"
-                onChange={handleImageModelChange}
-            >
-              {imageModels.map(model => (
-                <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
-              ))}
-            </Select>
-        </FormControl>
 
         {error && (
           <Alert severity="error">{error}</Alert>
