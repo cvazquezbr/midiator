@@ -38,15 +38,14 @@ import { getPlayableBlob } from '../utils/fileUtils';
 import ProgressModal from './ProgressModal';
 import { toast } from 'sonner';
 
-const AudioGenerator = ({ fieldPositions }) => {
+const AudioGenerator = ({ csvData, fieldPositions }) => {
   const { campaignState, setCampaignState, pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
-  // Agora, `generatedAudioData` é a única fonte da verdade, já sincronizada com o `csvData` pelo `HomePage`.
-  const { generatedAudioData: audioData = [] } = campaignState;
+  const { generatedAudioData: audioData } = campaignState;
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [audioMode, setAudioMode] = useState('browser');
-  const [speechRate, setSpeechRate] = useState(1.0);
+  const [speechRate, setSpeechRate] = useState(1.0); // Nova state para velocidade
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const { settings } = useSettings();
@@ -54,15 +53,7 @@ const AudioGenerator = ({ fieldPositions }) => {
   const audioRef = useRef(null);
   const isCancelledRef = useRef(false);
 
-  // Função centralizada para obter o texto para o áudio, usando o `record` como única fonte da verdade.
-  const getTextoParaAudio = (record) => {
-    if (!record) return '';
-    const visibleFields = Object.keys(record).filter(
-      (field) => fieldPositions[field]?.visible
-    );
-    return visibleFields.map((field) => record[field] || '').join('. ');
-  };
-
+  // Initialize the Google Cloud TTS API when the component mounts or mode changes
   useEffect(() => {
     if (audioMode.startsWith('google-tts')) {
       const credsString = settings.googleCloudTTSCredentials;
@@ -72,43 +63,66 @@ const AudioGenerator = ({ fieldPositions }) => {
           googleCloudTTSAPI.initialize(credentials);
         } catch (error) {
           console.error("Falha ao analisar as credenciais do Google Cloud TTS a partir das configurações:", error);
+          // Optionally, you could show a toast or an alert here
         }
       } else {
+        // This is not necessarily an error, the user might not have set them up yet.
+        // The error will be thrown when they try to generate.
         console.log("Credenciais do Google Cloud TTS não configuradas.");
       }
     }
   }, [audioMode, settings.googleCloudTTSCredentials]);
 
-  const generateAudioBrowser = async (record, rate = 1.0) => {
-    const text = getTextoParaAudio(record);
+  const generateAudioBrowser = async (text, rate = 1.0) => {
     return new Promise((resolve, reject) => {
       const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
       const textWithoutEmojis = text.replace(emojiRegex, '');
       const utterance = new SpeechSynthesisUtterance(textWithoutEmojis);
       utterance.lang = 'pt-BR';
-      utterance.rate = rate;
+      utterance.rate = rate; // Aplicar velocidade
       utterance.onend = () => {
         const baseDuration = textWithoutEmojis.length * 50;
-        const adjustedDuration = baseDuration / rate;
-        resolve({ record, duration: adjustedDuration / 1000, blob: null, url: null, source: 'browser', rate });
+        const adjustedDuration = baseDuration / rate; // Ajustar duração baseada na velocidade
+        resolve({ text, duration: adjustedDuration / 1000, blob: null, url: null, source: 'browser', rate });
       };
-      utterance.onerror = (event) => reject(event.error);
+      utterance.onerror = (event) => {
+        reject(event.error);
+      };
       speechSynthesis.speak(utterance);
     });
   };
 
   const removeFormatting = (text) => {
-    if (!text) return '';
-    const decoded = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-    const noEmojis = decoded.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+    // Decodifica entidades HTML
+    const decoded = text
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+
+    // Remove emojis
+    const noEmojis = decoded.replace(
+      /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+      ''
+    );
+
+    // Remove tags HTML
     const noHtml = noEmojis.replace(/<\/?[^>]+(>|$)/g, '');
+
+    // Substituir &nbsp; por espaço normal
     const noNbsp = noHtml.replace(/&nbsp;/g, ' ');
+
+    // Remove múltiplos pontos com ou sem espaços: ". .", "..", "... ", etc → ". "
     const fixedDots = noNbsp.replace(/(\s*\.\s*){2,}/g, '. ');
+
+    // Limpa padrões específicos indesejados, como "..':"
     const cleanedText = fixedDots.replace(/\.{2,}':/g, '');
+
+    // Remove espaços extras
     return cleanedText.trim();
   };
 
-  const generateAudioGoogleTTS = async (record, voice, rate = 1.0) => {
+  const generateAudioGoogleTTS = async (text, voice, rate = 1.0) => {
+    // Always check for initialization before generating.
     if (!googleCloudTTSAPI.isInitialized) {
       const credsString = settings.googleCloudTTSCredentials;
       if (credsString) {
@@ -123,19 +137,31 @@ const AudioGenerator = ({ fieldPositions }) => {
         throw new Error('Credenciais do Google Cloud TTS não configuradas. Por favor, adicione-as na tela de configuração.');
       }
     }
+
     if (!googleCloudTTSAPI.isInitialized) {
+      // This is a fallback check, in case initialization failed silently before.
       throw new Error('A API do Google Cloud TTS não pôde ser inicializada. Verifique as credenciais.');
     }
-    const textToSpeak = getTextoParaAudio(record);
-    const cleanText = removeFormatting(textToSpeak);
+
+    const cleanText = removeFormatting(text);
+
+    // A velocidade é passada para o método synthesize
     const audioContent = await googleCloudTTSAPI.synthesize(cleanText, voice, rate);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+
+    // Use the centralized handler to create a blob URL and manage the asset
     const blobUrl = addPendingAsset(blob);
-    if (!blobUrl) throw new Error("Failed to create a local URL for the generated audio.");
+    if (!blobUrl) {
+      throw new Error("Failed to create a local URL for the generated audio.");
+    }
+
+    // We need the duration, so we still use a temporary Audio object
     const audio = new Audio(blobUrl);
+
     return new Promise(resolve => {
       audio.onloadedmetadata = () => {
-        resolve({ record, duration: audio.duration, blob, url: blobUrl, source: 'google-tts', rate });
+        // Resolve with the blobUrl and the blob itself for immediate playback.
+        resolve({ text, duration: audio.duration, blob: blob, url: blobUrl, source: 'google-tts', rate });
       };
     });
   };
@@ -144,35 +170,45 @@ const AudioGenerator = ({ fieldPositions }) => {
     setIsGenerating(true);
     setShowProgressModal(true);
     isCancelledRef.current = false;
-    const newAudioData = [...audioData];
+    const generatedAudios = [];
 
-    (audioData || []).forEach(audio => {
-      if (audio && audio.url && audio.url.startsWith('blob:')) {
+    // Clean up old assets before generating new ones
+    audioData.forEach(audio => {
+      if (audio.url && audio.url.startsWith('blob:')) {
         removePendingAsset(audio.url);
       }
     });
 
-    for (let i = 0; i < audioData.length; i++) {
-      if (isCancelledRef.current) break;
+    for (let i = 0; i < csvData.length; i++) {
+      if (isCancelledRef.current) {
+        break;
+      }
       setProgress(i + 1);
-      const record = audioData[i].record;
-      if (!record) continue;
+      const record = csvData[i];
+      const visibleFields = Object.keys(record).filter(
+        (field) => fieldPositions[field]?.visible
+      );
+      const textToSpeak = visibleFields.map((field) => record[field]).join('. ');
 
       try {
-        let generatedAudio;
+        let audio;
         if (audioMode.startsWith('google-tts')) {
-          generatedAudio = await generateAudioGoogleTTS(record, voice, speechRate);
+          audio = await generateAudioGoogleTTS(textToSpeak, voice, speechRate);
+          audio.index = i;
+          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.mp3`;
         } else {
-          generatedAudio = await generateAudioBrowser(record, speechRate);
+          audio = await generateAudioBrowser(textToSpeak, speechRate);
+          audio.index = i;
+          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.mp3`;
         }
-        newAudioData[i] = { ...newAudioData[i], ...generatedAudio };
+        generatedAudios.push(audio);
       } catch (error) {
         console.error('Error generating audio for slide', i, error);
         toast.error(`Erro ao gerar áudio para o slide ${i + 1}: ${error.message}`);
       }
     }
     
-    setCampaignState({ generatedAudioData: newAudioData });
+    setCampaignState({ generatedAudioData: generatedAudios });
     setIsGenerating(false);
     setShowProgressModal(false);
     setProgress(0);
@@ -192,6 +228,7 @@ const AudioGenerator = ({ fieldPositions }) => {
 
     speechSynthesis.cancel();
     if (audioRef.current) {
+        // Clean up the previous blob URL to prevent memory leaks
         if (audioRef.current.src && audioRef.current.src.startsWith('blob:')) {
             URL.revokeObjectURL(audioRef.current.src);
         }
@@ -199,21 +236,23 @@ const AudioGenerator = ({ fieldPositions }) => {
     }
 
     const audio = audioData[index];
-    const textToSpeak = getTextoParaAudio(audio.record);
     const blobToPlay = getPlayableBlob(audio, pendingAssets);
 
     if (audio.source === 'google-tts' && blobToPlay) {
+      // The URL from `getPlayableBlob` is already a valid blob URL managed by the context.
+      // However, for playback, we create a new temporary object URL to be safe,
+      // and revoke it when the audio element is paused or a new one is played.
       const playbackUrl = URL.createObjectURL(blobToPlay);
       audioRef.current = new Audio(playbackUrl);
       audioRef.current.onended = () => {
         setCurrentlyPlaying(null);
-        URL.revokeObjectURL(playbackUrl);
+        URL.revokeObjectURL(playbackUrl); // Clean up after playback
       };
       audioRef.current.play();
     } else if (audio.source === 'browser') {
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      const utterance = new SpeechSynthesisUtterance(audio.text);
       utterance.lang = 'pt-BR';
-      utterance.rate = audio.rate || speechRate;
+      utterance.rate = speechRate;
       utterance.onended = () => setCurrentlyPlaying(null);
       speechSynthesis.speak(utterance);
     } else {
@@ -232,7 +271,6 @@ const AudioGenerator = ({ fieldPositions }) => {
     }
 
     const audio = audioData[currentTrackIndexRef.current];
-    const textToSpeak = getTextoParaAudio(audio.record);
     const blobToPlay = getPlayableBlob(audio, pendingAssets);
 
     if (audio.source === 'google-tts' && blobToPlay) {
@@ -245,15 +283,16 @@ const AudioGenerator = ({ fieldPositions }) => {
       };
       audioRef.current.play();
     } else if (audio.source === 'browser') {
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      const utterance = new SpeechSynthesisUtterance(audio.text);
       utterance.lang = 'pt-BR';
-      utterance.rate = audio.rate || speechRate;
+      utterance.rate = speechRate;
       utterance.onended = () => {
         currentTrackIndexRef.current += 1;
         playNextTrack();
       };
       speechSynthesis.speak(utterance);
     } else {
+        // Skip unplayable track
         console.warn("Skipping unplayable track:", audio);
         currentTrackIndexRef.current += 1;
         playNextTrack();
@@ -292,7 +331,7 @@ const AudioGenerator = ({ fieldPositions }) => {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url); // Clean up the temporary URL
     }
   };
 
@@ -307,13 +346,20 @@ const AudioGenerator = ({ fieldPositions }) => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url); // Clean up the temporary URL
       }
     });
   };
 
   const handleSpeedChange = (event, newValue) => {
     setSpeechRate(newValue);
+
+    // Se há um áudio tocando atualmente, a velocidade será aplicada na próxima reprodução.
+    // Não é possível alterar a velocidade de um áudio já gerado pelo Google TTS.
+    if (currentlyPlaying !== null) {
+      // Para browser TTS, precisaríamos parar e reiniciar com nova velocidade,
+      // o que pode ser intrusivo. A velocidade será aplicada na próxima vez que o áudio for reproduzido.
+    }
   };
 
   return (
@@ -383,7 +429,7 @@ const AudioGenerator = ({ fieldPositions }) => {
                   };
                   handleGenerateAllAudio(voiceMap[audioMode]);
                 }}
-                disabled={isGenerating || !audioData || audioData.length === 0}
+                disabled={isGenerating || csvData.length === 0}
                 startIcon={isGenerating ? <CircularProgress size={20} /> : <GraphicEq />}
               >
                 {isGenerating ? 'Gerando Áudios...' : 'Gerar Áudio para Todos os Slides'}
@@ -417,84 +463,91 @@ const AudioGenerator = ({ fieldPositions }) => {
 
           {audioData.length > 0 && (
             <List sx={{ mt: 2 }}>
-              {audioData.map((audio, index) => {
-                const textForSecondary = getTextoParaAudio(audio.record);
-                return (
-                  <ListItem
-                    key={audio.record?.id || index}
-                    sx={{ borderBottom: '1px solid #eee', p: 2 }}
-                  >
-                    <Grid container alignItems="center" spacing={2}>
-                      <Grid item xs={12} sm>
-                        <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-                          <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
-                            <Audiotrack />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={`Slide ${index + 1}`}
-                            secondary={removeFormatting(textForSecondary)}
-                            primaryTypographyProps={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                            secondaryTypographyProps={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                          />
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} sm="auto">
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {audio.duration && (
-                            <Chip
-                              icon={<Timer />}
-                              label={`${audio.duration.toFixed(1)}s`}
-                              sx={{ mr: 1 }}
-                            />
-                          )}
-                          {audio.rate && (
-                            <Chip
-                              icon={<Speed />}
-                              label={`${audio.rate}x`}
-                              variant="outlined"
-                              sx={{ mr: 1 }}
-                            />
-                          )}
-                          <IconButton onClick={() => handlePlayPause(index)} size="small">
-                            {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
-                          </IconButton>
-                          <IconButton onClick={async () => {
-                            const voiceMap = {
-                              'google-tts-a': 'pt-BR-Wavenet-A',
-                              'google-tts-b': 'pt-BR-Wavenet-B',
-                              'google-tts-c': 'pt-BR-Wavenet-C',
-                              'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
-                              'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
-                            };
-                            const oldAudio = audioData[index];
-                            if (oldAudio.url && oldAudio.url.startsWith('blob:')) {
-                              removePendingAsset(oldAudio.url);
-                            }
-                            let newAudio;
-                            if (audioMode.startsWith('google-tts')) {
-                              newAudio = await generateAudioGoogleTTS(oldAudio.record, voiceMap[audioMode], speechRate);
-                            } else {
-                              newAudio = await generateAudioBrowser(oldAudio.record, speechRate);
-                            }
-                            const newAudioData = [...audioData];
-                            newAudioData[index] = { ...oldAudio, ...newAudio };
-                            setCampaignState({ generatedAudioData: newAudioData });
-                          }} size="small">
-                            <Replay />
-                          </IconButton>
-                          <Tooltip title="Baixar áudio (somente Google TTS)">
-                            <span>
-                              <IconButton onClick={() => handleDownload(index)} disabled={!getPlayableBlob(audio, pendingAssets)} size="small">
-                                <SaveAlt />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </Box>
-                      </Grid>
+              {audioData.map((audio, index) => (
+                <ListItem
+                  key={index}
+                  sx={{
+                    borderBottom: '1px solid #eee',
+                    p: 2
+                  }}
+                >
+                  <Grid container alignItems="center" spacing={2}>
+                    <Grid item xs={12} sm>
+                      <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                        <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
+                          <Audiotrack />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`Slide ${index + 1}`}
+                          secondary={removeFormatting(audio.text)}
+                          primaryTypographyProps={{
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap'
+                          }}
+                          secondaryTypographyProps={{
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word'
+                          }}
+                        />
+                      </Box>
                     </Grid>
-                  </ListItem>
-                );
-              })}
+                    <Grid item xs={12} sm="auto">
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Chip
+                          icon={<Timer />}
+                          label={`${audio.duration.toFixed(1)}s`}
+                          sx={{ mr: 1 }}
+                        />
+                        {audio.rate && (
+                          <Chip
+                            icon={<Speed />}
+                            label={`${audio.rate}x`}
+                            variant="outlined"
+                            sx={{ mr: 1 }}
+                          />
+                        )}
+                        <IconButton onClick={() => handlePlayPause(index)} size="small">
+                          {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
+                        </IconButton>
+                        <IconButton onClick={async () => {
+                          const voiceMap = {
+                            'google-tts-a': 'pt-BR-Wavenet-A',
+                            'google-tts-b': 'pt-BR-Wavenet-B',
+                            'google-tts-c': 'pt-BR-Wavenet-C',
+                            'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
+                            'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
+                          };
+
+                          // Clean up the old asset before generating a new one
+                          const oldAudio = audioData[index];
+                          if (oldAudio.url && oldAudio.url.startsWith('blob:')) {
+                            removePendingAsset(oldAudio.url);
+                          }
+
+                          let newAudio;
+                          if (audioMode.startsWith('google-tts')) {
+                            newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode], speechRate);
+                          } else {
+                            newAudio = await generateAudioBrowser(audio.text, speechRate);
+                          }
+                          const newAudioData = [...audioData];
+                          newAudioData[index] = newAudio;
+                          setCampaignState({ generatedAudioData: newAudioData });
+                        }} size="small">
+                          <Replay />
+                        </IconButton>
+                        <Tooltip title="Baixar áudio (somente Google TTS)">
+                          <span>
+                            <IconButton onClick={() => handleDownload(index)} disabled={!getPlayableBlob(audio, pendingAssets)} size="small">
+                              <SaveAlt />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </ListItem>
+              ))}
             </List>
           )}
         </CardContent>
@@ -503,10 +556,10 @@ const AudioGenerator = ({ fieldPositions }) => {
       <ProgressModal
         open={showProgressModal}
         progress={progress}
-        total={audioData.length}
+        total={csvData.length}
         onCancel={handleCancel}
         title="Gerando Áudios"
-        progressText={`Progresso: ${progress} de ${audioData.length} áudios gerados.`}
+        progressText={`Progresso: ${progress} de ${csvData.length} áudios gerados.`}
       />
     </Box>
   );
