@@ -42,9 +42,14 @@ const handler = async (req, res) => {
     });
 
     if (!geminiResponse.ok) {
-        const errorText = await geminiResponse.text();
-        console.error('Gemini API Error:', errorText);
-        return res.status(geminiResponse.status).json({ error: 'Failed to fetch from Gemini API', details: errorText });
+        const errorDetails = {
+            status: geminiResponse.status,
+            statusText: geminiResponse.statusText,
+            headers: Object.fromEntries(geminiResponse.headers.entries()),
+            body: await geminiResponse.text()
+        };
+        console.error('Gemini API Error:', JSON.stringify(errorDetails, null, 2));
+        return res.status(geminiResponse.status).json({ error: 'Failed to fetch from Gemini API', details: errorDetails.body });
     }
 
     const geminiData = await geminiResponse.json();
