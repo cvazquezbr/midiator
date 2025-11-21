@@ -533,6 +533,7 @@ const AudioGenerator = ({ fieldPositions }) => {
                         </Tooltip>
                       </Box>
                     </Grid>
+                  </Grid>
                 </ListItem>
               ))}
             </List>
