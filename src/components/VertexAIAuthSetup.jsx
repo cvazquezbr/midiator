@@ -151,7 +151,7 @@ const VertexAIAuthSetup = () => {
                 label="Modelo de Imagem (Vertex AI)"
                 onChange={handleImageModelChange}
             >
-              <MenuItem value="models/gemini-1.5-flash-latest">gemini-1.5-flash-latest (Recomendado, via Gemini API)</MenuItem>
+              <MenuItem value="models/gemini-2.0-flash">gemini-2.0-flash (Recomendado, via Gemini API)</MenuItem>
               {imageModels.map(model => (
                 <MenuItem key={model.name} value={model.name}>{model.displayName}</MenuItem>
               ))}
