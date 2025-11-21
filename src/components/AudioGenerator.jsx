@@ -423,7 +423,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
                   };
                   handleGenerateAllAudio(voiceMap[audioMode]);
                 }}
-                disabled={isGenerating || !audioData || audioData.length === 0}
+                disabled={isGenerating || !csvData || csvData.length === 0}
                 startIcon={isGenerating ? <CircularProgress size={20} /> : <GraphicEq />}
               >
                 {isGenerating ? 'Gerando Áudios...' : 'Gerar Áudio para Todos os Slides'}
@@ -432,7 +432,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
               <Button
                 variant="outlined"
                 onClick={handlePlayAll}
-                disabled={isGenerating || audioData.length === 0}
+                disabled={isGenerating || !csvData || csvData.length === 0}
                 startIcon={isPlayingAll ? <Pause /> : <PlayArrow />}
                 sx={{ ml: 2 }}
               >
@@ -549,10 +549,10 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
       <ProgressModal
         open={showProgressModal}
         progress={progress}
-        total={audioData.length}
+        total={csvData.length}
         onCancel={handleCancel}
         title="Gerando Áudios"
-        progressText={`Progresso: ${progress} de ${audioData.length} áudios gerados.`}
+        progressText={`Progresso: ${progress} de ${csvData.length} áudios gerados.`}
       />
     </Box>
   );
