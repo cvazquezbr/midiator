@@ -135,7 +135,14 @@ const RecordForm = ({
 
             onSubmit({ _novasColunas: colunasDefinidas, ...dataToSubmit });
         } else {
-            onSubmit(formData);
+            // FIX: Explicitly ensure the original ID is included on submission.
+            // This prevents issues where the formData state might lose the ID,
+            // which would cause an update to be treated as an addition.
+            const dataToSubmit = { ...formData };
+            if (dadosIniciais && dadosIniciais.id) {
+                dataToSubmit.id = dadosIniciais.id;
+            }
+            onSubmit(dataToSubmit);
         }
     };
 

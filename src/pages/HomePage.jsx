@@ -1072,7 +1072,7 @@ function HomePage() {
                   }}
                 />
               }
-              {activeStep === 5 && <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} />}
+              {activeStep === 5 && <AudioGenerator fieldPositions={fieldPositions} />}
               {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} generatedAudioData={campaignState.generatedAudioData} />}
               {activeStep === 7 && (
                 <Publisher
