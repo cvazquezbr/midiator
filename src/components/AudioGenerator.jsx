@@ -39,7 +39,8 @@ import ProgressModal from './ProgressModal';
 import { toast } from 'sonner';
 
 const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
-  const { pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
+  const { campaignState, addPendingAsset, removePendingAsset } = useCampaign();
+  const { pendingAssets } = campaignState;
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
