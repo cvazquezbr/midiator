@@ -25,7 +25,7 @@ const handler = async (req, res) => {
     }
 
     const cleanModel = model.replace('models/', '');
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateImage?key=${geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${cleanModel}:generateImage?key=${geminiApiKey}`;
 
     const requestBody = {
       prompt: {
