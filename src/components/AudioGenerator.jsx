@@ -547,6 +547,7 @@ const AudioGenerator = ({ csvData, fieldPositions }) => {
                     </Grid>
                   </Grid>
                 </Grid>
+                </Grid>
               </ListItem>
               ))}
             </List>
