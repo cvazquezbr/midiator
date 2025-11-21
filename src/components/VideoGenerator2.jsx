@@ -1559,7 +1559,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
               <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
                 Vídeos Gerados
               </Typography>
-              {generatedVideos.map((video) => (
+              {generatedVideos.filter(Boolean).map((video) => (
                 <Card key={video.id || video.url} sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
                   {video.thumbnailUrl && (
                     <Box sx={{ width: 150, height: 84, flexShrink: 0 }}>
