@@ -89,8 +89,7 @@ class GeminiAPI {
     console.log(`[${purpose}] Prompt:`, promptString);
 
     // Determina qual endpoint usar com base no nome do modelo
-    const useVertexAI = model.includes('imagen');
-    const endpoint = useVertexAI ? '/api/google/generateImage' : '/api/google/generateImageGemini';
+    const endpoint = '/api/google/generateImage';
 
     console.log(`[${purpose}] Usando o endpoint: ${endpoint}`);
 
