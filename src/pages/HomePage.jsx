@@ -400,8 +400,7 @@ function HomePage() {
       });
     };
     processMedia(generatedVideos, (updater) => setCampaignState(prev => ({ ...prev, generatedVideos: updater(prev.generatedVideos) })));
-    processMedia(campaignState.generatedAudioData, (updater) => setCampaignState(prev => ({ ...prev, generatedAudioData: updater(prev.generatedAudioData) })));
-  }, [generatedVideos, campaignState.generatedAudioData, setCampaignState]);
+  }, [generatedVideos, setCampaignState]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
 
@@ -522,7 +521,6 @@ function HomePage() {
           url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
         }));
-        const newGeneratedAudioData = dataWithIds.map(record => ({ record }));
 
         setCampaignState(prev => ({
           ...prev,
@@ -532,7 +530,6 @@ function HomePage() {
           fieldStyles: newStyles,
           initialFieldStyles: newStyles,
           generatedPagesData: newGeneratedPagesData,
-          generatedAudioData: newGeneratedAudioData,
         }));
         setInputMethod('manual');
       }
@@ -666,21 +663,16 @@ function HomePage() {
         }
       });
 
-      // Aplica a mesma lógica de sincronização para os dados de áudio.
-      const newGeneratedAudioData = sanitizedRegistros.map((record) => {
-        const existingAudio = (prev.generatedAudioData || []).find(a => a.record?.id === record.id);
-        if (existingAudio) {
-          // Preserva o áudio gerado (blob, url, duration) e apenas atualiza o texto.
-          return { ...existingAudio, record };
-        }
-        // Cria um placeholder para um novo áudio, associado ao novo post.
-        return { record };
+      // A lógica de sincronização de áudio foi removida e substituída por uma lógica de merge.
+      // Ao editar os posts, mesclamos o registro antigo (que tem os dados do áudio) com o novo.
+      const mergedCsvData = sanitizedRegistros.map(newRecord => {
+        const oldRecord = (prev.csvData || []).find(r => r.id === newRecord.id);
+        return { ...(oldRecord || {}), ...newRecord };
       });
 
       const updates = {
-        csvData: sanitizedRegistros,
+        csvData: mergedCsvData,
         generatedPagesData: newGeneratedPagesData,
-        generatedAudioData: newGeneratedAudioData,
         // Preserva outros dados de mídia
         generatedVideos: prev.generatedVideos || [],
       };
@@ -710,7 +702,6 @@ function HomePage() {
         generatedPagesData: synchronizedPages,
         // Preserve media data
         generatedVideos: prev.generatedVideos || [],
-        generatedAudioData: prev.generatedAudioData || [],
       };
 
       return { ...prev, ...updates };
@@ -873,7 +864,7 @@ function HomePage() {
         effectiveImageSize: originalImageSize
       });
 
-      // 2. Synchronize generatedPagesData and generatedAudioData with the sanitized data.
+      // 2. Synchronize generatedPagesData with the sanitized data.
       const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({
         index,
         record,
@@ -881,7 +872,6 @@ function HomePage() {
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
       }));
-      const newGeneratedAudioData = sanitizedCsvData.map(record => ({ record }));
 
 
       setCampaignState(prev => {
@@ -892,7 +882,6 @@ function HomePage() {
           fieldStyles: newStyles,
           initialFieldStyles: newStyles,
           generatedPagesData: newGeneratedPagesData,
-          generatedAudioData: newGeneratedAudioData,
           // Preserve media data
           generatedVideos: prev.generatedVideos || [],
         };
@@ -1082,7 +1071,7 @@ function HomePage() {
                 />
               }
               {activeStep === 5 && <AudioGenerator fieldPositions={fieldPositions} />}
-              {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} generatedAudioData={campaignState.generatedAudioData} />}
+              {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} csvData={csvData} />}
               {activeStep === 7 && (
                 <Publisher
                   settings={settings}
