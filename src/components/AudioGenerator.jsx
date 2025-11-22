@@ -38,9 +38,10 @@ import { getPlayableBlob } from '../utils/fileUtils';
 import ProgressModal from './ProgressModal';
 import { toast } from 'sonner';
 
-const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
-  const { campaignState, addPendingAsset, removePendingAsset } = useCampaign();
-  const { pendingAssets } = campaignState;
+const AudioGenerator = ({ fieldPositions }) => {
+  const { campaignState, setCampaignState, pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
+  // Agora, `generatedAudioData` é a única fonte da verdade, já sincronizada com o `csvData` pelo `HomePage`.
+  const { generatedAudioData: audioData = [] } = campaignState;
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -93,7 +94,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
       utterance.onend = () => {
         const baseDuration = textWithoutEmojis.length * 50;
         const adjustedDuration = baseDuration / rate;
-        resolve({ duration: adjustedDuration / 1000, blob: null, url: null, source: 'browser', rate });
+        resolve({ record, duration: adjustedDuration / 1000, blob: null, url: null, source: 'browser', rate });
       };
       utterance.onerror = (event) => reject(event.error);
       speechSynthesis.speak(utterance);
@@ -164,7 +165,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
     const audio = new Audio(blobUrl);
     return new Promise(resolve => {
       audio.onloadedmetadata = () => {
-        resolve({ duration: audio.duration, blob, url: blobUrl, source: 'google-tts', rate });
+        resolve({ record, duration: audio.duration, blob, url: blobUrl, source: 'google-tts', rate });
       };
     });
   };
@@ -173,20 +174,18 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
     setIsGenerating(true);
     setShowProgressModal(true);
     isCancelledRef.current = false;
+    const newAudioData = [...audioData];
 
-    const updatedCsvData = [...csvData];
-
-    // Limpa os assets de áudio pendentes antigos antes de gerar novos
-    csvData.forEach(record => {
-      if (record && record.audioUrl && record.audioUrl.startsWith('blob:')) {
-        removePendingAsset(record.audioUrl);
+    (audioData || []).forEach(audio => {
+      if (audio && audio.url && audio.url.startsWith('blob:')) {
+        removePendingAsset(audio.url);
       }
     });
 
-    for (let i = 0; i < csvData.length; i++) {
+    for (let i = 0; i < audioData.length; i++) {
       if (isCancelledRef.current) break;
       setProgress(i + 1);
-      const record = csvData[i];
+      const record = audioData[i].record;
       if (!record) continue;
 
       try {
@@ -196,24 +195,14 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
         } else {
           generatedAudio = await generateAudioBrowser(record, speechRate);
         }
-
-        // Atualiza o registro no novo array com os dados do áudio
-        updatedCsvData[i] = {
-          ...record,
-          audioDuration: generatedAudio.duration,
-          audioUrl: generatedAudio.url,
-          audioSource: generatedAudio.source,
-          audioRate: generatedAudio.rate,
-          // O blob não é diretamente serializável, mas o gerenciamento dele é feito pelo pendingAssets
-        };
-
+        newAudioData[i] = { ...newAudioData[i], ...generatedAudio };
       } catch (error) {
         console.error('Error generating audio for slide', i, error);
         toast.error(`Erro ao gerar áudio para o slide ${i + 1}: ${error.message}`);
       }
     }
     
-    onUpdateCsvData(updatedCsvData);
+    setCampaignState({ generatedAudioData: newAudioData });
     setIsGenerating(false);
     setShowProgressModal(false);
     setProgress(0);
@@ -240,43 +229,47 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
         audioRef.current.pause();
     }
 
-    const record = csvData[index];
-    const textToSpeak = getTextoParaAudio(record);
-    const blobToPlay = getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets);
+    const audio = audioData[index];
+    const textToSpeak = getTextoParaAudio(audio.record);
+    const blobToPlay = getPlayableBlob(audio, pendingAssets);
 
-    if (record.audioSource === 'google-tts' && blobToPlay) {
+    if (audio.source === 'google-tts' && blobToPlay) {
+      // The URL from `getPlayableBlob` is already a valid blob URL managed by the context.
+      // However, for playback, we create a new temporary object URL to be safe,
+      // and revoke it when the audio element is paused or a new one is played.
       const playbackUrl = URL.createObjectURL(blobToPlay);
       audioRef.current = new Audio(playbackUrl);
       audioRef.current.onended = () => {
         setCurrentlyPlaying(null);
-        URL.revokeObjectURL(playbackUrl);
+        URL.revokeObjectURL(playbackUrl); // Clean up after playback
       };
       audioRef.current.play();
-    } else if (record.audioSource === 'browser') {
+    } else if (audio.source === 'browser') {
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = 'pt-BR';
-      utterance.rate = record.audioRate || speechRate;
+      utterance.rate = audio.rate || speechRate;
       utterance.onended = () => setCurrentlyPlaying(null);
       speechSynthesis.speak(utterance);
     } else {
       toast.error("Não foi possível encontrar os dados de áudio para reprodução.");
+      console.error("Failed to find playable blob for audio:", audio);
       return;
     }
     setCurrentlyPlaying(index);
   };
 
   const playNextTrack = () => {
-    if (currentTrackIndexRef.current >= csvData.length) {
+    if (currentTrackIndexRef.current >= audioData.length) {
       setIsPlayingAll(false);
       setCurrentlyPlaying(null);
       return;
     }
 
-    const record = csvData[currentTrackIndexRef.current];
-    const textToSpeak = getTextoParaAudio(record);
-    const blobToPlay = getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets);
+    const audio = audioData[currentTrackIndexRef.current];
+    const textToSpeak = getTextoParaAudio(audio.record);
+    const blobToPlay = getPlayableBlob(audio, pendingAssets);
 
-    if (record.audioSource === 'google-tts' && blobToPlay) {
+    if (audio.source === 'google-tts' && blobToPlay) {
       const playbackUrl = URL.createObjectURL(blobToPlay);
       audioRef.current = new Audio(playbackUrl);
       audioRef.current.onended = () => {
@@ -285,17 +278,18 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
         playNextTrack();
       };
       audioRef.current.play();
-    } else if (record.audioSource === 'browser') {
+    } else if (audio.source === 'browser') {
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = 'pt-BR';
-      utterance.rate = record.audioRate || speechRate;
+      utterance.rate = audio.rate || speechRate;
       utterance.onended = () => {
         currentTrackIndexRef.current += 1;
         playNextTrack();
       };
       speechSynthesis.speak(utterance);
     } else {
-        console.warn("Skipping unplayable track:", record);
+        // Skip unplayable track
+        console.warn("Skipping unplayable track:", audio);
         currentTrackIndexRef.current += 1;
         playNextTrack();
         return;
@@ -323,8 +317,8 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
   };
 
   const handleDownload = (index) => {
-    const record = csvData[index];
-    const blob = getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets);
+    const audio = audioData[index];
+    const blob = getPlayableBlob(audio, pendingAssets);
     if (blob) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -333,13 +327,13 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url); // Clean up the temporary URL
     }
   };
 
   const handleDownloadAll = () => {
-    csvData.forEach((record, index) => {
-      const blob = getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets);
+    audioData.forEach((audio, index) => {
+      const blob = getPlayableBlob(audio, pendingAssets);
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -348,13 +342,20 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url); // Clean up the temporary URL
       }
     });
   };
 
   const handleSpeedChange = (event, newValue) => {
     setSpeechRate(newValue);
+
+    // Se há um áudio tocando atualmente, a velocidade será aplicada na próxima reprodução.
+    // Não é possível alterar a velocidade de um áudio já gerado pelo Google TTS.
+    if (currentlyPlaying !== null) {
+      // Para browser TTS, precisaríamos parar e reiniciar com nova velocidade,
+      // o que pode ser intrusivo. A velocidade será aplicada na próxima vez que o áudio for reproduzido.
+    }
   };
 
   return (
@@ -424,7 +425,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
                   };
                   handleGenerateAllAudio(voiceMap[audioMode]);
                 }}
-                disabled={isGenerating || !csvData || csvData.length === 0}
+                disabled={isGenerating || !audioData || audioData.length === 0}
                 startIcon={isGenerating ? <CircularProgress size={20} /> : <GraphicEq />}
               >
                 {isGenerating ? 'Gerando Áudios...' : 'Gerar Áudio para Todos os Slides'}
@@ -433,7 +434,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
               <Button
                 variant="outlined"
                 onClick={handlePlayAll}
-                disabled={isGenerating || !csvData || csvData.length === 0}
+                disabled={isGenerating || audioData.length === 0}
                 startIcon={isPlayingAll ? <Pause /> : <PlayArrow />}
                 sx={{ ml: 2 }}
               >
@@ -445,7 +446,7 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
                   <Button
                     variant="outlined"
                     onClick={handleDownloadAll}
-                    disabled={isGenerating || csvData.some(record => !getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets))}
+                    disabled={isGenerating || audioData.some(a => !getPlayableBlob(a))}
                     startIcon={<CloudDownload />}
                     sx={{ ml: 2 }}
                   >
@@ -456,13 +457,13 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
             </Grid>
           </Grid>
 
-          {csvData.length > 0 && (
+          {audioData.length > 0 && (
             <List sx={{ mt: 2 }}>
-              {csvData.map((record, index) => {
-                const textForSecondary = getTextoParaAudio(record);
+              {audioData.map((audio, index) => {
+                const textForSecondary = getTextoParaAudio(audio.record);
                 return (
                   <ListItem
-                    key={record?.id || index}
+                    key={audio.record?.id || index}
                     sx={{ borderBottom: '1px solid #eee', p: 2 }}
                   >
                     <Grid container alignItems="center" spacing={2}>
@@ -481,17 +482,17 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
                       </Grid>
                       <Grid item xs={12} sm="auto">
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {record.audioDuration && (
+                          {audio.duration && (
                             <Chip
                               icon={<Timer />}
-                              label={`${record.audioDuration.toFixed(1)}s`}
+                              label={`${audio.duration.toFixed(1)}s`}
                               sx={{ mr: 1 }}
                             />
                           )}
-                          {record.audioRate && (
+                          {audio.rate && (
                             <Chip
                               icon={<Speed />}
-                              label={`${record.audioRate}x`}
+                              label={`${audio.rate}x`}
                               variant="outlined"
                               sx={{ mr: 1 }}
                             />
@@ -507,31 +508,25 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
                               'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
                               'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
                             };
-                            const oldRecord = csvData[index];
-                            if (oldRecord.audioUrl && oldRecord.audioUrl.startsWith('blob:')) {
-                                removePendingAsset(oldRecord.audioUrl);
+                            const oldAudio = audioData[index];
+                            if (oldAudio.url && oldAudio.url.startsWith('blob:')) {
+                              removePendingAsset(oldAudio.url);
                             }
-                            let generatedAudio;
+                            let newAudio;
                             if (audioMode.startsWith('google-tts')) {
-                                generatedAudio = await generateAudioGoogleTTS(oldRecord, voiceMap[audioMode], speechRate);
+                              newAudio = await generateAudioGoogleTTS(oldAudio.record, voiceMap[audioMode], speechRate);
                             } else {
-                                generatedAudio = await generateAudioBrowser(oldRecord, speechRate);
+                              newAudio = await generateAudioBrowser(oldAudio.record, speechRate);
                             }
-                            const updatedCsvData = [...csvData];
-                            updatedCsvData[index] = {
-                                ...oldRecord,
-                                audioDuration: generatedAudio.duration,
-                                audioUrl: generatedAudio.url,
-                                audioSource: generatedAudio.source,
-                                audioRate: generatedAudio.rate,
-                            };
-                            onUpdateCsvData(updatedCsvData);
-                            }} size="small">
+                            const newAudioData = [...audioData];
+                            newAudioData[index] = { ...oldAudio, ...newAudio };
+                            setCampaignState({ generatedAudioData: newAudioData });
+                          }} size="small">
                             <Replay />
                           </IconButton>
                           <Tooltip title="Baixar áudio (somente Google TTS)">
                           <span>
-                            <IconButton onClick={() => handleDownload(index)} disabled={!getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets)} size="small">
+                            <IconButton onClick={() => handleDownload(index)} disabled={!getPlayableBlob(audio, pendingAssets)} size="small">
                               <SaveAlt />
                             </IconButton>
                           </span>
@@ -550,10 +545,10 @@ const AudioGenerator = ({ fieldPositions, csvData, onUpdateCsvData }) => {
       <ProgressModal
         open={showProgressModal}
         progress={progress}
-        total={csvData.length}
+        total={audioData.length}
         onCancel={handleCancel}
         title="Gerando Áudios"
-        progressText={`Progresso: ${progress} de ${csvData.length} áudios gerados.`}
+        progressText={`Progresso: ${progress} de ${audioData.length} áudios gerados.`}
       />
     </Box>
   );

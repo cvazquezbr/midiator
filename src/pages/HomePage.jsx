@@ -400,26 +400,8 @@ function HomePage() {
       });
     };
     processMedia(generatedVideos, (updater) => setCampaignState(prev => ({ ...prev, generatedVideos: updater(prev.generatedVideos) })));
-
-    const audioItems = (csvData || [])
-        .filter(record => record.audioUrl && !record.audioDuration)
-        .map(record => ({ url: record.audioUrl, type: 'audio' }));
-
-    if (audioItems.length > 0) {
-        processMedia(audioItems, (processedAudios) => {
-            setCampaignState(prev => {
-                const updatedCsvData = prev.csvData.map(record => {
-                    const processed = processedAudios.find(p => p.url === record.audioUrl);
-                    if (processed) {
-                        return { ...record, audioDuration: processed.duration };
-                    }
-                    return record;
-                });
-                return { ...prev, csvData: updatedCsvData };
-            });
-        });
-    }
-  }, [generatedVideos, csvData, setCampaignState]);
+    processMedia(campaignState.generatedAudioData, (updater) => setCampaignState(prev => ({ ...prev, generatedAudioData: updater(prev.generatedAudioData) })));
+  }, [generatedVideos, campaignState.generatedAudioData, setCampaignState]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
 
@@ -540,6 +522,7 @@ function HomePage() {
           url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
         }));
+        const newGeneratedAudioData = dataWithIds.map(record => ({ record }));
 
         setCampaignState(prev => ({
           ...prev,
@@ -549,6 +532,7 @@ function HomePage() {
           fieldStyles: newStyles,
           initialFieldStyles: newStyles,
           generatedPagesData: newGeneratedPagesData,
+          generatedAudioData: newGeneratedAudioData,
         }));
         setInputMethod('manual');
       }
@@ -604,7 +588,16 @@ function HomePage() {
       case 3: return csvData.length > 0;
       case 4: return true;
       case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.url)) { toast.error("Gere todas as páginas antes de prosseguir."); return false; } return true;
-      case 6: if (campaignState.generatedAudioData?.length === 0 && csvData.length > 0) { toast.error("Gere os áudios antes de prosseguir."); return false; } if (campaignState.generatedAudioData?.some(a => !a.duration)) { toast.error("Aguarde o cálculo da duração de todos os áudios."); return false; } return true;
+      case 6:
+        if (csvData.length > 0 && !csvData.every(record => record && record.audioUrl)) {
+          toast.error("Gere o áudio para todos os slides antes de prosseguir.");
+          return false;
+        }
+        if (csvData.length > 0 && csvData.some(record => record && record.audioUrl && !record.audioDuration)) {
+          toast.error("Aguarde o cálculo da duração de todos os áudios.");
+          return false;
+        }
+        return true;
       default: return true;
     }
   };
@@ -673,9 +666,21 @@ function HomePage() {
         }
       });
 
+      // Aplica a mesma lógica de sincronização para os dados de áudio.
+      const newGeneratedAudioData = sanitizedRegistros.map((record) => {
+        const existingAudio = (prev.generatedAudioData || []).find(a => a.record?.id === record.id);
+        if (existingAudio) {
+          // Preserva o áudio gerado (blob, url, duration) e apenas atualiza o texto.
+          return { ...existingAudio, record };
+        }
+        // Cria um placeholder para um novo áudio, associado ao novo post.
+        return { record };
+      });
+
       const updates = {
         csvData: sanitizedRegistros,
         generatedPagesData: newGeneratedPagesData,
+        generatedAudioData: newGeneratedAudioData,
         // Preserva outros dados de mídia
         generatedVideos: prev.generatedVideos || [],
       };
@@ -705,6 +710,7 @@ function HomePage() {
         generatedPagesData: synchronizedPages,
         // Preserve media data
         generatedVideos: prev.generatedVideos || [],
+        generatedAudioData: prev.generatedAudioData || [],
       };
 
       return { ...prev, ...updates };
@@ -875,6 +881,7 @@ function HomePage() {
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
       }));
+      const newGeneratedAudioData = sanitizedCsvData.map(record => ({ record }));
 
 
       setCampaignState(prev => {
@@ -885,6 +892,7 @@ function HomePage() {
           fieldStyles: newStyles,
           initialFieldStyles: newStyles,
           generatedPagesData: newGeneratedPagesData,
+          generatedAudioData: newGeneratedAudioData,
           // Preserve media data
           generatedVideos: prev.generatedVideos || [],
         };
@@ -1073,14 +1081,8 @@ function HomePage() {
                   }}
                 />
               }
-              {activeStep === 5 &&
-                <AudioGenerator
-                  fieldPositions={fieldPositions}
-                  csvData={csvData}
-                  onUpdateCsvData={(updatedCsvData) => setCampaignState(prev => ({ ...prev, csvData: updatedCsvData }))}
-                />
-              }
-              {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} csvData={csvData} />}
+              {activeStep === 5 && <AudioGenerator fieldPositions={fieldPositions} />}
+              {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} generatedAudioData={campaignState.generatedAudioData} />}
               {activeStep === 7 && (
                 <Publisher
                   settings={settings}
