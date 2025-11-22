@@ -632,6 +632,11 @@ function HomePage() {
 
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCampaignState(prev => {
+      // 1. Encontre os áudios que existem ANTES da atualização.
+      const oldAudioUrls = (prev.csvData || [])
+        .map(r => r.audioUrl)
+        .filter(url => url && url.startsWith('blob:'));
+
       const sanitizedRegistros = novosRegistros.map((record, index) => ({
         ...(record || {}),
         Título: (record || {}).Título || `Página ${index + 1}`,
@@ -681,9 +686,23 @@ function HomePage() {
         updates.csvHeaders = novasColunas;
       }
 
+      // 3. Compare as listas de URLs de áudio e limpe os órfãos.
+      const newAudioUrls = new Set(
+        mergedCsvData
+          .map(r => r.audioUrl)
+          .filter(url => url && url.startsWith('blob:'))
+      );
+
+      oldAudioUrls.forEach(oldUrl => {
+        if (!newAudioUrls.has(oldUrl)) {
+          console.log(`[handleDadosAlterados] Limpando blob de áudio órfão: ${oldUrl}`);
+          removePendingAsset(oldUrl);
+        }
+      });
+
       return { ...prev, ...updates };
     });
-  }, [setCampaignState]);
+  }, [setCampaignState, removePendingAsset]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
     setCampaignState(prev => {
