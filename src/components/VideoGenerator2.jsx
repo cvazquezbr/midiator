@@ -459,7 +459,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
         setProgress(i + 1);
       }
 
-      const hasAudio = csvData && csvData.length > 0 && csvData.some(rec => rec.audioUrl);
+      const hasAudio = csvData && csvData.some(rec => getPlayableBlob({ url: rec.audioUrl, source: rec.audioSource }, pendingAssets));
       if (hasAudio) {
         for (const [i, record] of csvData.entries()) {
           const audioBlob = getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets);
@@ -644,7 +644,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
         setProgress(Math.max(0, framesProcessed));
       });
 
-      console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+      console.log("FINAL FFMPEG COMMAND:", cmd.join(" "));
       await ffmpeg.exec(cmd);
 
       const data = await ffmpeg.readFile("output.mp4");
