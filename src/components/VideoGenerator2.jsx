@@ -412,6 +412,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
   };
 
   const generateVideoWithFFmpeg = async () => {
+    if (!csvData || csvData.length === 0) {
+      setError("Os dados dos slides (csvData) não foram encontrados. Não é possível calcular a duração do vídeo.");
+      setSnackbarOpen(true);
+      return;
+    }
     const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
       const record = csvData[i];
       const duration = (record && record.audioDuration) ? record.audioDuration : slideDuration;

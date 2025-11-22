@@ -159,6 +159,20 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   });
   console.log('[serializeCampaignData] Step 4 COMPLETE.');
 
+  // --- Step 5: Clean up stale audio blobs ---
+  // After URLs are replaced, the local audioBlob is no longer valid for the next session.
+  if (workingState.csvData && Array.isArray(workingState.csvData)) {
+    workingState.csvData.forEach(record => {
+      // If the audioUrl was uploaded and replaced, it will no longer start with 'blob:'.
+      // In this case, we must delete the stale local blob reference.
+      if (record && record.audioUrl && !record.audioUrl.startsWith('blob:')) {
+        delete record.audioBlob;
+      }
+    });
+  }
+  console.log('[serializeCampaignData] Step 5: Stale audio blobs cleaned up.');
+
+
   console.log('[serializeCampaignData] All uploads and serialization complete.');
   return workingState;
 };
@@ -248,16 +262,6 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
       uniqueUrlsToDownload.set(value, null); // Value will be the downloaded blob later
     }
   });
-
-  // Specifically traverse csvData to find audioUrls
-    if (finalState.csvData && Array.isArray(finalState.csvData)) {
-        finalState.csvData.forEach(record => {
-            if (record && isVercelUrl(record.audioUrl) && !uniqueUrlsToDownload.has(record.audioUrl)) {
-                uniqueUrlsToDownload.set(record.audioUrl, null);
-            }
-        });
-    }
-
   console.log(`[deserializeCampaignData] Found ${uniqueUrlsToDownload.size} unique assets to download.`);
 
   // --- Step 2: Download all unique assets and create local blobs ---
@@ -329,16 +333,6 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
       }
     }
   });
-
-    // Specifically traverse csvData to replace audioUrls
-    if (finalState.csvData && Array.isArray(finalState.csvData)) {
-        finalState.csvData.forEach(record => {
-            if (record && permanentToTempUrlMap.has(record.audioUrl)) {
-                record.audioUrl = permanentToTempUrlMap.get(record.audioUrl);
-            }
-        });
-    }
-
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
   console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);
