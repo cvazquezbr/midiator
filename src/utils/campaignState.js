@@ -248,6 +248,16 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
       uniqueUrlsToDownload.set(value, null); // Value will be the downloaded blob later
     }
   });
+
+  // Specifically traverse csvData to find audioUrls
+    if (finalState.csvData && Array.isArray(finalState.csvData)) {
+        finalState.csvData.forEach(record => {
+            if (record && isVercelUrl(record.audioUrl) && !uniqueUrlsToDownload.has(record.audioUrl)) {
+                uniqueUrlsToDownload.set(record.audioUrl, null);
+            }
+        });
+    }
+
   console.log(`[deserializeCampaignData] Found ${uniqueUrlsToDownload.size} unique assets to download.`);
 
   // --- Step 2: Download all unique assets and create local blobs ---
@@ -319,6 +329,16 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
       }
     }
   });
+
+    // Specifically traverse csvData to replace audioUrls
+    if (finalState.csvData && Array.isArray(finalState.csvData)) {
+        finalState.csvData.forEach(record => {
+            if (record && permanentToTempUrlMap.has(record.audioUrl)) {
+                record.audioUrl = permanentToTempUrlMap.get(record.audioUrl);
+            }
+        });
+    }
+
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
   console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);

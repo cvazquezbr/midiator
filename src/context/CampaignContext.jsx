@@ -32,7 +32,6 @@ const initialState = {
   followupPosts: [],
   promptText: '',
   promptNumRecords: 10,
-  generatedAudioData: [],
   templateFieldStyles: {},
   fontScale: 1,
   isGeneratingFollowup: false,
@@ -121,7 +120,6 @@ export const CampaignProvider = ({ children }) => {
       selectedPersonaForCampaign: loadedData.persona_id || '',
       // Ensure specific fields are initialized correctly to prevent app crashes
       generatedVideos: campaignData.generatedVideos || [],
-      generatedAudioData: campaignData.generatedAudioData || [],
       fieldPositions: campaignData.fieldPositions || {},
       colors: campaignColors,
     };
