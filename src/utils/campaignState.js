@@ -323,19 +323,27 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
 
   // --- Step 3: Replace all permanent URLs with their new temporary blob: URLs ---
   console.log('[deserializeCampaignData] Step 3: Replacing permanent URLs with local blob URLs...');
+
+  // Create a reverse map for easier lookup: permanentUrl -> tempUrl
+  const permanentToTempMap = new Map();
+  for (const [tempUrl, file] of Object.entries(newlyCreatedAssets)) {
+    // We need to find the original permanent URL that corresponds to this file.
+    // The `permanentToTempUrlMap` has permanent -> temp. We iterate through it.
+    for (const [perm, temp] of permanentToTempUrlMap.entries()) {
+      if (temp === tempUrl) {
+        permanentToTempMap.set(perm, tempUrl);
+        break;
+      }
+    }
+  }
+
   traverseState(finalState, (key, value, owner) => {
-    if (typeof value === 'string' && permanentToTempUrlMap.has(value)) {
-      const tempUrl = permanentToTempUrlMap.get(value);
+    if (typeof value === 'string' && permanentToTempMap.has(value)) {
+      const tempUrl = permanentToTempMap.get(value);
+      owner[key] = tempUrl; // Generic replacement
 
-      // Generic replacement for simple URL fields
-      owner[key] = tempUrl;
-
-      // Special handling for audio objects to ensure the `blob` property is restored
-      // for the `getPlayableBlob` utility to find it.
+      // Special handling for nested audio objects inside other structures
       if (owner.source && (owner.source === 'google-tts' || owner.source === 'browser') && key === 'url') {
-        owner.url = tempUrl;
-        // The `getPlayableBlob` function needs the `blob` property to be present on the object
-        // after deserialization. We can get it from the `newlyCreatedAssets` map we just populated.
         const downloadedFile = newlyCreatedAssets[tempUrl];
         if (downloadedFile) {
           owner.blob = downloadedFile;
@@ -344,14 +352,24 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
     }
   });
 
-    // Specifically traverse csvData to replace audioUrls
-    if (finalState.csvData && Array.isArray(finalState.csvData)) {
-        finalState.csvData.forEach(record => {
-            if (record && permanentToTempUrlMap.has(record.audioUrl)) {
-                record.audioUrl = permanentToTempUrlMap.get(record.audioUrl);
-            }
-        });
-    }
+  // Specifically and robustly traverse csvData to re-hydrate audio properties.
+  if (finalState.csvData && Array.isArray(finalState.csvData)) {
+    finalState.csvData.forEach(record => {
+      if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
+        const permanentUrl = record.audioUrl;
+        const tempUrl = permanentToTempMap.get(permanentUrl);
+        const downloadedBlob = newlyCreatedAssets[tempUrl];
+
+        if (tempUrl && downloadedBlob) {
+          console.log(`[deserializeCampaignData] Re-hydrating audio for record ID ${record.id}: ${permanentUrl} -> ${tempUrl}`);
+          record.audioUrl = tempUrl; // Update the URL
+          record.audioBlob = downloadedBlob; // CRITICAL: Attach the actual Blob object
+        } else {
+           console.warn(`[deserializeCampaignData] Mismatch finding blob for audio URL: ${permanentUrl}`);
+        }
+      }
+    });
+  }
 
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
