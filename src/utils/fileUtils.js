@@ -51,11 +51,15 @@ export const downloadExampleCsv = async () => {
  */
 export const getPlayableBlob = (asset, pendingAssets = {}) => {
   if (!asset) return null;
-  // Priority 1: The blob property on the asset object itself (for newly generated assets)
+  // Priority 1: Direct 'blob' property (e.g., from a newly generated audio object)
   if (asset.blob instanceof Blob) {
     return asset.blob;
   }
-  // Priority 2: Look in pendingAssets using the asset's URL (for loaded assets)
+  // Priority 2: 'audioBlob' property (e.g., from a re-hydrated record in csvData)
+  if (asset.audioBlob instanceof Blob) {
+    return asset.audioBlob;
+  }
+  // Priority 3: Look in the global pendingAssets map using the asset's URL
   if (asset.url && asset.url.startsWith('blob:') && pendingAssets[asset.url] instanceof Blob) {
     return pendingAssets[asset.url];
   }

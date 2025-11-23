@@ -464,10 +464,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
         setProgress(i + 1);
       }
 
-      const hasAudio = csvData && csvData.some(rec => getPlayableBlob({ url: rec.audioUrl, source: rec.audioSource }, pendingAssets));
+      const hasAudio = csvData && csvData.some(rec => getPlayableBlob(rec, pendingAssets));
       if (hasAudio) {
         for (const [i, record] of csvData.entries()) {
-          const audioBlob = getPlayableBlob({ url: record.audioUrl, source: record.audioSource }, pendingAssets);
+          const audioBlob = getPlayableBlob(record, pendingAssets);
           if (audioBlob) {
             const tempUrl = URL.createObjectURL(audioBlob);
             try {
@@ -731,7 +731,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
 
         const imageData = [generatedImages[i]];
         const record = csvData[i];
-        const audioData = (record && record.audioUrl) ? [{ url: record.audioUrl, source: record.audioSource, duration: record.audioDuration }] : null;
         const framesForThisVideo = Math.floor((record?.audioDuration || slideDuration) * fps);
 
         const handleSubProgress = ({ time, frame }) => {
@@ -743,7 +742,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
         const ffmpeg = new FFmpeg();
         try {
           await ffmpeg.load();
-          const videoBlob = await generateSingleVideo(ffmpeg, imageData, audioData, i, pendingAssets, handleSubProgress);
+          const videoBlob = await generateSingleVideo(ffmpeg, imageData, record, i, pendingAssets, handleSubProgress);
           const thumbnailBlob = await generateThumbnail(ffmpeg, videoBlob);
 
           framesCompletedSoFar += framesForThisVideo;
@@ -791,9 +790,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, csvData }) => {
     }
   };
 
-  const generateSingleVideo = async (ffmpeg, imageData, audioData, index, pendingAssets, onProgress) => {
-    const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
-    const audioBlob = getPlayableBlob(audioObject, pendingAssets);
+  const generateSingleVideo = async (ffmpeg, imageData, record, index, pendingAssets, onProgress) => {
+    const audioBlob = getPlayableBlob(record, pendingAssets);
     const hasAudio = !!audioBlob;
     const outputFilename = `output_${index}.mp4`;
 
