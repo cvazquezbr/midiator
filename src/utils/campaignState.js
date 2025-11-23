@@ -261,16 +261,16 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
     if (isVercelUrl(value) && !uniqueUrlsToDownload.has(value)) {
       uniqueUrlsToDownload.set(value, null); // Value will be the downloaded blob later
     }
-  });
-
-  // Specifically traverse csvData to find audioUrls
-    if (finalState.csvData && Array.isArray(finalState.csvData)) {
-        finalState.csvData.forEach(record => {
-            if (record && isVercelUrl(record.audioUrl) && !uniqueUrlsToDownload.has(record.audioUrl)) {
-                uniqueUrlsToDownload.set(record.audioUrl, null);
-            }
-        });
+     // CRITICAL FIX: Also check for audioUrl specifically within csvData records
+    if (key === 'csvData' && Array.isArray(value)) {
+      value.forEach(record => {
+        if (record && isVercelUrl(record.audioUrl) && !uniqueUrlsToDownload.has(record.audioUrl)) {
+          console.log(`[deserializeCampaignData] Found audioUrl to re-hydrate: ${record.audioUrl}`);
+          uniqueUrlsToDownload.set(record.audioUrl, null);
+        }
+      });
     }
+  });
 
   console.log(`[deserializeCampaignData] Found ${uniqueUrlsToDownload.size} unique assets to download.`);
 
@@ -352,29 +352,24 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
     }
   });
 
-  // Specifically and robustly traverse csvData to re-hydrate audio properties.
-  if (finalState.csvData && Array.isArray(finalState.csvData)) {
-    finalState.csvData.forEach(record => {
-      if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
-        const permanentUrl = record.audioUrl;
-        const tempUrl = permanentToTempMap.get(permanentUrl);
-        const downloadedBlob = newlyCreatedAssets[tempUrl];
-
-        if (tempUrl && downloadedBlob) {
-          console.log(`[deserializeCampaignData] Re-hydrating audio for record ID ${record.id}: ${permanentUrl} -> ${tempUrl}`);
-          record.audioUrl = tempUrl; // Update the URL
-          record.audioBlob = downloadedBlob; // CRITICAL: Attach the actual Blob object
-
-          // ROBUSTNESS: Also ensure this re-hydrated asset is in the global pendingAssets map.
-          // This provides a reliable fallback if the component receives stale props.
-          newlyCreatedAssets[tempUrl] = downloadedBlob;
-
-        } else {
-           console.warn(`[deserializeCampaignData] Mismatch finding blob for audio URL: ${permanentUrl}`);
-        }
+      // Special handling for audio properties within csvData records
+      if (key === 'csvData' && Array.isArray(value)) {
+          value.forEach(record => {
+              if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
+                  const tempUrl = permanentToTempMap.get(record.audioUrl);
+                  const downloadedBlob = newlyCreatedAssets[tempUrl];
+                  record.audioUrl = tempUrl;
+                   if (downloadedBlob) {
+                      // This is the critical fix: re-attach the actual Blob object to the record.
+                      // While `getPlayableBlob` can work without this by looking in pendingAssets,
+                      // it's more robust to have the data directly on the object.
+                      record.audioBlob = downloadedBlob;
+                  }
+              }
+          });
       }
-    });
-  }
+    }
+  });
 
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 

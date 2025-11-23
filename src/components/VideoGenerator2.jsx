@@ -781,7 +781,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
   };
 
   const generateSingleVideo = async (ffmpeg, imageData, record, index, pendingAssets, onProgress) => {
-    const audioBlob = getPlayableBlob(audioObject, pendingAssets);
+    const audioBlob = getPlayableBlob({ url: record.audioUrl }, pendingAssets);
     const hasAudio = !!audioBlob;
     const outputFilename = `output_${index}.mp4`;
 
