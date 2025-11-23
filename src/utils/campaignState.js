@@ -364,6 +364,11 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
           console.log(`[deserializeCampaignData] Re-hydrating audio for record ID ${record.id}: ${permanentUrl} -> ${tempUrl}`);
           record.audioUrl = tempUrl; // Update the URL
           record.audioBlob = downloadedBlob; // CRITICAL: Attach the actual Blob object
+
+          // ROBUSTNESS: Also ensure this re-hydrated asset is in the global pendingAssets map.
+          // This provides a reliable fallback if the component receives stale props.
+          newlyCreatedAssets[tempUrl] = downloadedBlob;
+
         } else {
            console.warn(`[deserializeCampaignData] Mismatch finding blob for audio URL: ${permanentUrl}`);
         }
