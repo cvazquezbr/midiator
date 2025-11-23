@@ -109,16 +109,6 @@ function HomePage() {
     return [];
   }, [csvData]);
 
-  const generatedAudioData = useMemo(() => {
-    if (!csvData) return [];
-    return csvData.map(record => ({
-      text: record['Texto'] || '',
-      url: record.audioUrl,
-      duration: record.audioDuration,
-      source: record.audioSource,
-      rate: record.audioRate,
-    }));
-  }, [csvData]);
   const [palettes, setPalettes] = useState([]);
   const [personaList, setPersonaList] = useState([]);
   const [autorList, setAutorList] = useState([]);
@@ -1101,7 +1091,7 @@ function HomePage() {
                 />
               }
               {activeStep === 5 && <AudioGenerator fieldPositions={fieldPositions} />}
-              {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} generatedAudioData={generatedAudioData} />}
+              {activeStep === 6 && <VideoGenerator2 generatedPages={generatedPagesData} />}
               {activeStep === 7 && (
                 <Publisher
                   settings={settings}

@@ -22,9 +22,9 @@ import SlidesSettings from './VideoGenerator/SlidesSettings';
 import EditableTypography from './EditableTypography';
 import { toast } from 'sonner';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }) => {
+const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
   const { campaignState, setCampaignState, pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
-  const { generatedVideos = [] } = campaignState;
+  const { generatedVideos = [], csvData } = campaignState;
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -412,8 +412,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
   };
 
   const generateVideoWithFFmpeg = async () => {
+    const hasAudio = csvData && csvData.some(record => record.audioUrl);
+
     const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
-      const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
+      const record = csvData[i];
+      const duration = (record && record.audioDuration) ? record.audioDuration : slideDuration;
       return acc + Math.floor(duration * fps);
     }, 0);
 
@@ -458,10 +461,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
         setProgress(i + 1);
       }
 
-      const hasAudio = generatedAudioData && generatedAudioData.length > 0;
       if (hasAudio) {
-        for (const [i, audio] of generatedAudioData.entries()) {
-          const audioBlob = getPlayableBlob(audio, pendingAssets);
+        for (const [i, record] of csvData.entries()) {
+          const audioBlob = getPlayableBlob({ url: record.audioUrl }, pendingAssets);
           if (audioBlob) {
             const tempUrl = URL.createObjectURL(audioBlob);
             try {
@@ -482,7 +484,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
         : 0;
 
       generatedImages.forEach((_, i) => {
-        let duration = (hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration) + effectiveSlideDelay;
+        const record = csvData[i];
+        let duration = (record && record.audioDuration ? record.audioDuration : slideDuration) + effectiveSlideDelay;
         if (i === generatedImages.length - 1) {
           duration += finalSlideDelay;
         }
@@ -499,8 +502,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
             inputs.push("-i", "transition.mp3");
           }
         }
-        generatedAudioData.forEach((audio, i) => {
-          if (getPlayableBlob(audio, pendingAssets)) {
+        csvData.forEach((record, i) => {
+          if (getPlayableBlob({ url: record.audioUrl }, pendingAssets)) {
             inputs.push("-i", `audio${i}.mp3`);
           }
         });
@@ -523,7 +526,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
       generatedImages.slice(1).forEach((_, idx) => {
         const nextVideo = `v${idx + 1}`;
         const label = `xf${idx}`;
-        const duration = (hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration) + effectiveSlideDelay;
+        const record = csvData[idx];
+        const duration = (record && record.audioDuration ? record.audioDuration : slideDuration) + effectiveSlideDelay;
         const offset = videoTime + duration - fadeSeconds;
 
         transitionFilters.push(`[${previousVideo}][${nextVideo}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`);
@@ -531,21 +535,15 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
         videoTime += duration - fadeSeconds;
       });
 
-      const lastImageDuration = (hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration) + effectiveSlideDelay + finalSlideDelay;
+      const lastRecord = csvData[generatedImages.length - 1];
+      const lastImageDuration = (lastRecord && lastRecord.audioDuration ? lastRecord.audioDuration : slideDuration) + effectiveSlideDelay + finalSlideDelay;
       totalDuration = videoTime + lastImageDuration;
       lastVideoLabel = `[${previousVideo}]`;
 
       // --- Audio Filter Chain ---
       if (hasAudio) {
-        // This array will hold filter definitions that create audio sources (e.g., silence).
         const audioPreProcessingFilters = [];
-
-        // This array will hold the labels of the final audio stream for each slide.
-        // Each stream will include narration/silence and a transition sound/delay if applicable.
         const slideAudioStreams = [];
-
-        // Determine the input index for the first narration audio file in the FFmpeg command.
-        // It follows the image inputs and a potential transition sound input.
         const transitionAudioInputIndex = generatedImages.length;
         let firstNarrationInputIndex = transitionAudioInputIndex;
         if (effectiveSlideDelay > 0 && transitionSound !== 'delay') {
@@ -554,16 +552,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
 
         let narrationBlobCounter = 0;
 
-        // Step 1: For each slide, create a combined audio stream containing its narration (or silence)
-        // followed by its transition sound (or silence).
         for (let i = 0; i < generatedImages.length; i++) {
-          const audioData = generatedAudioData[i];
-          const hasNarration = !!getPlayableBlob(audioData, pendingAssets);
+          const record = csvData[i];
+          const hasNarration = !!getPlayableBlob({ url: record.audioUrl }, pendingAssets);
           const isLastSlide = i === generatedImages.length - 1;
 
           let slideContentAudio;
           
-          // Get the primary audio for the slide's content (either narration or generated silence).
           if (hasNarration) {
             slideContentAudio = `[${firstNarrationInputIndex + narrationBlobCounter}:a]`;
             narrationBlobCounter++;
@@ -573,7 +568,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
             slideContentAudio = `[${silenceLabel}]`;
           }
 
-          // If it's not the last slide, append the transition sound or a silent delay.
           if (!isLastSlide && effectiveSlideDelay > 0) {
             let transitionAudio;
             if (transitionSound === 'delay') {
@@ -581,21 +575,16 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
                 audioPreProcessingFilters.push(`anullsrc=channel_layout=stereo:sample_rate=44100:d=${slideDelay}[${delayLabel}]`);
                 transitionAudio = `[${delayLabel}]`;
             } else {
-                // The transition sound is a single file at a fixed input index.
                 transitionAudio = `[${transitionAudioInputIndex}:a]`;
             }
-            // Concatenate the slide's content audio with its transition audio.
-            const combinedLabel = `ca${i}`; // 'ca' for "combined audio"
+            const combinedLabel = `ca${i}`;
             audioPreProcessingFilters.push(`${slideContentAudio}${transitionAudio}concat=n=2:v=0:a=1[${combinedLabel}]`);
             slideAudioStreams.push(`[${combinedLabel}]`);
           } else {
-            // For the last slide, there's no transition, so just use its content audio.
             slideAudioStreams.push(slideContentAudio);
           }
         }
         
-        // Step 2: Chain all the prepared slide audio streams together using `acrossfade`
-        // to match the `xfade` video transitions.
         if (slideAudioStreams.length > 0) {
           let audioChain = slideAudioStreams[0];
           const acrossfadeFilters = [];
@@ -608,7 +597,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
               }
           }
           
-          // Step 3: Append the final delay to the very end of the entire audio chain.
           if (finalSlideDelay > 0) {
             const finalSilenceLabel = 'final_silence';
             const finalAudioOut = 'final_audio';
@@ -624,12 +612,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
           const allAudioFilters = [...audioPreProcessingFilters, ...acrossfadeFilters];
           filterComplex = [...filterParts, ...transitionFilters, ...allAudioFilters].join(";");
         } else {
-          // This case should not happen if hasAudio is true, but for safety:
           filterComplex = [...filterParts, ...transitionFilters].join(";");
         }
 
       } else {
-        // If there's no audio at all, the filter complex only contains video filters.
         filterComplex = [...filterParts, ...transitionFilters].join(";");
       }
 
@@ -670,24 +656,20 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
       }
       setVideo(url);
 
-      // --- Thumbnail Generation ---
       const thumbnailBlob = await generateThumbnail(ffmpeg, blob);
       const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
-      // --------------------------
 
       const videoAsset = {
         id: crypto.randomUUID(),
         type: 'video',
         url: url,
-        // blob property is removed, context handles it
         name: `video-${Date.now()}.mp4`,
         vercelBlobId: null,
-        vercelBlobUrl: url, // This will be replaced by the real one on save
+        vercelBlobUrl: url,
         mimeType: blob.type,
         size: blob.size,
         linkedinVideoUrn: null,
         thumbnailUrl: thumbnailUrl,
-        // thumbnailBlob property is removed
       };
 
       setCampaignState(prev => ({
@@ -713,8 +695,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
     startTimeRef.current = Date.now();
 
     const totalDurationAllVideos = generatedImages.reduce((acc, _, i) => {
-      const audio = generatedAudioData[i];
-      const duration = audio ? audio.duration : slideDuration;
+      const record = csvData[i];
+      const duration = (record && record.audioDuration) ? record.audioDuration : slideDuration;
       return acc + duration;
     }, 0);
 
@@ -740,8 +722,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
         }
 
         const imageData = [generatedImages[i]];
-        const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
-        const framesForThisVideo = Math.floor((audioData?.[0]?.duration || slideDuration) * fps);
+        const record = csvData[i];
+        const framesForThisVideo = Math.floor(((record && record.audioDuration) || slideDuration) * fps);
 
         const handleSubProgress = ({ time, frame }) => {
           const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
@@ -752,12 +734,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
         const ffmpeg = new FFmpeg();
         try {
           await ffmpeg.load();
-          const videoBlob = await generateSingleVideo(ffmpeg, imageData, audioData, i, pendingAssets, handleSubProgress);
+          const videoBlob = await generateSingleVideo(ffmpeg, imageData, record, i, pendingAssets, handleSubProgress);
           const thumbnailBlob = await generateThumbnail(ffmpeg, videoBlob);
 
           framesCompletedSoFar += framesForThisVideo;
-          // This line was causing the progress to "jump". The handleSubProgress is now solely responsible for updates.
-          // setProgress(framesCompletedSoFar); // This line is now removed to allow for smooth progress.
 
           const videoUrl = addPendingAsset(videoBlob);
           const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
@@ -800,8 +780,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }
     }
   };
 
-  const generateSingleVideo = async (ffmpeg, imageData, audioData, index, pendingAssets, onProgress) => {
-    const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
+  const generateSingleVideo = async (ffmpeg, imageData, record, index, pendingAssets, onProgress) => {
     const audioBlob = getPlayableBlob(audioObject, pendingAssets);
     const hasAudio = !!audioBlob;
     const outputFilename = `output_${index}.mp4`;
