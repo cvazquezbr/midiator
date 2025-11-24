@@ -98,12 +98,15 @@ export const CampaignProvider = ({ children }) => {
     // Ensure csvData is always a valid array of objects
     const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
 
-    // A sincronização foi removida para evitar redundância.
-    // O `record` não é mais copiado para `generatedPagesData`.
-    const synchronizedPages = (campaignData.generatedPagesData || []).map((page, index) => ({
-      ...page,
-      index,
-    }));
+    // Synchronize generatedPagesData with csvData
+    const synchronizedPages = sanitizedCsvData.map((record, index) => {
+      const existingPage = (campaignData.generatedPagesData || [])[index] || {};
+      return {
+        ...existingPage,
+        index,
+        record,
+      };
+    });
 
     const campaignColors = campaignData.customPalette?.colors || [];
     const newState = {
