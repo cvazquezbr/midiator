@@ -50,18 +50,37 @@ const GeneratedPagesSection = ({ pages, csvData }) => {
                   </Typography>
                   {csvData && csvData[index] ? (
                     <List dense>
-                      {Object.entries(csvData[index]).map(([key, value]) => (
-                        <React.Fragment key={key}>
-                          <ListItem sx={{ py: 0.5 }}>
-                            <ListItemText
-                              primary={key}
-                              secondary={String(value)}
-                              primaryTypographyProps={{ fontWeight: 'bold' }}
-                            />
-                          </ListItem>
-                          <Divider component="li" />
-                        </React.Fragment>
-                      ))}
+                      {Object.entries(csvData[index]).map(([key, value]) => {
+                        const isAudioObject = key === 'audio' && typeof value === 'object' && value !== null;
+                        return (
+                          <React.Fragment key={key}>
+                            <ListItem sx={{ py: 0.5, alignItems: 'flex-start' }}>
+                              <ListItemText
+                                primary={key}
+                                secondary={
+                                  isAudioObject ? (
+                                    <Box component="span" sx={{ display: 'flex', flexDirection: 'column' }}>
+                                      <Typography component="span" variant="body2">
+                                        Rate: {value.rate ?? 'N/A'}
+                                      </Typography>
+                                      <Typography component="span" variant="body2">
+                                        Source: {value.source ?? 'N/A'}
+                                      </Typography>
+                                      <Typography component="span" variant="body2">
+                                        Duration: {value.duration ? `${value.duration.toFixed(2)}s` : 'N/A'}
+                                      </Typography>
+                                    </Box>
+                                  ) : (
+                                    String(value)
+                                  )
+                                }
+                                primaryTypographyProps={{ fontWeight: 'bold' }}
+                              />
+                            </ListItem>
+                            <Divider component="li" />
+                          </React.Fragment>
+                        );
+                      })}
                     </List>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
