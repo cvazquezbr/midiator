@@ -161,7 +161,7 @@ const PageGeneratorFrontendOnly = ({
   useEffect(() => {
     if (generatedPagesData && generatedPagesData.length > 0 && fontsLoaded) {
       const regenerateMissingThumbnails = async () => {
-        const pagesToRegenerate = generatedPagesData.filter(img => img.record && !img.url);
+        const pagesToRegenerate = generatedPagesData.filter((img, index) => csvData[index] && !img.url);
         if (pagesToRegenerate.length === 0) return;
 
         const pagePromises = generatedPagesData.map(pageData => {
@@ -170,7 +170,7 @@ const PageGeneratorFrontendOnly = ({
           }
           const regenContext = {
             ...campaignState,
-            record: pageData.record,
+            record: csvData[pageData.index],
             index: pageData.index,
             pageTemplate: pageData.customPageTemplate || pageTemplate,
             brandElements: pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements,
@@ -347,10 +347,11 @@ const PageGeneratorFrontendOnly = ({
 
   const handleResetPage = async (index) => {
     const pageToReset = generatedPagesData.find(img => img.index === index);
-    if (pageToReset) {
+    const recordToReset = csvData[index];
+    if (pageToReset && recordToReset) {
       try {
         const regenContext = {
-          ...campaignState, record: pageToReset.record, index, pageTemplate, brandElements, fieldPositions, fieldStyles, fontScale: 1,
+          ...campaignState, record: recordToReset, index, pageTemplate, brandElements, fieldPositions, fieldStyles, fontScale: 1,
         };
         const newPageData = await regenerateSinglePage(regenContext);
         setCampaignState(current => ({
@@ -416,7 +417,7 @@ const PageGeneratorFrontendOnly = ({
 
   const handleOpenGeneratedPageEditor = (pageIndex) => {
     const pageToEdit = generatedPagesData.find(p => p.index === pageIndex);
-    if (!pageToEdit?.record) {
+    if (!pageToEdit || !csvData[pageIndex]) {
       toast.error("Não é possível editar esta página, dados corrompidos.");
       return;
     }
@@ -446,13 +447,14 @@ const PageGeneratorFrontendOnly = ({
     if (file && editingGeneratedPageIndex !== null) {
       const tempUrl = addPendingAsset(file);
       const pageToUpdate = generatedPagesData.find(img => img.index === editingGeneratedPageIndex);
-      if (pageToUpdate) {
+      const recordToUpdate = csvData[editingGeneratedPageIndex];
+      if (pageToUpdate && recordToUpdate) {
         const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
         const newImageElement = { ...createNewImageElement(tempUrl), zIndex: -1 };
         const updatedTemplate = { ...templateToUpdate, images: [newImageElement, ...templateToUpdate.images.slice(1)] };
         const regenContext = {
           ...campaignState,
-          record: pageToUpdate.record,
+          record: recordToUpdate,
           index: editingGeneratedPageIndex,
           pageTemplate: updatedTemplate,
           brandElements: pageToUpdate.customBrandElements || brandElements,
@@ -476,9 +478,9 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleOpenPromptEditor = (index) => {
-    const pageData = generatedPagesData.find(p => p.index === index);
-    if (pageData && pageData.record) {
-      setCurrentPrompt(pageData.record.prompt_imagem_carrossel || '');
+    const record = csvData[index];
+    if (record) {
+      setCurrentPrompt(record.prompt_imagem_carrossel || '');
       setEditingPromptIndex(index);
       setIsPromptEditorOpen(true);
     } else {
@@ -497,35 +499,13 @@ const PageGeneratorFrontendOnly = ({
       toast.error("Nenhuma página selecionada para salvar o prompt.");
       return;
     }
-
-    const updatedGeneratedPagesData = generatedPagesData.map((page) => {
-      if (page.index === editingPromptIndex) {
-        return {
-          ...page,
-          record: {
-            ...page.record,
-            prompt_imagem_carrossel: currentPrompt,
-          },
-        };
-      }
-      return page;
-    });
-
     const updatedCsvData = csvData.map((record, index) => {
       if (index === editingPromptIndex) {
-        return {
-          ...record,
-          prompt_imagem_carrossel: currentPrompt,
-        };
+        return { ...record, prompt_imagem_carrossel: currentPrompt };
       }
       return record;
     });
-
-    setCampaignState({
-      generatedPagesData: updatedGeneratedPagesData,
-      csvData: updatedCsvData,
-    });
-
+    setCampaignState({ csvData: updatedCsvData });
     toast.success("Prompt atualizado com sucesso!");
     handleClosePromptEditor();
   };
@@ -686,6 +666,7 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const pageToEdit = (generatedPagesData || []).find(p => p.index === editingGeneratedPageIndex);
+  const recordToEdit = csvData && editingGeneratedPageIndex !== null ? csvData[editingGeneratedPageIndex] : null;
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -761,13 +742,13 @@ const PageGeneratorFrontendOnly = ({
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Chip label={`#${index + 1}`} size="small" sx={{ backgroundColor: 'rgba(255,255,255,0.3)', color: 'white', mr: 1 }} />
                             <Typography variant="body2" noWrap>
-                              {pageData.record?.Título || 'Página sem título'}
+                              {csvData[index]?.Título || 'Página sem título'}
                             </Typography>
                           </Box>
 
                           <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
-                              { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
+                              { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(csvData[index], pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
                               { title: 'Editar Prompt de Imagem', icon: <AutoFixHigh />, action: (e) => { e.stopPropagation(); handleOpenPromptEditor(pageData.index); } },
                               { title: 'Resetar', icon: <SettingsBackupRestore />, action: (e) => { e.stopPropagation(); handleResetPage(pageData.index); } },
                               { title: 'Editar', icon: <Edit />, action: (e) => { e.stopPropagation(); handleOpenGeneratedPageEditor(pageData.index); } },
@@ -844,13 +825,13 @@ const PageGeneratorFrontendOnly = ({
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Chip label={`#${index + 1}`} size="small" sx={{ backgroundColor: 'rgba(255,255,255,0.3)', color: 'white', mr: 1 }} />
                             <Typography variant="body2" noWrap>
-                              {pageData.record?.Título || 'Página sem título'}
+                              {csvData[index]?.Título || 'Página sem título'}
                             </Typography>
                           </Box>
 
                           <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
-                              { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
+                              { title: 'Regerar com IA', icon: <GeminiIcon />, action: (e) => { e.stopPropagation(); (async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(csvData[index], pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); })(); }, disabled: regeneratingIndex !== null },
                               { title: 'Editar Prompt de Imagem', icon: <AutoFixHigh />, action: (e) => { e.stopPropagation(); handleOpenPromptEditor(pageData.index); } },
                               { title: 'Resetar', icon: <SettingsBackupRestore />, action: (e) => { e.stopPropagation(); handleResetPage(pageData.index); } },
                               { title: 'Editar', icon: <Edit />, action: (e) => { e.stopPropagation(); handleOpenGeneratedPageEditor(pageData.index); } },
@@ -921,12 +902,12 @@ const PageGeneratorFrontendOnly = ({
 
         </CardContent>
       </Card>
-      {pageToEdit && (
+      {pageToEdit && recordToEdit && (
         <PageEditor
           key={editingGeneratedPageIndex}
           open={showGeneratedPageEditor}
           onClose={handleCloseGeneratedPageEditor}
-          pageData={safeDeepClone(pageToEdit)}
+          pageData={{ ...safeDeepClone(pageToEdit), record: recordToEdit }}
           baseTemplate={{
             pageTemplate,
             fieldPositions,

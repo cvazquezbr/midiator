@@ -98,22 +98,19 @@ export const CampaignProvider = ({ children }) => {
     // Ensure csvData is always a valid array of objects
     const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
 
-    // Synchronize generatedPagesData with csvData
-    const synchronizedPages = sanitizedCsvData.map((record, index) => {
-      const existingPage = (campaignData.generatedPagesData || [])[index] || {};
-      return {
-        ...existingPage,
-        index,
-        record,
-      };
-    });
+    // A sincronização foi removida para evitar redundância.
+    // O `record` não é mais copiado para `generatedPagesData`.
+    const synchronizedPages = (campaignData.generatedPagesData || []).map((page, index) => ({
+      ...page,
+      index,
+    }));
 
     const campaignColors = campaignData.customPalette?.colors || [];
     const newState = {
       ...initialState,
       ...campaignData,
       csvData: sanitizedCsvData,
-      generatedPagesData: synchronizedPages,
+      generatedPagesData: campaignData.generatedPagesData || [],
       currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
       pendingAssets: loadedData.pendingAssets || {}, // This is the fix: Overwrite, don't merge.
       selectedAutorForCampaign: loadedData.autor_id || '',
