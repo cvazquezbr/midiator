@@ -757,6 +757,10 @@ function HomePage() {
   const handleGenerateImage = useCallback(async (content, palette = null) => {
     const finalContent = content || campaignContentRef.current;
     if (!finalContent) { toast.error("Gere o conteúdo do texto primeiro."); return false; }
+
+    // Captura as URLs antigas antes de gerar a nova
+    const oldPageUrls = campaignState.pageUrls || [];
+
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
@@ -765,12 +769,22 @@ function HomePage() {
       const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
       const managedUrl = addPendingAsset(imageBlob);
       if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
+
+      // Substitui o array pageUrls em vez de adicionar a ele
       setCampaignState(prev => ({
         ...prev,
         generatedPageUrl: managedUrl,
-        pageUrls: [managedUrl, ...(prev.pageUrls || [])]
+        pageUrls: [managedUrl]
       }));
       addNewImageToCanvas(managedUrl);
+
+      // Limpa as URLs antigas
+      oldPageUrls.forEach(url => {
+        if (url !== managedUrl) {
+          removePendingAsset(url);
+        }
+      });
+
       return true;
     } catch (imageError) {
       toast.error(`Erro na geração da imagem: ${imageError.message}`);
@@ -779,7 +793,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign, setCampaignState]);
+  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign, setCampaignState, campaignState.pageUrls, removePendingAsset]);
 
   const handleGenerateSummary = async (targetLength, content) => {
     // The source of truth for the main content is the 'content' param if provided,
