@@ -350,24 +350,22 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
         }
       }
     }
-  });
 
-      // Special handling for audio properties within csvData records
-      if (key === 'csvData' && Array.isArray(value)) {
-          value.forEach(record => {
-              if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
-                  const tempUrl = permanentToTempMap.get(record.audioUrl);
-                  const downloadedBlob = newlyCreatedAssets[tempUrl];
-                  record.audioUrl = tempUrl;
-                   if (downloadedBlob) {
-                      // This is the critical fix: re-attach the actual Blob object to the record.
-                      // While `getPlayableBlob` can work without this by looking in pendingAssets,
-                      // it's more robust to have the data directly on the object.
-                      record.audioBlob = downloadedBlob;
-                  }
-              }
-          });
-      }
+    // Special handling for audio properties within csvData records
+    if (key === 'csvData' && Array.isArray(value)) {
+        value.forEach(record => {
+            if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
+                const tempUrl = permanentToTempMap.get(record.audioUrl);
+                const downloadedBlob = newlyCreatedAssets[tempUrl];
+                record.audioUrl = tempUrl;
+                 if (downloadedBlob) {
+                    // This is the critical fix: re-attach the actual Blob object to the record.
+                    // While `getPlayableBlob` can work without this by looking in pendingAssets,
+                    // it's more robust to have the data directly on the object.
+                    record.audioBlob = downloadedBlob;
+                }
+            }
+        });
     }
   });
 
