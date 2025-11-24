@@ -151,13 +151,10 @@ const AudioGenerator = ({ fieldPositions }) => {
     const recordsToProcess = campaignState.csvData || [];
     const newCsvData = [...recordsToProcess];
 
-    // Limpa os blobs de áudio antigos para evitar vazamentos de memória
+    // Clean up old audio blobs to prevent memory leaks
     recordsToProcess.forEach(record => {
-      if (record?.audio?.url) {
-        URL.revokeObjectURL(record.audio.url);
-      } else if (record?.audioUrl?.startsWith('blob:')) {
-        // Compatibilidade com a estrutura antiga
-        removePendingAsset(record.audioUrl);
+      if (record?.audio?.url?.startsWith('blob:')) {
+        removePendingAsset(record.audio.url);
       }
     });
 
@@ -176,13 +173,7 @@ const AudioGenerator = ({ fieldPositions }) => {
         }
 
         const newRecord = { ...newCsvData[i] };
-        // Remove propriedades de áudio antigas e niveladas
-        delete newRecord.audioUrl;
-        delete newRecord.audioDuration;
-        delete newRecord.audioSource;
-        delete newRecord.audioRate;
-
-        // Adiciona o novo objeto de áudio aninhado
+        // Set the new nested audio object
         newRecord.audio = {
           url: generatedAudio.url,
           duration: generatedAudio.duration,
@@ -226,28 +217,32 @@ const AudioGenerator = ({ fieldPositions }) => {
 
     const record = audioData[index];
     const textToSpeak = getTextoParaAudio(record);
+    const audioInfo = record.audio;
 
-    const audioInfo = record.audio || {};
-    const blobToPlay = audioInfo.blob || getPlayableBlob({ url: record.audioUrl }, campaignState.pendingAssets);
+    if (!audioInfo || !audioInfo.source) {
+      toast.error("Não foi possível encontrar os dados de áudio para reprodução.");
+      console.error("Audio source information is missing:", record);
+      return;
+    }
 
-    if (audioInfo.source === 'google-tts' && blobToPlay) {
-      const playbackUrl = audioInfo.url || URL.createObjectURL(blobToPlay);
+    if (audioInfo.source === 'google-tts' && audioInfo.blob) {
+      const playbackUrl = audioInfo.url || URL.createObjectURL(audioInfo.blob);
       audioRef.current = new Audio(playbackUrl);
       audioRef.current.onended = () => {
         setCurrentlyPlaying(null);
-        if (!audioInfo.url) {
+        if (!audioInfo.url) { // Revoke only if it was a temporary object URL
             URL.revokeObjectURL(playbackUrl);
         }
       };
       audioRef.current.play();
-    } else if (record.audioSource === 'browser' || audioInfo.source === 'browser') {
+    } else if (audioInfo.source === 'browser') {
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = 'pt-BR';
-      utterance.rate = record.audioRate || audioInfo.rate || speechRate;
+      utterance.rate = audioInfo.rate || speechRate;
       utterance.onended = () => setCurrentlyPlaying(null);
       speechSynthesis.speak(utterance);
     } else {
-      toast.error("Não foi possível encontrar os dados de áudio para reprodução.");
+      toast.error("Dados de áudio para este slide estão incompletos ou corrompidos.");
       console.error("Failed to find playable blob for audio:", record);
       return;
     }
@@ -262,25 +257,31 @@ const AudioGenerator = ({ fieldPositions }) => {
     }
 
     const record = audioData[currentTrackIndexRef.current];
-    const audioInfo = record.audio || {};
+    const audioInfo = record.audio;
     const textToSpeak = getTextoParaAudio(record);
-    const blobToPlay = audioInfo.blob || getPlayableBlob({ url: record.audioUrl }, campaignState.pendingAssets);
 
-    if (audioInfo.source === 'google-tts' && blobToPlay) {
-      const playbackUrl = audioInfo.url || URL.createObjectURL(blobToPlay);
+    if (!audioInfo || !audioInfo.source) {
+      console.warn("Skipping unplayable track (missing source):", record);
+      currentTrackIndexRef.current += 1;
+      playNextTrack();
+      return;
+    }
+
+    if (audioInfo.source === 'google-tts' && audioInfo.blob) {
+      const playbackUrl = audioInfo.url || URL.createObjectURL(audioInfo.blob);
       audioRef.current = new Audio(playbackUrl);
       audioRef.current.onended = () => {
-        if (!audioInfo.url) {
+        if (!audioInfo.url) { // Revoke only temporary URLs
             URL.revokeObjectURL(playbackUrl);
         }
         currentTrackIndexRef.current += 1;
         playNextTrack();
       };
       audioRef.current.play();
-    } else if (record.audioSource === 'browser' || audioInfo.source === 'browser') {
+    } else if (audioInfo.source === 'browser') {
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = 'pt-BR';
-      utterance.rate = record.audioRate || audioInfo.rate || speechRate;
+      utterance.rate = audioInfo.rate || speechRate;
       utterance.onended = () => {
         currentTrackIndexRef.current += 1;
         playNextTrack();
@@ -316,17 +317,16 @@ const AudioGenerator = ({ fieldPositions }) => {
 
   const handleDownload = (index) => {
     const record = audioData[index];
-    const audioInfo = record.audio || {};
-    const blob = audioInfo.blob || getPlayableBlob({ url: record.audioUrl }, campaignState.pendingAssets);
+    const blob = record?.audio?.blob;
     if (blob) {
-      const url = audioInfo.url || URL.createObjectURL(blob);
+      const url = record.audio.url || URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `audio_${index + 1}.mp3`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      if (!audioInfo.url) {
+      if (!record.audio.url) {
         URL.revokeObjectURL(url);
       }
     }
@@ -334,17 +334,16 @@ const AudioGenerator = ({ fieldPositions }) => {
 
   const handleDownloadAll = () => {
     audioData.forEach((record, index) => {
-      const audioInfo = record.audio || {};
-      const blob = audioInfo.blob || getPlayableBlob({ url: record.audioUrl }, campaignState.pendingAssets);
+      const blob = record?.audio?.blob;
       if (blob) {
-        const url = audioInfo.url || URL.createObjectURL(blob);
+        const url = record.audio.url || URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `audio_${index + 1}.mp3`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        if (!audioInfo.url) {
+        if (!record.audio.url) {
             URL.revokeObjectURL(url);
         }
       }
@@ -443,7 +442,7 @@ const AudioGenerator = ({ fieldPositions }) => {
                   <Button
                     variant="outlined"
                     onClick={handleDownloadAll}
-                    disabled={isGenerating || audioData.some(rec => !(rec.audio?.blob || getPlayableBlob({ url: rec.audioUrl }, campaignState.pendingAssets)))}
+                    disabled={isGenerating || audioData.some(rec => !rec.audio?.blob)}
                     startIcon={<CloudDownload />}
                     sx={{ ml: 2 }}
                   >
@@ -479,17 +478,17 @@ const AudioGenerator = ({ fieldPositions }) => {
                       </Grid>
                       <Grid item xs={12} sm="auto">
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {(record.audio?.duration || record.audioDuration) && (
+                          {record.audio?.duration && (
                             <Chip
                               icon={<Timer />}
-                              label={`${(record.audio?.duration || record.audioDuration).toFixed(1)}s`}
+                              label={`${record.audio.duration.toFixed(1)}s`}
                               sx={{ mr: 1 }}
                             />
                           )}
-                          {(record.audio?.rate || record.audioRate) && (
+                          {record.audio?.rate && (
                             <Chip
                               icon={<Speed />}
-                              label={`${record.audio?.rate || record.audioRate}x`}
+                              label={`${record.audio.rate}x`}
                               variant="outlined"
                               sx={{ mr: 1 }}
                             />
@@ -506,10 +505,8 @@ const AudioGenerator = ({ fieldPositions }) => {
                               'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
                             };
                             const oldRecord = audioData[index];
-                            if (oldRecord.audio?.url) {
-                              URL.revokeObjectURL(oldRecord.audio.url);
-                            } else if (oldRecord.audioUrl?.startsWith('blob:')) {
-                              removePendingAsset(oldRecord.audioUrl);
+                            if (oldRecord.audio?.url?.startsWith('blob:')) {
+                                removePendingAsset(oldRecord.audio.url);
                             }
 
                             let generatedAudio;
@@ -521,10 +518,6 @@ const AudioGenerator = ({ fieldPositions }) => {
                             const newCsvData = audioData.map((rec, idx) => {
                                 if (idx === index) {
                                   const newRecord = { ...rec };
-                                  delete newRecord.audioUrl;
-                                  delete newRecord.audioDuration;
-                                  delete newRecord.audioSource;
-                                  delete newRecord.audioRate;
                                   newRecord.audio = {
                                     url: generatedAudio.url,
                                     duration: generatedAudio.duration,
@@ -544,7 +537,7 @@ const AudioGenerator = ({ fieldPositions }) => {
                           <span>
                             <IconButton
                               onClick={() => handleDownload(index)}
-                              disabled={!(record.audio?.blob || getPlayableBlob({ url: record.audioUrl }, campaignState.pendingAssets))}
+                              disabled={!record.audio?.blob}
                               size="small"
                             >
                               <SaveAlt />

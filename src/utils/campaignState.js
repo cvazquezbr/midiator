@@ -159,18 +159,24 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   });
   console.log('[serializeCampaignData] Step 4 COMPLETE.');
 
-  // --- Step 5: Clean up stale audio blobs ---
-  // After URLs are replaced, the local audioBlob is no longer valid for the next session.
+  // --- Step 5: Final data sanitization before saving ---
   if (workingState.csvData && Array.isArray(workingState.csvData)) {
     workingState.csvData.forEach(record => {
-      // If the audioUrl was uploaded and replaced, it will no longer start with 'blob:'.
-      // In this case, we must delete the stale local blob reference.
-      if (record && record.audioUrl && !record.audioUrl.startsWith('blob:')) {
-        delete record.audioBlob;
+      if (!record) return;
+      // Ensure any old, flat audio properties are removed to maintain a clean data structure.
+      delete record.audioUrl;
+      delete record.audioBlob;
+      delete record.audioDuration;
+      delete record.audioSource;
+      delete record.audioRate;
+
+      // Also, remove the local blob from the nested audio object as it's not needed for persistence.
+      if (record.audio) {
+        delete record.audio.blob;
       }
     });
   }
-  console.log('[serializeCampaignData] Step 5: Stale audio blobs cleaned up.');
+  console.log('[serializeCampaignData] Step 5: Final data sanitization complete.');
 
 
   console.log('[serializeCampaignData] All uploads and serialization complete.');
@@ -356,26 +362,42 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
 
     // Special handling for audio properties within csvData records
     if (key === 'csvData' && Array.isArray(value)) {
-        value.forEach(record => {
-            // Handle new nested audio object structure
-            if (record?.audio && typeof record.audio.url === 'string' && permanentToTempMap.has(record.audio.url)) {
-                const tempUrl = permanentToTempMap.get(record.audio.url);
-                const downloadedBlob = newlyCreatedAssets[tempUrl];
-                record.audio.url = tempUrl;
-                if (downloadedBlob) {
-                    record.audio.blob = downloadedBlob;
-                }
-            }
-            // Handle old flat structure for backward compatibility
-            else if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
-                const tempUrl = permanentToTempMap.get(record.audioUrl);
-                const downloadedBlob = newlyCreatedAssets[tempUrl];
-                record.audioUrl = tempUrl;
-                 if (downloadedBlob) {
-                    record.audioBlob = downloadedBlob;
-                }
-            }
-        });
+      value.forEach(record => {
+        if (!record) return;
+
+        // --- MIGRATION LOGIC ---
+        // If the old flat structure exists, migrate it to the new nested structure.
+        if (record.audioUrl || record.audioDuration) {
+          // If 'audio' object doesn't exist, create it.
+          if (!record.audio) {
+            record.audio = {};
+          }
+          // Migrate properties, giving preference to the new structure if it already partly exists.
+          record.audio.url = record.audio.url || record.audioUrl;
+          record.audio.blob = record.audio.blob || record.audioBlob;
+          record.audio.duration = record.audio.duration || record.audioDuration;
+          record.audio.source = record.audio.source || record.audioSource;
+          record.audio.rate = record.audio.rate || record.audioRate;
+
+          // Clean up old flat properties
+          delete record.audioUrl;
+          delete record.audioBlob;
+          delete record.audioDuration;
+          delete record.audioSource;
+          delete record.audioRate;
+        }
+
+        // --- HYDRATION LOGIC ---
+        // Now, hydrate the 'audio.url' if it's a permanent URL that has been downloaded.
+        if (record.audio && typeof record.audio.url === 'string' && permanentToTempMap.has(record.audio.url)) {
+          const tempUrl = permanentToTempMap.get(record.audio.url);
+          const downloadedBlob = newlyCreatedAssets[tempUrl];
+          record.audio.url = tempUrl;
+          if (downloadedBlob) {
+            record.audio.blob = downloadedBlob;
+          }
+        }
+      });
     }
   });
 

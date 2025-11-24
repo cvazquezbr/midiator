@@ -412,11 +412,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
   };
 
   const generateVideoWithFFmpeg = async () => {
-    const hasAudio = csvData && csvData.some(record => record.audioUrl || record.audio);
+    const hasAudio = csvData && csvData.some(record => record.audio);
 
     const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
       const record = csvData[i];
-      const duration = (record && (record.audio?.duration || record.audioDuration)) ? (record.audio?.duration || record.audioDuration) : slideDuration;
+      const duration = record?.audio?.duration ? record.audio.duration : slideDuration;
       return acc + Math.floor(duration * fps);
     }, 0);
 
@@ -463,9 +463,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
 
       if (hasAudio) {
         for (const [i, record] of csvData.entries()) {
-          const audioBlob = record.audio?.blob || getPlayableBlob({ url: record.audioUrl }, pendingAssets);
+          const audioBlob = record.audio?.blob;
           if (audioBlob) {
-            const tempUrl = record.audio?.url || URL.createObjectURL(audioBlob);
+            const tempUrl = record.audio.url || URL.createObjectURL(audioBlob);
             try {
               const audioSource = await fetchFile(tempUrl);
               await ffmpeg.writeFile(`audio${i}.mp3`, audioSource);
@@ -487,7 +487,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
 
       generatedImages.forEach((_, i) => {
         const record = csvData[i];
-        let duration = (record && (record.audio?.duration || record.audioDuration) ? (record.audio?.duration || record.audioDuration) : slideDuration) + effectiveSlideDelay;
+        let duration = (record?.audio?.duration ? record.audio.duration : slideDuration) + effectiveSlideDelay;
         if (i === generatedImages.length - 1) {
           duration += finalSlideDelay;
         }
@@ -505,7 +505,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
           }
         }
         csvData.forEach((record, i) => {
-          if (record.audio?.blob || getPlayableBlob({ url: record.audioUrl }, pendingAssets)) {
+          if (record.audio?.blob) {
             inputs.push("-i", `audio${i}.mp3`);
           }
         });
@@ -529,7 +529,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
         const nextVideo = `v${idx + 1}`;
         const label = `xf${idx}`;
         const record = csvData[idx];
-        const duration = (record && (record.audio?.duration || record.audioDuration) ? (record.audio?.duration || record.audioDuration) : slideDuration) + effectiveSlideDelay;
+        const duration = (record?.audio?.duration ? record.audio.duration : slideDuration) + effectiveSlideDelay;
         const offset = videoTime + duration - fadeSeconds;
 
         transitionFilters.push(`[${previousVideo}][${nextVideo}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`);
@@ -538,7 +538,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
       });
 
       const lastRecord = csvData[generatedImages.length - 1];
-      const lastImageDuration = (lastRecord && (lastRecord.audio?.duration || lastRecord.audioDuration) ? (lastRecord.audio?.duration || lastRecord.audioDuration) : slideDuration) + effectiveSlideDelay + finalSlideDelay;
+      const lastImageDuration = (lastRecord?.audio?.duration ? lastRecord.audio.duration : slideDuration) + effectiveSlideDelay + finalSlideDelay;
       totalDuration = videoTime + lastImageDuration;
       lastVideoLabel = `[${previousVideo}]`;
 
@@ -556,7 +556,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
 
         for (let i = 0; i < generatedImages.length; i++) {
           const record = csvData[i];
-          const hasNarration = !!(record.audio?.blob || getPlayableBlob({ url: record.audioUrl }, pendingAssets));
+          const hasNarration = !!record.audio?.blob;
           const isLastSlide = i === generatedImages.length - 1;
 
           let slideContentAudio;
@@ -698,7 +698,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
 
     const totalDurationAllVideos = generatedImages.reduce((acc, _, i) => {
       const record = csvData[i];
-      const duration = (record && (record.audio?.duration || record.audioDuration)) ? (record.audio?.duration || record.audioDuration) : slideDuration;
+      const duration = record?.audio?.duration ? record.audio.duration : slideDuration;
       return acc + duration;
     }, 0);
 
@@ -725,7 +725,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
 
         const imageData = [generatedImages[i]];
         const record = csvData[i];
-        const framesForThisVideo = Math.floor(((record && (record.audio?.duration || record.audioDuration)) || slideDuration) * fps);
+        const framesForThisVideo = Math.floor((record?.audio?.duration || slideDuration) * fps);
 
         const handleSubProgress = ({ time, frame }) => {
           const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
@@ -783,7 +783,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages }) => {
   };
 
   const generateSingleVideo = async (ffmpeg, imageData, record, index, pendingAssets, onProgress) => {
-    const audioBlob = record.audio?.blob || getPlayableBlob({ url: record.audioUrl }, pendingAssets);
+    const audioBlob = record.audio?.blob;
     const hasAudio = !!audioBlob;
     const outputFilename = `output_${index}.mp4`;
 
