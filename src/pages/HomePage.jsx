@@ -515,8 +515,9 @@ function HomePage() {
         });
 
         // Ensure dependent data arrays are also initialized
-        const newGeneratedPagesData = dataWithIds.map((_, index) => ({
+        const newGeneratedPagesData = dataWithIds.map((record, index) => ({
           index,
+          record,
           blob: null,
           url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
@@ -645,21 +646,22 @@ function HomePage() {
       // Sincroniza os dados das páginas geradas com os posts curtos (fonte da verdade).
       // Usa o ID do registro para garantir que os ativos existentes (imagens) não sejam perdidos.
       const newGeneratedPagesData = sanitizedRegistros.map((record, index) => {
-        // Corrigido: `existingPage` agora é encontrado comparando o ID do registro em `csvData`
-        const oldCsvIndex = (prev.csvData || []).findIndex(oldRecord => oldRecord.id === record.id);
-        const existingPage = oldCsvIndex !== -1 ? (prev.generatedPagesData || [])[oldCsvIndex] : undefined;
+        // Encontra a página existente correspondente pelo ID do registro, não pelo índice.
+        const existingPage = (prev.generatedPagesData || []).find(p => p.record?.id === record.id);
 
         if (existingPage) {
-          // Se a página já existe, preserva a URL da imagem e outros metadados.
-          // O 'record' não é mais adicionado aqui.
+          // Se a página já existe, atualiza o 'record' com os novos dados do post,
+          // mas preserva a URL da imagem e outros metadados.
           return {
             ...existingPage,
+            record: record, // Atualiza os dados do post
             index: index,   // Atualiza o índice em caso de reordenação
           };
         } else {
-          // Se for um novo post, cria um novo objeto de página sem o 'record'.
+          // Se for um novo post, cria um novo objeto de página.
           return {
             index,
+            record,
             url: null,
             blob: null,
             filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
@@ -705,19 +707,26 @@ function HomePage() {
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
     setCampaignState(prev => {
-        const sanitizedCsvData = newCsvData.map((record, index) => ({
-            ...(record || {}),
-            Título: (record || {}).Título || `Página ${index + 1}`,
-        }));
+      const sanitizedCsvData = newCsvData.map((record, index) => ({
+        ...(record || {}),
+        Título: (record || {}).Título || `Página ${index + 1}`,
+      }));
 
-        const updates = {
-            csvData: sanitizedCsvData,
-            // generatedPagesData é mantido em sincronia pelo índice, sem duplicar o 'record'.
-        };
+      const synchronizedPages = sanitizedCsvData.map((record, index) => {
+        const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
+        return { ...existingPage, index, record };
+      });
 
-        return { ...prev, ...updates };
+      const updates = {
+        csvData: sanitizedCsvData,
+        generatedPagesData: synchronizedPages,
+        // Preserve media data
+        generatedVideos: prev.generatedVideos || [],
+      };
+
+      return { ...prev, ...updates };
     });
-}, [setCampaignState]);
+  }, [setCampaignState]);
 
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
     setCampaignState(prev => ({
@@ -890,8 +899,9 @@ function HomePage() {
       });
 
       // 2. Synchronize generatedPagesData with the sanitized data.
-      const newGeneratedPagesData = sanitizedCsvData.map((_, index) => ({
+      const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({
         index,
+        record,
         blob: null,
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography, Box, Grid, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
 
-const GeneratedPagesSection = ({ pages }) => {
+const GeneratedPagesSection = ({ pages, csvData }) => {
   if (!pages || pages.length === 0) {
     return null;
   }
@@ -48,9 +48,9 @@ const GeneratedPagesSection = ({ pages }) => {
                   <Typography variant="subtitle1" gutterBottom>
                     Dados do CSV
                   </Typography>
-                  {page.record ? (
+                  {csvData && csvData[index] ? (
                     <List dense>
-                      {Object.entries(page.record).map(([key, value]) => (
+                      {Object.entries(csvData[index]).map(([key, value]) => (
                         <React.Fragment key={key}>
                           <ListItem sx={{ py: 0.5 }}>
                             <ListItemText
@@ -64,7 +64,7 @@ const GeneratedPagesSection = ({ pages }) => {
                       ))}
                     </List>
                   ) : (
-                     <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary">
                       (Nenhum registro de CSV para esta página)
                     </Typography>
                   )}
