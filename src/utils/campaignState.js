@@ -184,6 +184,13 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   // Final sanitization: Remove keys that are not meant for persistence.
   delete workingState.pendingAssets;
 
+  // Final sanitization: Remove redundant data from generatedPagesData.
+  if (workingState.generatedPagesData && Array.isArray(workingState.generatedPagesData)) {
+    workingState.generatedPagesData.forEach(page => {
+      delete page.record;
+    });
+  }
+
   return workingState;
 };
 
@@ -231,29 +238,16 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
     }, {});
 
     finalState.generatedPagesData = finalState.generatedPagesData.map((page, index) => {
-      const baseRecord = sanitizedCsvData[index] || { ...defaultRecord };
-
       if (!page) {
         return {
           index: index,
-          record: baseRecord,
           url: null,
           blob: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         };
       }
-
-      if (!page.record) {
-        page.record = baseRecord;
-      } else {
-        // Ensure all header fields exist on the record to prevent crashes.
-        headers.forEach(header => {
-          if (!(header in page.record)) {
-            page.record[header] = '';
-          }
-        });
-      }
-
+      // A propriedade 'record' é removida para garantir que não haja dados redundantes.
+      delete page.record;
       page.index = index;
       return page;
     });

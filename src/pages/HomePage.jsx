@@ -650,18 +650,16 @@ function HomePage() {
         const existingPage = oldCsvIndex !== -1 ? (prev.generatedPagesData || [])[oldCsvIndex] : undefined;
 
         if (existingPage) {
-          // Se a página já existe, atualiza o 'record' com os novos dados do post,
-          // mas preserva a URL da imagem e outros metadados.
+          // Se a página já existe, preserva a URL da imagem e outros metadados.
+          // O 'record' não é mais adicionado aqui.
           return {
             ...existingPage,
-            record: record, // Atualiza os dados do post
             index: index,   // Atualiza o índice em caso de reordenação
           };
         } else {
-          // Se for um novo post, cria um novo objeto de página.
+          // Se for um novo post, cria um novo objeto de página sem o 'record'.
           return {
             index,
-            record,
             url: null,
             blob: null,
             filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
