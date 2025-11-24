@@ -24,6 +24,7 @@ const MemorialDescritivo = ({ campaignData }) => {
     followupPosts,
     colors,
     generatedPagesData,
+    csvData,
   } = campaignData;
 
   // In the new structure, `colors` is the primary array of color objects.
@@ -80,7 +81,7 @@ const MemorialDescritivo = ({ campaignData }) => {
       <Divider sx={{ my: 6 }} />
 
       <Box sx={{ my: 4 }}>
-        <GeneratedPagesSection pages={generatedPagesData} />
+        <GeneratedPagesSection pages={generatedPagesData} csvData={csvData} />
       </Box>
 
       <Divider sx={{ my: 6 }} />
