@@ -587,11 +587,11 @@ function HomePage() {
       case 4: return true;
       case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.url)) { toast.error("Gere todas as páginas antes de prosseguir."); return false; } return true;
       case 6:
-        if (csvData.length > 0 && !csvData.every(record => record && record.audioUrl)) {
+        if (csvData.length > 0 && !csvData.every(record => record && (record.audioUrl || record.audio?.url))) {
           toast.error("Gere o áudio para todos os slides antes de prosseguir.");
           return false;
         }
-        if (csvData.length > 0 && csvData.some(record => record && record.audioUrl && !record.audioDuration)) {
+        if (csvData.length > 0 && csvData.some(record => record && (record.audioUrl || record.audio?.url) && !(record.audioDuration || record.audio?.duration))) {
           toast.error("Aguarde o cálculo da duração de todos os áudios.");
           return false;
         }

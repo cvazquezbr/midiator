@@ -264,8 +264,11 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
      // CRITICAL FIX: Also check for audioUrl specifically within csvData records
     if (key === 'csvData' && Array.isArray(value)) {
       value.forEach(record => {
-        if (record && isVercelUrl(record.audioUrl) && !uniqueUrlsToDownload.has(record.audioUrl)) {
-          console.log(`[deserializeCampaignData] Found audioUrl to re-hydrate: ${record.audioUrl}`);
+        if (record?.audio && isVercelUrl(record.audio.url) && !uniqueUrlsToDownload.has(record.audio.url)) {
+          console.log(`[deserializeCampaignData] Found nested audioUrl to re-hydrate: ${record.audio.url}`);
+          uniqueUrlsToDownload.set(record.audio.url, null);
+        } else if (record && isVercelUrl(record.audioUrl) && !uniqueUrlsToDownload.has(record.audioUrl)) {
+          console.log(`[deserializeCampaignData] Found flat audioUrl to re-hydrate: ${record.audioUrl}`);
           uniqueUrlsToDownload.set(record.audioUrl, null);
         }
       });
@@ -354,14 +357,21 @@ export const deserializeCampaignData = async (loadedState, onHydrationProgress) 
     // Special handling for audio properties within csvData records
     if (key === 'csvData' && Array.isArray(value)) {
         value.forEach(record => {
-            if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
+            // Handle new nested audio object structure
+            if (record?.audio && typeof record.audio.url === 'string' && permanentToTempMap.has(record.audio.url)) {
+                const tempUrl = permanentToTempMap.get(record.audio.url);
+                const downloadedBlob = newlyCreatedAssets[tempUrl];
+                record.audio.url = tempUrl;
+                if (downloadedBlob) {
+                    record.audio.blob = downloadedBlob;
+                }
+            }
+            // Handle old flat structure for backward compatibility
+            else if (record && typeof record.audioUrl === 'string' && permanentToTempMap.has(record.audioUrl)) {
                 const tempUrl = permanentToTempMap.get(record.audioUrl);
                 const downloadedBlob = newlyCreatedAssets[tempUrl];
                 record.audioUrl = tempUrl;
                  if (downloadedBlob) {
-                    // This is the critical fix: re-attach the actual Blob object to the record.
-                    // While `getPlayableBlob` can work without this by looking in pendingAssets,
-                    // it's more robust to have the data directly on the object.
                     record.audioBlob = downloadedBlob;
                 }
             }
