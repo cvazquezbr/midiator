@@ -180,6 +180,10 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
 
 
   console.log('[serializeCampaignData] All uploads and serialization complete.');
+
+  // Final sanitization: Remove keys that are not meant for persistence.
+  delete workingState.pendingAssets;
+
   return workingState;
 };
 
