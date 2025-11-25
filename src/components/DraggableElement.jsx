@@ -27,6 +27,7 @@ const DraggableElementInternal = ({
   onSelect,
   onPositionChange,
   onSizeChange,
+  onStyleChange,
   containerSize,
   onContentChange,
   rotation,
@@ -56,7 +57,43 @@ const DraggableElementInternal = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
   const htmlContentRef = useRef(null);
-  // const canvasRef = useRef(null); // Removido
+
+  useEffect(() => {
+    if (element.type === 'text' && enableHtmlRendering && htmlContentRef.current && containerSize.width > 0) {
+      const measureDiv = document.createElement('div');
+      document.body.appendChild(measureDiv);
+
+      // Apply styles that affect layout
+      measureDiv.style.visibility = 'hidden';
+      measureDiv.style.position = 'absolute';
+      measureDiv.style.width = 'auto';
+      measureDiv.style.height = 'auto';
+      measureDiv.style.fontFamily = style.fontFamily || 'Arial';
+      measureDiv.style.fontSize = `${style.fontSize || 24}px`;
+      measureDiv.style.fontWeight = style.fontWeight || 'normal';
+      measureDiv.style.fontStyle = style.fontStyle || 'normal';
+      measureDiv.style.lineHeight = `${(style.fontSize || 24) * (style.lineHeightMultiplier || 1.2)}px`;
+      measureDiv.innerHTML = sanitizeHtml(content);
+
+      const naturalWidth = measureDiv.scrollWidth;
+      const naturalHeight = measureDiv.scrollHeight;
+
+      document.body.removeChild(measureDiv);
+
+      if (naturalWidth > 0 && naturalHeight > 0) {
+        const containerWidth = (position.width / 100) * containerSize.width;
+        const containerHeight = (position.height / 100) * containerSize.height;
+        const scaleX = containerWidth / naturalWidth;
+        const scaleY = containerHeight / naturalHeight;
+        const newScale = Math.min(scaleX, scaleY);
+
+        if (onStyleChange && Math.abs((style.scale || 1) - newScale) > 0.001) {
+            onStyleChange(element.id, { scale: newScale });
+        }
+      }
+    }
+  }, [content, position.width, position.height, style.fontFamily, style.fontSize, style.fontWeight, style.fontStyle, style.lineHeightMultiplier, containerSize, enableHtmlRendering]);
+
 
   // Função para sanitizar HTML básico
   const sanitizeHtml = (html) => {
@@ -155,41 +192,17 @@ const DraggableElementInternal = ({
       );
     }
 
-    // For HTML, we now apply scaling directly to font sizes and effects,
-    // just like with plain text, to ensure consistency with the final render.
     const sanitizedContent = sanitizeHtml(content);
-    const scaledFontSize = (style.fontSize || 24) * (fontScale || 1);
-    const scaledLineHeight = (style.fontSize || 24) * (style.lineHeightMultiplier || 1.2) * (fontScale || 1);
-
-    const htmlStyle = {
-      fontFamily: style.fontFamily || 'Arial',
-      fontSize: `${scaledFontSize}px`,
-      fontWeight: style.fontWeight || 'normal',
-      fontStyle: style.fontStyle || 'normal',
-      color: style.color || '#000000',
-      textDecoration: style.textDecoration || 'none',
-      lineHeight: `${scaledLineHeight}px`,
-      textAlign: style.textAlign || 'left',
-    };
-
-    if (style.textStroke) {
-      htmlStyle.WebkitTextStroke = `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}`;
-    }
-    if (style.textShadow) {
-      htmlStyle.textShadow = `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}`;
-    }
-
     return (
       <div
         ref={htmlContentRef}
         dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         style={{
-          ...htmlStyle,
           width: '100%',
-          height: '100%',
           overflow: 'hidden',
           wordWrap: 'break-word',
           pointerEvents: 'none',
+          ...textContentStyle,
         }}
       />
     );
@@ -593,6 +606,7 @@ const DraggableElementInternal = ({
     return `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor}`;
   };
 
+  const scale = style.scale || 1;
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
     fontSize: `${scaledFontSize}px`,
@@ -604,6 +618,10 @@ const DraggableElementInternal = ({
     textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
     pointerEvents: 'none',
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left',
+    width: `${100 / scale}%`,
+    height: `${100 / scale}%`,
   };
 
   if (style.textStroke) {
