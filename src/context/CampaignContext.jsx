@@ -83,7 +83,7 @@ export const CampaignProvider = ({ children }) => {
     });
   }, []);
 
-  const applyLoadedCampaign = useCallback((loadedData) => {
+  const applyLoadedCampaign = useCallback((loadedData, allPalettes = []) => {
     // CRITICAL FIX: The cleanup of old assets must happen HERE, before setting
     // the new state. We get the CURRENT assets from the state updater function,
     // clear them, and then return the NEW state. This avoids race conditions.
@@ -108,7 +108,17 @@ export const CampaignProvider = ({ children }) => {
       };
     });
 
-    const campaignColors = campaignData.customPalette?.colors || [];
+    // Find the correct colors for the campaign
+    let campaignColors = [];
+    if (campaignData.customPalette?.colors && campaignData.customPalette.colors.length > 0) {
+      campaignColors = campaignData.customPalette.colors;
+    } else if (campaignData.paletteId && allPalettes && allPalettes.length > 0) {
+      const selectedPalette = allPalettes.find(p => p.id === campaignData.paletteId);
+      if (selectedPalette) {
+        campaignColors = selectedPalette.colors;
+      }
+    }
+
     const newState = {
       ...initialState,
       ...campaignData,

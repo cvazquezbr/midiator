@@ -259,7 +259,7 @@ function HomePage() {
       applyLoadedCampaign({
         ...result.campaign,
         pendingAssets: result.pendingAssets || {},
-      });
+      }, palettes);
     } catch (err) {
       console.error("[HomePage] Error during save/update campaign:", err);
       toast.error(err.message || 'An unknown error occurred while saving the campaign.');
@@ -303,7 +303,7 @@ function HomePage() {
             ...loadedCampaign,
             campaign_data: loadedCampaign.campaign_data || {},
             pendingAssets: loadedCampaign.pendingAssets || {},
-          });
+          }, palettes);
           // Redirect to the general campaigns view but with the campaign loaded
           navigate('/', { replace: true });
         } catch (error) {
@@ -406,7 +406,7 @@ function HomePage() {
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
 
   const handleCreateNewCampaign = () => {
-    applyLoadedCampaign({});
+    applyLoadedCampaign({}, palettes);
     setActiveStep(1);
   };
 
@@ -453,7 +453,7 @@ function HomePage() {
           }));
         }
 
-        applyLoadedCampaign(campaignToApply);
+        applyLoadedCampaign(campaignToApply, palettes);
 
         // If the loaded campaign has CSV data, set the input method to manual
         // so the user sees the data grid immediately.
@@ -485,7 +485,7 @@ function HomePage() {
         pendingAssets: clonedCampaign.pendingAssets || {},
       };
 
-      applyLoadedCampaign(campaignToApply);
+      applyLoadedCampaign(campaignToApply, palettes);
 
       // If the cloned campaign has CSV data, set the input method to manual.
       if (clonedCampaign.campaign_data?.csvData?.length > 0) {
