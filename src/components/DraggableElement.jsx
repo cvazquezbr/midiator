@@ -155,17 +155,38 @@ const DraggableElementInternal = ({
       );
     }
 
+    // When rendering HTML, we use a transform to scale the content proportionally.
+    // This maintains the relative sizes of fonts and elements within the HTML.
     const sanitizedContent = sanitizeHtml(content);
+    const baseStyleForHtml = {
+      fontFamily: style.fontFamily || 'Arial',
+      fontSize: `${style.fontSize || 24}px`, // Use original, non-scaled font size
+      fontWeight: style.fontWeight || 'normal',
+      fontStyle: style.fontStyle || 'normal',
+      color: style.color || '#000000',
+      textDecoration: style.textDecoration || 'none',
+      lineHeight: `${(style.fontSize || 24) * (style.lineHeightMultiplier || 1.2)}px`,
+      textAlign: style.textAlign || 'left',
+    };
+    if (style.textStroke) {
+      baseStyleForHtml.WebkitTextStroke = `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`;
+    }
+    if (style.textShadow) {
+      baseStyleForHtml.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
+    }
     return (
       <div
         ref={htmlContentRef}
         dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         style={{
-          width: '100%',
+          ...baseStyleForHtml,
+          width: `calc(100% / ${fontScale || 1})`,
+          height: `calc(100% / ${fontScale || 1})`,
+          transform: `scale(${fontScale || 1})`,
+          transformOrigin: 'top left',
           overflow: 'hidden',
           wordWrap: 'break-word',
           pointerEvents: 'none',
-          ...textContentStyle,
         }}
       />
     );
