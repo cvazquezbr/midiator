@@ -171,6 +171,22 @@ const FieldPositioner = React.forwardRef(({
     });
   }, [selectedField, setEditorState]);
 
+  const handleStyleChange = useCallback((id, newStyle) => {
+    setEditorState(prevState => {
+      const { fieldStyles } = prevState;
+      if (fieldStyles && Object.prototype.hasOwnProperty.call(fieldStyles, id)) {
+        return {
+          ...prevState,
+          fieldStyles: {
+            ...fieldStyles,
+            [id]: { ...(fieldStyles[id] || {}), ...newStyle },
+          },
+        };
+      }
+      return prevState;
+    });
+  }, [setEditorState]);
+
   const handleSizeChange = useCallback((id, newSize) => {
     setEditorState(prevState => {
       const { fieldPositions, pageTemplate, brandElements } = prevState;
@@ -471,6 +487,7 @@ const FieldPositioner = React.forwardRef(({
               onSelect={setSelectedField}
               onPositionChange={handlePositionChange}
               onSizeChange={handleSizeChange}
+            onStyleChange={handleStyleChange}
               containerSize={renderedImageMetrics}
               onContentChange={element.type === 'text' ? handleContentChange : undefined}
               onDoubleClick={() => {
