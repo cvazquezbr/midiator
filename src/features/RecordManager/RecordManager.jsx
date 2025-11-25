@@ -70,6 +70,24 @@ const RecordManager = ({
     const registros = registrosIniciais;
     const colunas = colunasIniciais;
 
+    // Efeito para sincronizar o registro selecionado com os dados mais recentes das props.
+    // Isso evita que o modal de edição contenha dados obsoletos após uma edição de campo individual.
+    useEffect(() => {
+        if (registroSelecionado && registroSelecionado.id) {
+            const registroAtualizado = registros.find(r => String(r.id) === String(registroSelecionado.id));
+            if (registroAtualizado) {
+                // Previne re-renderizações desnecessárias se os dados forem os mesmos.
+                if (JSON.stringify(registroSelecionado) !== JSON.stringify(registroAtualizado)) {
+                    setRegistroSelecionado(registroAtualizado);
+                }
+            } else {
+                // O registro foi excluído, então fecha o modal.
+                handleFecharModal();
+            }
+        }
+    }, [registros, registroSelecionado]);
+
+
     // Handlers para abrir modais
     const handleAbrirModalAdicionar = () => {
         setRegistroSelecionado(null);
