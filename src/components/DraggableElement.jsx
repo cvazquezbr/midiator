@@ -57,13 +57,14 @@ const DraggableElementInternal = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
   const htmlContentRef = useRef(null);
+  const debounceTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    if (element.type === 'text' && enableHtmlRendering && htmlContentRef.current && containerSize.width > 0) {
+
+  const calculateAndApplyScale = useCallback(() => {
+    if (element.type === 'text' && enableHtmlRendering && containerSize.width > 0) {
       const measureDiv = document.createElement('div');
       document.body.appendChild(measureDiv);
 
-      // Apply styles that affect layout
       measureDiv.style.visibility = 'hidden';
       measureDiv.style.position = 'absolute';
       measureDiv.style.width = 'auto';
@@ -88,11 +89,36 @@ const DraggableElementInternal = ({
         const newScale = Math.min(scaleX, scaleY);
 
         if (onStyleChange && Math.abs((style.scale || 1) - newScale) > 0.001) {
-            onStyleChange(element.id, { scale: newScale });
+          onStyleChange(element.id, { scale: newScale });
         }
       }
     }
-  }, [content, style.fontFamily, style.fontSize, style.fontWeight, style.fontStyle, style.lineHeightMultiplier, containerSize, enableHtmlRendering]);
+  }, [
+    content, style.fontFamily, style.fontSize, style.fontWeight,
+    style.fontStyle, style.lineHeightMultiplier, style.scale,
+    containerSize.width, containerSize.height,
+    position.width, position.height,
+    enableHtmlRendering, onStyleChange, element.id
+  ]);
+
+  useEffect(() => {
+    // Clear any existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set a new timeout
+    debounceTimeoutRef.current = setTimeout(() => {
+      calculateAndApplyScale();
+    }, 250); // 250ms debounce delay
+
+    // Cleanup function to clear timeout on unmount or re-render
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [calculateAndApplyScale]);
 
 
   // Função para sanitizar HTML básico
