@@ -56,5 +56,13 @@ export default defineConfig({
   
   define: {
     global: 'globalThis'
-  }
+  },
+
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './test/setup.js',
+    // Exclude Playwright tests from the Vitest runner
+    exclude: ['**/node_modules/**', '**/dist/**', '**/test/isolated.e2e.test.js'],
+  },
 })

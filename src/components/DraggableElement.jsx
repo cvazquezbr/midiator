@@ -40,7 +40,6 @@ const DraggableElementInternal = ({
 }) => {
   const { campaignState } = useCampaign();
   const { pendingAssets } = campaignState;
-  console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -57,39 +56,49 @@ const DraggableElementInternal = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
   const htmlContentRef = useRef(null);
-  const debounceTimeoutRef = useRef(null);
+  const measurementRef = useRef(null); // Ref for the hidden measurement div
 
-  const calculateAndApplyScale = useCallback(() => {
-    if (element.type === 'text' && enableHtmlRendering && htmlContentRef.current && containerSize.width > 0) {
-      const naturalWidth = htmlContentRef.current.scrollWidth;
-      const naturalHeight = htmlContentRef.current.scrollHeight;
+  // This effect calculates the correct scale for HTML content to fit its container.
+  // It uses a hidden, unscaled div (`measurementRef`) to get the "natural" size
+  // of the content after word-wrapping. This breaks the feedback loop where
+  // measuring the scaled element would cause it to re-scale itself indefinitely.
+  useEffect(() => {
+    if (element.type === 'text' && enableHtmlRendering && measurementRef.current && containerSize.width > 0 && containerSize.height > 0) {
+        const containerPixelWidth = (position.width / 100) * containerSize.width;
+        const containerPixelHeight = (position.height / 100) * containerSize.height;
 
-      if (naturalWidth > 0 && naturalHeight > 0) {
-        const containerWidth = (position.width / 100) * containerSize.width;
-        const containerHeight = (position.height / 100) * containerSize.height;
+        // The measurement div has the correct width, so its scrollHeight is the natural height of the wrapped text.
+        const naturalHeight = measurementRef.current.scrollHeight;
+        const naturalWidth = measurementRef.current.scrollWidth;
 
-        // Adiciona um pequeno buffer para evitar o truncamento devido a arredondamento
-        const scaleX = containerWidth / (naturalWidth + 2);
-        const scaleY = containerHeight / (naturalHeight + 2);
+        if (naturalWidth > 0 && naturalHeight > 0) {
+            const scaleY = containerPixelHeight / naturalHeight;
+            const scaleX = containerPixelWidth / naturalWidth;
+            const newScale = Math.min(scaleX, scaleY);
 
-        const newScale = Math.min(scaleX, scaleY);
-
-        if (onStyleChange && Math.abs((style.scale || 1) - newScale) > 0.001) {
-          onStyleChange(element.id, { ...style, scale: newScale });
+            // Only update if the scale has meaningfully changed to prevent tiny re-renders
+            if (onStyleChange && Math.abs((style.scale || 1) - newScale) > 0.001) {
+                onStyleChange(element.id, { scale: newScale });
+            }
         }
-      }
     }
   }, [
-    containerSize.width, containerSize.height,
-    position.width, position.height,
-    enableHtmlRendering, onStyleChange, element.id, style
+      content,
+      position.width,
+      position.height,
+      containerSize.width,
+      containerSize.height,
+      style.fontFamily,
+      style.fontSize,
+      style.fontWeight,
+      style.fontStyle,
+      style.lineHeightMultiplier,
+      enableHtmlRendering,
+      element.type,
+      element.id,
+      onStyleChange
+      // CRITICAL: style.scale is NOT in the dependency array
   ]);
-
-
-  useEffect(() => {
-    // A escala é calculada quando o conteúdo ou as fontes mudam, não no redimensionamento.
-    calculateAndApplyScale();
-  }, [content, style.fontFamily, style.fontSize, style.fontWeight, style.fontStyle, style.lineHeightMultiplier, calculateAndApplyScale]);
 
 
   // Função para sanitizar HTML básico
@@ -620,9 +629,10 @@ const DraggableElementInternal = ({
   if (enableHtmlRendering) {
     textContentStyle.transform = `scale(${scale})`;
     textContentStyle.transformOrigin = 'top left';
-    // Ajusta a largura e a altura para compensar a escala
-    textContentStyle.width = `${100 / scale}%`;
-    textContentStyle.height = `${100 / scale}%`;
+    // As linhas a seguir foram removidas porque estavam quebrando o layout do flexbox pai,
+    // fazendo com que o conteúdo não fosse renderizado. A transformação `scale` é suficiente.
+    // textContentStyle.width = `${100 / scale}%`;
+    // textContentStyle.height = `${100 / scale}%`;
   }
 
   if (style.textStroke) {
@@ -715,8 +725,34 @@ const DraggableElementInternal = ({
     boxSx.padding = `${style.padding || 0}px`;
   }
 
+  const sanitizedContentForRendering = sanitizeHtml(content);
+
   return (
     <>
+      {/*
+        Hidden Measurement Div:
+        - This div is positioned off-screen (-9999px).
+        - It has the same width and text styles as the visible element, but NO scaling transform.
+        - The `useEffect` hook measures its `scrollHeight` and `scrollWidth` to get the "natural"
+          dimensions of the content after word-wrapping has occurred.
+        - This is the key to breaking the scaling feedback loop.
+      */}
+      {enableHtmlRendering && element.type === 'text' && (
+        <div
+          ref={measurementRef}
+          style={{
+            ...textContentStyle,
+            position: 'absolute',
+            left: '-9999px', // Position off-screen
+            top: '-9999px',
+            width: `${(position.width / 100) * containerSize.width}px`, // Set explicit pixel width for accurate wrapping
+            height: 'auto', // Height must be auto to measure scrollHeight
+            transform: 'none', // CRITICAL: No scaling
+          }}
+          dangerouslySetInnerHTML={{ __html: sanitizedContentForRendering }}
+        />
+      )}
+
       <Box
         id={element.id}
         ref={textBoxRef}
