@@ -92,7 +92,7 @@ const DraggableElementInternal = ({
         }
       }
     }
-  }, [content, position.width, position.height, style.fontFamily, style.fontSize, style.fontWeight, style.fontStyle, style.lineHeightMultiplier, containerSize, enableHtmlRendering]);
+  }, [content, style.fontFamily, style.fontSize, style.fontWeight, style.fontStyle, style.lineHeightMultiplier, containerSize, enableHtmlRendering]);
 
 
   // Função para sanitizar HTML básico
