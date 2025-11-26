@@ -20,30 +20,29 @@ export const containsHtml = (text) => {
  * @param {number} maxHeight The maximum height for the HTML content.
  * @param {Object} style The CSS styles to apply.
  */
-export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
+export const renderHtmlToCanvas = async (htmlContent, maxWidth, maxHeight, style) => {
   // Create an off-screen parent container that will act as a table.
   const tableContainer = document.createElement('div');
   tableContainer.style.position = 'absolute';
   tableContainer.style.left = '-9999px';
   tableContainer.style.top = '-9999px';
-  tableContainer.style.display = 'table';
-  tableContainer.style.width = `${maxWidth}px`;
-  tableContainer.style.height = `${maxHeight}px`;
+  // Use inline-block instead of table to allow natural width/height
+  tableContainer.style.display = 'inline-block';
+  tableContainer.style.width = 'auto';
+  tableContainer.style.height = 'auto';
 
-  // Create the target child element that will act as a table-cell.
+
+  // The tempDiv is the one that gets the styles and content
   const tempDiv = document.createElement('div');
 
-  // Apply layout styles to the table-cell container.
-  tempDiv.style.display = 'table-cell';
-  tempDiv.style.verticalAlign = style.verticalAlign || 'top';
+  // Apply layout styles
+  tempDiv.style.display = 'inline-block';
   tempDiv.style.padding = `${style.padding || 0}px`;
 
   // Construct an inline style string to force styles onto the content.
   // This is more robust for html2canvas, which can be fickle with style inheritance.
   const inlineStyle = `
     display: inline-block;
-    width: 100%;
-    height: 100%;
     box-sizing: border-box;
     font-family: ${style.fontFamily || 'Arial'};
     font-size: ${style.fontSize || 24}px;
@@ -81,18 +80,19 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
       backgroundColor: null, // Make background transparent
       useCORS: true,
       scale: window.devicePixelRatio, // Use device pixel ratio for better quality
-      width: maxWidth,
-      height: maxHeight,
     });
 
-    // Draw the resulting canvas onto the main context at the specified coordinates.
-    ctx.drawImage(canvasFromHtml, x, y);
+    // Return the newly created canvas instead of drawing it.
+    return canvasFromHtml;
 
   } catch (error) {
     console.error('Error rendering HTML to canvas with html2canvas:', error);
+    return null;
   } finally {
     // Clean up by removing the container from the DOM.
-    document.body.removeChild(tableContainer);
+    if (document.body.contains(tableContainer)) {
+      document.body.removeChild(tableContainer);
+    }
   }
 };
 
