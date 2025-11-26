@@ -609,12 +609,12 @@ const DraggableElementInternal = ({
   const scale = style.scale || 1;
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
-    fontSize: `${scaledFontSize}px`,
+    fontSize: `${enableHtmlRendering ? baseFontSize : scaledFontSize}px`,
     fontWeight: style.fontWeight || 'normal',
     fontStyle: style.fontStyle || 'normal',
     color: style.color || '#000000',
     textDecoration: style.textDecoration || 'none',
-    lineHeight: `${scaledLineHeight}px`,
+    lineHeight: `${enableHtmlRendering ? lineHeight : scaledLineHeight}px`,
     textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
     pointerEvents: 'none',

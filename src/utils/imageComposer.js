@@ -496,7 +496,19 @@ export const drawAndComposeImage = async ({
             const lineHeight = finalStyle.fontSize * (finalStyle.lineHeightMultiplier || 1.2);
 
             if (containsHtml(content)) {
-                await renderHtmlToCanvas(ctx, content, textContentStartX, textContentStartY, effectiveTextWidth, effectiveTextHeight, finalStyle);
+                // Para HTML, usamos o fontSize base, pois a escala é aplicada no drawImage
+                const htmlStyle = { ...finalStyle, fontSize: style.fontSize || 24 };
+                const htmlCanvas = await renderHtmlToCanvas(content, undefined, undefined, htmlStyle);
+                if (htmlCanvas) {
+                    // A escala calculada no editor nos diz como o conteúdo natural deve ser redimensionado.
+                    const scale = style.scale || 1;
+                    const scaledWidth = htmlCanvas.width * scale;
+                    const scaledHeight = htmlCanvas.height * scale;
+
+                    // Desenha o canvas do HTML no canvas principal, aplicando a escala
+                    // através das dimensões de destino do drawImage.
+                    ctx.drawImage(htmlCanvas, textContentStartX, textContentStartY, scaledWidth, scaledHeight);
+                }
             } else {
                 const lines = wrapTextInArea(ctx, content, finalStyle, effectiveTextWidth, effectiveTextHeight);
                 let totalTextBlockHeight = lines.length * lineHeight;
