@@ -56,49 +56,6 @@ const DraggableElementInternal = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
   const htmlContentRef = useRef(null);
-  const measurementRef = useRef(null); // Ref for the hidden measurement div
-
-  // This effect calculates the correct scale for HTML content to fit its container.
-  // It uses a hidden, unscaled div (`measurementRef`) to get the "natural" size
-  // of the content after word-wrapping. This breaks the feedback loop where
-  // measuring the scaled element would cause it to re-scale itself indefinitely.
-  useEffect(() => {
-    if (element.type === 'text' && enableHtmlRendering && measurementRef.current && containerSize.width > 0 && containerSize.height > 0) {
-        const containerPixelWidth = (position.width / 100) * containerSize.width;
-        const containerPixelHeight = (position.height / 100) * containerSize.height;
-
-        // The measurement div has the correct width, so its scrollHeight is the natural height of the wrapped text.
-        const naturalHeight = measurementRef.current.scrollHeight;
-        const naturalWidth = measurementRef.current.scrollWidth;
-
-        if (naturalWidth > 0 && naturalHeight > 0) {
-            const scaleY = containerPixelHeight / naturalHeight;
-            const scaleX = containerPixelWidth / naturalWidth;
-            const newScale = Math.min(scaleX, scaleY);
-
-            // Only update if the scale has meaningfully changed to prevent tiny re-renders
-            if (onStyleChange && Math.abs((style.scale || 1) - newScale) > 0.001) {
-                onStyleChange(element.id, { scale: newScale });
-            }
-        }
-    }
-  }, [
-      content,
-      position.width,
-      position.height,
-      containerSize.width,
-      containerSize.height,
-      style.fontFamily,
-      style.fontSize,
-      style.fontWeight,
-      style.fontStyle,
-      style.lineHeightMultiplier,
-      enableHtmlRendering,
-      element.type,
-      element.id,
-      onStyleChange
-      // CRITICAL: style.scale is NOT in the dependency array
-  ]);
 
 
   // Função para sanitizar HTML básico
@@ -612,7 +569,6 @@ const DraggableElementInternal = ({
     return `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor}`;
   };
 
-  const scale = style.scale || 1;
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
     fontSize: `${enableHtmlRendering ? baseFontSize : scaledFontSize}px`,
@@ -625,15 +581,6 @@ const DraggableElementInternal = ({
     textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
     pointerEvents: 'none',
   };
-
-  if (enableHtmlRendering) {
-    textContentStyle.transform = `scale(${scale})`;
-    textContentStyle.transformOrigin = 'top left';
-    // As linhas a seguir foram removidas porque estavam quebrando o layout do flexbox pai,
-    // fazendo com que o conteúdo não fosse renderizado. A transformação `scale` é suficiente.
-    // textContentStyle.width = `${100 / scale}%`;
-    // textContentStyle.height = `${100 / scale}%`;
-  }
 
   if (style.textStroke) {
     textContentStyle.WebkitTextStroke = `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}`;
@@ -729,30 +676,6 @@ const DraggableElementInternal = ({
 
   return (
     <>
-      {/*
-        Hidden Measurement Div:
-        - This div is positioned off-screen (-9999px).
-        - It has the same width and text styles as the visible element, but NO scaling transform.
-        - The `useEffect` hook measures its `scrollHeight` and `scrollWidth` to get the "natural"
-          dimensions of the content after word-wrapping has occurred.
-        - This is the key to breaking the scaling feedback loop.
-      */}
-      {enableHtmlRendering && element.type === 'text' && (
-        <div
-          ref={measurementRef}
-          style={{
-            ...textContentStyle,
-            position: 'absolute',
-            left: '-9999px', // Position off-screen
-            top: '-9999px',
-            width: `${(position.width / 100) * containerSize.width}px`, // Set explicit pixel width for accurate wrapping
-            height: 'auto', // Height must be auto to measure scrollHeight
-            transform: 'none', // CRITICAL: No scaling
-          }}
-          dangerouslySetInnerHTML={{ __html: sanitizedContentForRendering }}
-        />
-      )}
-
       <Box
         id={element.id}
         ref={textBoxRef}
