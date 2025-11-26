@@ -157,17 +157,19 @@ const DraggableElementInternal = ({
 
     const sanitizedContent = sanitizeHtml(content);
     return (
-      <div
-        ref={htmlContentRef}
-        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-        style={{
-          width: '100%',
-          overflow: 'hidden',
-          wordWrap: 'break-word',
-          pointerEvents: 'none',
-          ...textContentStyle,
-        }}
-      />
+      <div style={{ transform: `scale(${fontScale})`, transformOrigin: 'top left', width: `${100 / fontScale}%`, height: `${100 / fontScale}%` }}>
+        <div
+          ref={htmlContentRef}
+          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+          style={{
+            width: '100%',
+            overflow: 'hidden',
+            wordWrap: 'break-word',
+            pointerEvents: 'none',
+            ...textContentStyle,
+          }}
+        />
+      </div>
     );
   };
 
