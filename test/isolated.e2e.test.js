@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('PageSet Thumbnail Generation', () => {
-  test('should generate a thumbnail on save', async ({ page }) => {
-    // Listen for any console errors, which can indicate why the page isn't rendering.
+test('should generate a thumbnail on save', async ({ page }) => {
+    // NOTE: This test was temporarily disabled due to a Vitest/Playwright
+    // runner conflict, which has now been resolved by excluding E2E tests
+    // from the Vitest configuration in vite.config.js.
+
     page.on('console', msg => {
       if (msg.type() === 'error') {
         console.log(`PAGE CONSOLE ERROR: ${msg.text()}`);
       }
     });
 
-    // Mock all initial API calls
     await page.route('/api/auth/me', route => {
       route.fulfill({
         status: 200,
@@ -46,19 +47,15 @@ test.describe('PageSet Thumbnail Generation', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
 
-    // Go to the application
     await page.goto('http://localhost:5173/');
 
     try {
-      // Wait for the main page to load
       await expect(page.locator('h1:has-text("Campanhas")')).toBeVisible({ timeout: 15000 });
     } catch (error) {
-      // If it fails, take a screenshot for debugging and re-throw the error.
       await page.screenshot({ path: '/home/jules/verification/render-failure.png' });
       throw error;
     }
 
-    // --- Rest of the test ---
     await page.getByRole('button', { name: 'Conjunto de Páginas' }).click();
     await expect(page.locator('h2:has-text("Conjuntos de Páginas")')).toBeVisible();
 
@@ -84,4 +81,3 @@ test.describe('PageSet Thumbnail Generation', () => {
 
     await page.screenshot({ path: '/home/jules/verification/thumbnail-verification.png' });
   });
-});
