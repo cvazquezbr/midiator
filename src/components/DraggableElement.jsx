@@ -618,11 +618,14 @@ const DraggableElementInternal = ({
     textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
     pointerEvents: 'none',
-    transform: `scale(${scale})`,
-    transformOrigin: 'top left',
-    width: `${100 / scale}%`,
-    height: `${100 / scale}%`,
   };
+
+  if (enableHtmlRendering) {
+    textContentStyle.transform = `scale(${scale})`;
+    textContentStyle.transformOrigin = 'top left';
+    textContentStyle.width = `${100 / scale}%`;
+    textContentStyle.height = `${100 / scale}%`;
+  }
 
   if (style.textStroke) {
     textContentStyle.WebkitTextStroke = `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}`;
