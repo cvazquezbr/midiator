@@ -496,18 +496,45 @@ export const drawAndComposeImage = async ({
             const lineHeight = finalStyle.fontSize * (finalStyle.lineHeightMultiplier || 1.2);
 
             if (containsHtml(content)) {
-                // Para HTML, usamos o fontSize base, pois a escala é aplicada no drawImage
                 const htmlStyle = { ...finalStyle, fontSize: style.fontSize || 24 };
-                const htmlCanvas = await renderHtmlToCanvas(content, undefined, undefined, htmlStyle);
-                if (htmlCanvas) {
-                    // A escala calculada no editor nos diz como o conteúdo natural deve ser redimensionado.
-                    const scale = style.scale || 1;
-                    const scaledWidth = htmlCanvas.width * scale;
-                    const scaledHeight = htmlCanvas.height * scale;
+                // Passamos a largura efetiva para obter a quebra de linha correta. A altura é nula
+                // para permitir que o conteúdo determine sua própria altura.
+                const htmlCanvas = await renderHtmlToCanvas(content, effectiveTextWidth, undefined, htmlStyle);
 
-                    // Desenha o canvas do HTML no canvas principal, aplicando a escala
-                    // através das dimensões de destino do drawImage.
-                    ctx.drawImage(htmlCanvas, textContentStartX, textContentStartY, scaledWidth, scaledHeight);
+                if (htmlCanvas && htmlCanvas.width > 0 && htmlCanvas.height > 0) {
+                    // Preservar a proporção do aspecto
+                    const canvasAspectRatio = htmlCanvas.width / htmlCanvas.height;
+                    const containerAspectRatio = effectiveTextWidth / effectiveTextHeight;
+
+                    let destWidth = effectiveTextWidth;
+                    let destHeight = effectiveTextHeight;
+
+                    // Lógica para 'contain' - caber o conteúdo dentro do contêiner.
+                    if (canvasAspectRatio > containerAspectRatio) {
+                        // O conteúdo é mais largo que o contêiner
+                        destHeight = destWidth / canvasAspectRatio;
+                    } else {
+                        // O conteúdo é mais alto ou tem a mesma proporção
+                        destWidth = destHeight * canvasAspectRatio;
+                    }
+
+                    // Calcular posicionamento com base nos alinhamentos
+                    let drawX = textContentStartX;
+                    let drawY = textContentStartY;
+
+                    if (finalStyle.textAlign === 'center') {
+                        drawX += (effectiveTextWidth - destWidth) / 2;
+                    } else if (finalStyle.textAlign === 'right') {
+                        drawX += effectiveTextWidth - destWidth;
+                    }
+
+                    if (finalStyle.verticalAlign === 'middle') {
+                        drawY += (effectiveTextHeight - destHeight) / 2;
+                    } else if (finalStyle.verticalAlign === 'bottom') {
+                        drawY += effectiveTextHeight - destHeight;
+                    }
+
+                    ctx.drawImage(htmlCanvas, drawX, drawY, destWidth, destHeight);
                 }
             } else {
                 const lines = wrapTextInArea(ctx, content, finalStyle, effectiveTextWidth, effectiveTextHeight);

@@ -37,6 +37,10 @@ export const renderHtmlToCanvas = async (htmlContent, maxWidth, maxHeight, style
 
   // Apply layout styles
   tempDiv.style.display = 'inline-block';
+  // If maxWidth is provided, use it to constrain the container.
+  if (maxWidth) {
+    tempDiv.style.width = `${maxWidth}px`;
+  }
   tempDiv.style.padding = `${style.padding || 0}px`;
 
   // Construct an inline style string to force styles onto the content.
