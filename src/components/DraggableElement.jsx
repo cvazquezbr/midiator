@@ -59,66 +59,37 @@ const DraggableElementInternal = ({
   const htmlContentRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
 
-
   const calculateAndApplyScale = useCallback(() => {
-    if (element.type === 'text' && enableHtmlRendering && containerSize.width > 0) {
-      const measureDiv = document.createElement('div');
-      document.body.appendChild(measureDiv);
-
-      measureDiv.style.visibility = 'hidden';
-      measureDiv.style.position = 'absolute';
-      measureDiv.style.width = 'auto';
-      measureDiv.style.height = 'auto';
-      measureDiv.style.fontFamily = style.fontFamily || 'Arial';
-      measureDiv.style.fontSize = `${style.fontSize || 24}px`;
-      measureDiv.style.fontWeight = style.fontWeight || 'normal';
-      measureDiv.style.fontStyle = style.fontStyle || 'normal';
-      measureDiv.style.lineHeight = `${(style.fontSize || 24) * (style.lineHeightMultiplier || 1.2)}px`;
-      measureDiv.innerHTML = sanitizeHtml(content);
-
-      const naturalWidth = measureDiv.scrollWidth;
-      const naturalHeight = measureDiv.scrollHeight;
-
-      document.body.removeChild(measureDiv);
+    if (element.type === 'text' && enableHtmlRendering && htmlContentRef.current && containerSize.width > 0) {
+      const naturalWidth = htmlContentRef.current.scrollWidth;
+      const naturalHeight = htmlContentRef.current.scrollHeight;
 
       if (naturalWidth > 0 && naturalHeight > 0) {
         const containerWidth = (position.width / 100) * containerSize.width;
         const containerHeight = (position.height / 100) * containerSize.height;
-        const scaleX = containerWidth / naturalWidth;
-        const scaleY = containerHeight / naturalHeight;
+
+        // Adiciona um pequeno buffer para evitar o truncamento devido a arredondamento
+        const scaleX = containerWidth / (naturalWidth + 2);
+        const scaleY = containerHeight / (naturalHeight + 2);
+
         const newScale = Math.min(scaleX, scaleY);
 
         if (onStyleChange && Math.abs((style.scale || 1) - newScale) > 0.001) {
-          onStyleChange(element.id, { scale: newScale });
+          onStyleChange(element.id, { ...style, scale: newScale });
         }
       }
     }
   }, [
-    content, style.fontFamily, style.fontSize, style.fontWeight,
-    style.fontStyle, style.lineHeightMultiplier, style.scale,
     containerSize.width, containerSize.height,
     position.width, position.height,
-    enableHtmlRendering, onStyleChange, element.id
+    enableHtmlRendering, onStyleChange, element.id, style
   ]);
 
+
   useEffect(() => {
-    // Clear any existing timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    // Set a new timeout
-    debounceTimeoutRef.current = setTimeout(() => {
-      calculateAndApplyScale();
-    }, 250); // 250ms debounce delay
-
-    // Cleanup function to clear timeout on unmount or re-render
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [calculateAndApplyScale]);
+    // A escala é calculada quando o conteúdo ou as fontes mudam, não no redimensionamento.
+    calculateAndApplyScale();
+  }, [content, style.fontFamily, style.fontSize, style.fontWeight, style.fontStyle, style.lineHeightMultiplier, calculateAndApplyScale]);
 
 
   // Função para sanitizar HTML básico
@@ -649,6 +620,7 @@ const DraggableElementInternal = ({
   if (enableHtmlRendering) {
     textContentStyle.transform = `scale(${scale})`;
     textContentStyle.transformOrigin = 'top left';
+    // Ajusta a largura e a altura para compensar a escala
     textContentStyle.width = `${100 / scale}%`;
     textContentStyle.height = `${100 / scale}%`;
   }
