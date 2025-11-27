@@ -335,13 +335,13 @@ const TextFormatting = ({
                 <Typography variant="caption" display="block">Padding</Typography>
                 <Slider
                   orientation="vertical"
-                  value={currentElement.style.padding || 5} // Valor inicial 5px
+                  value={currentElement.style.padding ?? 0} // Valor inicial 0px
                   onChange={(e, v) => updateFieldStyle('padding', v)}
                   min={0}
                   max={50}
                   sx={{ height: 100, mt: 1 }}
                 />
-                <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
+                <Typography variant="caption" display="block">{currentElement.style.padding ?? 0}px</Typography>
               </Grid>
 
             </Grid>
