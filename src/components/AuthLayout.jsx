@@ -1,7 +1,8 @@
 import React from 'react';
 import { Grid, Box, Paper, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { Link } from 'react-router-dom';
-import AuthBackgroundImage from '../assets/auth_background.png'; // Importa a imagem
+import AuthBackgroundImage from '../assets/auth_background.png';
+import LogoImage from '../assets/logo.png'; // Importa o novo logo
 
 const AuthLayout = ({ children, title }) => {
   const theme = useTheme();
@@ -51,12 +52,10 @@ const AuthLayout = ({ children, title }) => {
             alignItems: 'center',
           }}
         >
-          {/* Placeholder do Logo */}
+          {/* Logo */}
           <Box sx={{ mb: 4 }}>
             <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-                LOGO
-              </Typography>
+              <img src={LogoImage} alt="Logo" style={{ width: '150px', height: 'auto' }} />
             </Link>
           </Box>
 
