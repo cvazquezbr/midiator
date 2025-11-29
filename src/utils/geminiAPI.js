@@ -1,10 +1,6 @@
 import fetchWithAuth from './fetchWithAuth';
 
 class GeminiAPI {
-  // The API key is now handled by the backend proxy,
-  // so we don't need to initialize or store it here for text generation.
-  // The initialize method is kept for now as generateImage might still use it
-  // or other parts of the app might depend on it.
   constructor() {
     this.apiKey = null;
     this.isInitialized = false;
@@ -38,7 +34,7 @@ class GeminiAPI {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: model, // Pass the selected model to the proxy
+          model: model,
           contents: [{
             parts: [{
               text: promptString
@@ -74,9 +70,10 @@ class GeminiAPI {
     }
   }
 
-  async generateImage(promptString, model, purpose = 'Geração de Imagem') {
+  async generateImage(promptString, model, purpose = 'Geração de Imagem de Campanha') {
     if (!this.isInitialized) {
-      throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
+      // Allow this to proceed if the backend handles API key retrieval
+      console.warn('GeminiAPI não inicializada com chave de API. Assumindo que o backend irá fornecer.');
     }
     if (!promptString) {
       throw new Error('O prompt não pode ser vazio.');
@@ -88,11 +85,11 @@ class GeminiAPI {
     console.log(`[${purpose}] Iniciando chamada ao proxy de imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    // Determina qual endpoint usar com base no nome do modelo
     const useVertexAI = model.includes('imagen');
-    const endpoint = useVertexAI ? '/api/google/generateImage' : '/api/google/generateImageGemini';
+    const action = useVertexAI ? 'generateImageVertex' : 'generateImageGemini';
+    const endpoint = '/api/google-proxy';
 
-    console.log(`[${purpose}] Usando o endpoint: ${endpoint}`);
+    console.log(`[${purpose}] Usando o endpoint: ${endpoint} com a ação: ${action}`);
 
     try {
       const response = await fetchWithAuth(endpoint, {
@@ -100,7 +97,13 @@ class GeminiAPI {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: promptString, model: model }),
+        body: JSON.stringify({
+          action: action,
+          payload: {
+            prompt: promptString,
+            model: model,
+          }
+        }),
       });
 
       const responseData = await response.json();
@@ -123,6 +126,7 @@ class GeminiAPI {
       throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
     }
   }
+
 }
 
 const geminiAPI = new GeminiAPI();
