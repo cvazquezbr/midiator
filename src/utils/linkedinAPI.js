@@ -136,8 +136,6 @@ export const getLinkedInProfiles = async (linkedinConfig, forceRefresh = false) 
     return profiles;
 };
 
-// The main publishing function that components will call.
-// It abstracts away the class instantiation.
 export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
     if (!linkedinConfig || !linkedinConfig.accessToken) {
         throw new Error('LinkedIn configuration or Access Token not found.');
@@ -147,11 +145,50 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
     }
 
     const { content, targetId, targetType, images, video } = campaignData;
+    const authorUrn = `urn:li:${targetType}:${targetId}`;
+
+    const payload = {
+        author: authorUrn,
+        commentary: content,
+        visibility: 'PUBLIC',
+        distribution: {
+            feedDistribution: 'MAIN_FEED',
+            targetEntities: [],
+            thirdPartyDistributionChannels: [],
+        },
+        lifecycleState: 'PUBLISHED',
+        isReshareDisabledByAuthor: false,
+    };
+
+    if (video) {
+        payload.content = {
+            media: {
+                id: video,
+            }
+        };
+    } else if (images && images.length > 0) {
+        if (images.length === 1) {
+            payload.content = {
+                media: {
+                    id: images[0],
+                }
+            };
+        } else {
+            payload.content = {
+                multiImage: {
+                    images: images.map(id => ({ id })),
+                }
+            };
+        }
+    }
+
+    // Em vez de usar a função `publishPost` antiga, chamamos o proxy diretamente
+    // com a ação `createPost` e o payload formatado corretamente.
     const api = new LinkedInAPI(linkedinConfig.accessToken);
-    const result = await api.publishPost(content, targetId, targetType, images, video);
+    const result = await api._proxyFetch('createPost', { payload });
 
     console.log('Post created successfully on LinkedIn!', result);
-    return result; // The proxy should return the final post object with an ID or link.
+    return result;
 };
 
 // Note: The complex video/image upload logic from the old file is being removed for now
@@ -250,34 +287,45 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
 
 
 export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, authorUrn, setStatus) => {
-  if (!linkedinConfig || !linkedinConfig.accessToken) {
-    throw new Error('LinkedIn configuration or Access Token not found.');
-  }
-  if (!imageBlobs || imageBlobs.length === 0) {
-    return []; // No images to upload
-  }
-
-  const api = new LinkedInAPI(linkedinConfig.accessToken);
-  const assetUrns = [];
-
-  for (let i = 0; i < imageBlobs.length; i++) {
-    const blob = imageBlobs[i];
-    setStatus(`Registering image ${i + 1} of ${imageBlobs.length}...`);
-
-    const registerResponse = await api.registerUpload(authorUrn);
-    if (!registerResponse || !registerResponse.uploadUrl || !registerResponse.assetUrn) {
-      throw new Error('Failed to register image upload with LinkedIn. The response from the server was invalid.');
+    if (!linkedinConfig || !linkedinConfig.accessToken) {
+        throw new Error('LinkedIn configuration or Access Token not found.');
     }
-    const { uploadUrl, assetUrn } = registerResponse;
+    if (!imageBlobs || imageBlobs.length === 0) {
+        return [];
+    }
 
-    setStatus(`Uploading image ${i + 1} of ${imageBlobs.length}...`);
-    await api.uploadImage(uploadUrl, blob);
+    const api = new LinkedInAPI(linkedinConfig.accessToken);
+    const assetUrns = [];
 
-    assetUrns.push(assetUrn);
-  }
+    // The LinkedIn image upload API expects each image to be sent in a separate call.
+    // Do not deduplicate blobs here, even if they are the same file.
+    for (let i = 0; i < imageBlobs.length; i++) {
+        const blob = imageBlobs[i];
+        setStatus(`Uploading image ${i + 1} of ${imageBlobs.length}...`);
 
-  setStatus('Image uploads complete.');
-  return assetUrns;
+        try {
+            const imageBase64 = await blobToBase64(blob);
+            const response = await api._proxyFetch('uploadAndCheckImage', {
+                authorUrn,
+                imageBase64,
+                imageType: blob.type,
+            });
+
+            if (!response.assetUrn) {
+                throw new Error('Asset URN was not returned from the proxy after image upload.');
+            }
+            assetUrns.push(response.assetUrn);
+            // Add a short delay to avoid undocumented rate limit issues.
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            console.error(`Failed to upload image ${i + 1}:`, error);
+            // Throw the error up so the caller can handle it (e.g., show a notification).
+            throw new Error(`Error uploading image ${i + 1}/${imageBlobs.length}: ${error.message}`);
+        }
+    }
+
+    setStatus('Image uploads complete.');
+    return assetUrns;
 };
 
 export const getLinkedInShareStatistics = async (linkedinConfig, authorUrn, shareUrns) => {
