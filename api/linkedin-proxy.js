@@ -743,6 +743,9 @@ const protectedHandler = async (request, response) => {
             return handleGetShareStatistics(request, response);
         case 'getMemberPostStatistics':
             return handleGetMemberPostStatistics(request, response);
+        case 'uploadImage':
+        case 'uploadAndCheckImage':
+            return handleUploadAndCheckImage(request, response);
 
         default:
             return response.status(400).json({ error: `Invalid protected action: ${action}` });
