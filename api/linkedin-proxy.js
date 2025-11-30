@@ -383,7 +383,29 @@ async function handleCreatePost(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or payload for createPost.' });
     }
 
+    // For personal multi-image posts, copy the commentary to the title of the first image
+    // as a workaround for a suspected API bug that truncates the main commentary.
+    if (
+        payload.author &&
+        payload.author.includes(':person:') &&
+        payload.content?.multiImage?.images?.length > 0
+    ) {
+        console.log('[LinkedIn Proxy] Applying title workaround for personal multi-image post.');
+        if (payload.commentary && !payload.content.multiImage.images[0].title) {
+            payload.content.multiImage.images[0].title = payload.commentary;
+        }
+    }
+
     console.log('[LinkedIn Proxy] Received createPost request with payload:', JSON.stringify(payload, null, 2));
+
+    // Move commentary into the content object for personal carousels, as the API seems to truncate it otherwise.
+    if (payload.author && payload.author.includes(':person:') && payload.content && payload.content.multiImage) {
+        console.log('[LinkedIn Proxy] Modifying payload for personal multi-image post.');
+        if (payload.commentary) {
+            payload.content.commentary = payload.commentary;
+            delete payload.commentary;
+        }
+    }
 
     const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
