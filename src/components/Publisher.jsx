@@ -459,14 +459,6 @@ const Publisher = ({
             // A lógica de limite de caracteres agora cuida das restrições da API.
             // postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
 
-            // Trunca o conteúdo final com base no limite dinâmico
-            if (postText.length > characterLimit) {
-                // Encontra o último espaço antes do limite para não cortar palavras ao meio
-                const lastSpace = postText.substring(0, characterLimit).lastIndexOf(' ');
-                const cutoff = lastSpace > 0 ? lastSpace : characterLimit;
-                postText = postText.substring(0, cutoff) + '...';
-            }
-
             setContent(postText);
         }
     }, [campaignContent, contentSize, characterLimit]);
