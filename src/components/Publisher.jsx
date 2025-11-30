@@ -461,7 +461,7 @@ const Publisher = ({
 
             setContent(postText);
         }
-    }, [campaignContent, contentSize, characterLimit]);
+    }, [campaignContent, contentSize]);
 
   const getPublishingTargets = () => {
     const targets = [];

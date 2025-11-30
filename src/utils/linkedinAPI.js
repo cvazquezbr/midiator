@@ -52,15 +52,32 @@ class LinkedInAPI {
   }
 
   async publishPost(content, targetId, targetType = 'person', images = [], video = null) {
-    return this._proxyFetch('createPost', {
-      payload: {
-        content,
-        targetId,
-        targetType,
-        images,
-        video,
-      }
-    });
+    const authorUrn = `urn:li:${targetType}:${targetId}`;
+
+    const payload = {
+        author: authorUrn,
+        commentary: content,
+        visibility: 'PUBLIC',
+        distribution: {
+            feedDistribution: 'MAIN_FEED',
+            targetEntities: [],
+            thirdPartyDistributionChannels: [],
+        },
+        lifecycleState: 'PUBLISHED',
+        isReshareDisabledByAuthor: false,
+    };
+
+    if (video) {
+        payload.content = { media: { id: video } };
+    } else if (images && images.length > 0) {
+        if (images.length === 1) {
+            payload.content = { media: { id: images[0] } };
+        } else {
+            payload.content = { multiImage: { images: images.map(id => ({ id })) } };
+        }
+    }
+
+    return this._proxyFetch('createPost', { payload });
   }
 
   async registerUpload(authorUrn) {
@@ -145,47 +162,10 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
     }
 
     const { content, targetId, targetType, images, video } = campaignData;
-    const authorUrn = `urn:li:${targetType}:${targetId}`;
 
-    const payload = {
-        author: authorUrn,
-        commentary: content,
-        visibility: 'PUBLIC',
-        distribution: {
-            feedDistribution: 'MAIN_FEED',
-            targetEntities: [],
-            thirdPartyDistributionChannels: [],
-        },
-        lifecycleState: 'PUBLISHED',
-        isReshareDisabledByAuthor: false,
-    };
-
-    if (video) {
-        payload.content = {
-            media: {
-                id: video,
-            }
-        };
-    } else if (images && images.length > 0) {
-        if (images.length === 1) {
-            payload.content = {
-                media: {
-                    id: images[0],
-                }
-            };
-        } else {
-            payload.content = {
-                multiImage: {
-                    images: images.map(id => ({ id })),
-                }
-            };
-        }
-    }
-
-    // Em vez de usar a função `publishPost` antiga, chamamos o proxy diretamente
-    // com a ação `createPost` e o payload formatado corretamente.
     const api = new LinkedInAPI(linkedinConfig.accessToken);
-    const result = await api._proxyFetch('createPost', { payload });
+    // A lógica de construção do payload agora está centralizada no método publishPost.
+    const result = await api.publishPost(content, targetId, targetType, images, video);
 
     console.log('Post created successfully on LinkedIn!', result);
     return result;
