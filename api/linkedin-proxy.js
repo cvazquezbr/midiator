@@ -385,6 +385,15 @@ async function handleCreatePost(request, response) {
 
     console.log('[LinkedIn Proxy] Received createPost request with payload:', JSON.stringify(payload, null, 2));
 
+    // Move commentary into the content object for personal carousels, as the API seems to truncate it otherwise.
+    if (payload.author && payload.author.includes(':person:') && payload.content && payload.content.multiImage) {
+        console.log('[LinkedIn Proxy] Modifying payload for personal multi-image post.');
+        if (payload.commentary) {
+            payload.content.commentary = payload.commentary;
+            delete payload.commentary;
+        }
+    }
+
     const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
     try {
