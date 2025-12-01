@@ -383,6 +383,23 @@ async function handleCreatePost(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or payload for createPost.' });
     }
 
+    // WORKAROUND for suspected API bug that truncates commentary on personal multi-image posts.
+    // The API documentation states that top-level 'commentary' is correct, but in practice it gets truncated.
+    // Copying the commentary to the multiImage's altText field seems to be the correct undocumented workaround.
+    if (
+        payload.author &&
+        payload.author.includes(':person:') &&
+        payload.content?.multiImage?.images?.length > 0 &&
+        payload.commentary
+    ) {
+        console.log('[LinkedIn Proxy] Applying altText workaround for personal multi-image post.');
+        if (!payload.content.multiImage.altText) {
+            payload.content.multiImage.altText = payload.commentary;
+        }
+        // We DO NOT delete the top-level 'commentary' field because it is required by the API schema,
+        // even if it's not being displayed correctly. Deleting it causes a "field is required" error.
+    }
+
     console.log('[LinkedIn Proxy] Received createPost request with payload:', JSON.stringify(payload, null, 2));
 
     const createPostUrl = 'https://api.linkedin.com/rest/posts';
