@@ -383,23 +383,24 @@ async function handleCreatePost(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or payload for createPost.' });
     }
 
-    // WORKAROUND for suspected API bug that truncates commentary on personal multi-image posts.
-    // The API documentation states that top-level 'commentary' is correct, but in practice it gets truncated.
-    // The correct workaround is to add the commentary as the altText for EACH image in the post.
+    // FINAL WORKAROUND for API bug that truncates commentary on personal multi-image posts.
+    // Previous attempts showed that neither 'commentary' nor 'altText' work reliably.
+    // The original error (title length exceeded) suggests the 'title' field is involved.
+    // This hybrid approach places a snippet of the text in the first image's title,
+    // which appears to be the undocumented trigger to make the API display the full top-level commentary.
     if (
         payload.author &&
         payload.author.includes(':person:') &&
         payload.content?.multiImage?.images?.length > 0 &&
         payload.commentary
     ) {
-        console.log('[LinkedIn Proxy] Applying altText workaround for personal multi-image post.');
-        payload.content.multiImage.images.forEach(image => {
-            if (!image.altText) {
-                image.altText = payload.commentary;
-            }
-        });
-        // We DO NOT delete the top-level 'commentary' field because it is required by the API schema,
-        // even if it's not being displayed correctly. Deleting it causes a "field is required" error.
+        console.log('[LinkedIn Proxy] Applying title snippet workaround for personal multi-image post.');
+        const firstImage = payload.content.multiImage.images[0];
+        if (!firstImage.title) {
+            // Use a truncated version of the commentary for the title to avoid length errors.
+            firstImage.title = payload.commentary.substring(0, 380);
+        }
+        // The full, original text remains in the top-level 'commentary' field.
     }
 
     console.log('[LinkedIn Proxy] Received createPost request with payload:', JSON.stringify(payload, null, 2));
