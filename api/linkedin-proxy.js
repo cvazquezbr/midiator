@@ -385,7 +385,7 @@ async function handleCreatePost(request, response) {
 
     // WORKAROUND for suspected API bug that truncates commentary on personal multi-image posts.
     // The API documentation states that top-level 'commentary' is correct, but in practice it gets truncated.
-    // Copying the commentary to the multiImage's altText field seems to be the correct undocumented workaround.
+    // The correct workaround is to add the commentary as the altText for EACH image in the post.
     if (
         payload.author &&
         payload.author.includes(':person:') &&
@@ -393,9 +393,11 @@ async function handleCreatePost(request, response) {
         payload.commentary
     ) {
         console.log('[LinkedIn Proxy] Applying altText workaround for personal multi-image post.');
-        if (!payload.content.multiImage.altText) {
-            payload.content.multiImage.altText = payload.commentary;
-        }
+        payload.content.multiImage.images.forEach(image => {
+            if (!image.altText) {
+                image.altText = payload.commentary;
+            }
+        });
         // We DO NOT delete the top-level 'commentary' field because it is required by the API schema,
         // even if it's not being displayed correctly. Deleting it causes a "field is required" error.
     }
