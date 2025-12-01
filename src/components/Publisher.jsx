@@ -58,7 +58,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { dataURLtoBlob, urlToBlob } from '../utils/imageComposer';
-import { markdownToLinkedinText } from '../lib/utils';
+import { markdownToLinkedinText, escapeLinkedinText } from '../lib/utils';
 import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, uploadVideoForLinkedIn } from '../utils/linkedinAPI';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns, deserializeCampaignData } from '../utils/campaignState.js';
@@ -444,22 +444,21 @@ const Publisher = ({
                     break;
             }
 
-            let postText = [
-                campaignContent.titulo?.toUpperCase(),
-                '',
-                markdownToLinkedinText(sourceContent),
-                '',
-                '----',
-                campaignContent.cta,
-                '----',
-                (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
-            ].join('\n');
+            // This logic replicates the successful selective escaping from the cron job.
+            // It escapes the main content and CTA, but leaves hashtags untouched.
 
-            // A remoção de nova linha foi desativada para permitir posts formatados.
-            // A lógica de limite de caracteres agora cuida das restrições da API.
-            // postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+            const titlePart = campaignContent.titulo?.toUpperCase() || '';
+            const contentPart = escapeLinkedinText(markdownToLinkedinText(sourceContent));
+            const ctaPart = escapeLinkedinText(campaignContent.cta || '');
+            const hashtagsPart = (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ');
 
-            setContent(postText);
+            const finalParts = [];
+            if (titlePart) finalParts.push(titlePart);
+            if (contentPart) finalParts.push(contentPart);
+            if (ctaPart) finalParts.push('----', ctaPart);
+            if (hashtagsPart) finalParts.push('----', hashtagsPart);
+
+            setContent(finalParts.join('\n\n'));
         }
     }, [campaignContent, contentSize]);
 
