@@ -601,8 +601,6 @@ const Publisher = ({
 
       // If blob is missing, try to get it.
       if (!firstImage.blob && firstImage.url) {
-        setPublishingStatusWp('Preparando imagem para upload...');
-        toast.info("Preparando imagem para upload...");
         if (firstImage.url.startsWith('data:')) {
             firstImage.blob = dataURLtoBlob(firstImage.url);
         } else {
@@ -766,9 +764,6 @@ const Publisher = ({
 
             videoUrn = await uploadVideoForLinkedIn(settings?.linkedin, videoBlob, authorUrn, setPublishingStatusLi);
         } else if (selectedImageIndexes.length > 0) {
-            setPublishingStatusLi('Preparando imagens para upload...');
-            const toastId = toast.loading("Preparando imagens para o upload...");
-
             const imageBlobsToUpload = await Promise.all(
               selectedImageIndexes.map(async (index, i) => {
                 const media = unifiedMedia[parseInt(index)];
