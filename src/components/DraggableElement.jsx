@@ -703,7 +703,6 @@ const DraggableElementInternal = ({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
-            alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
             height: '100%',
           }}
         >
