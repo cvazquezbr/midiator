@@ -392,7 +392,8 @@ const PageEditor = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 minWidth: 0,
-                minHeight: 0, // Removido 80vh fixo que quebra proporção
+                minHeight: '300px', // Altura mínima para garantir que o ResizeObserver funcione e o preview apareça
+                height: '100%',
                 overflow: 'hidden',
                 position: 'relative',
                 padding: 1,
