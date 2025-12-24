@@ -77,6 +77,7 @@ const PageEditor = ({
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
 
   const [editorState, setEditorState] = useState(null);
+  const [fontScale, setFontScale] = useState(1);
   const [selectedField, setSelectedField] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
@@ -332,6 +333,7 @@ const PageEditor = ({
   const handleSave = () => {
     onSave({
       index: pageData.index,
+      fontScale: fontScale,
       ...editorState
     });
     onClose();
@@ -412,6 +414,7 @@ const PageEditor = ({
                 originalImageSize={originalImageSize}
                 onOpenHtmlEditor={handleOpenHtmlEditor}
                 currentPreviewIndex={0}
+                onFontScaleChange={setFontScale}
               />
             </Box>
           </Box>
