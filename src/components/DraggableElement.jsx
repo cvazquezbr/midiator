@@ -669,9 +669,9 @@ const DraggableElementInternal = ({
     boxSx.padding = 0;
   } else if (element.type === 'text') { // Text element
     boxSx.backgroundColor = hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1);
-    boxSx.border = `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`;
-    boxSx.borderRadius = `${style.borderRadius || 0}px`;
-    boxSx.padding = `${style.padding || 0}px`;
+    boxSx.border = `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`;
+    boxSx.borderRadius = `${(style.borderRadius || 0) * fontScale}px`;
+    boxSx.padding = `${(style.padding || 0) * fontScale}px`;
   }
 
   const sanitizedContentForRendering = sanitizeHtml(content);
