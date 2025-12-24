@@ -73,7 +73,7 @@ const PageGeneratorFrontendOnly = ({
 
     const performSave = async () => {
       try {
-        const { pageTemplate: customPageTemplate, fontScale, ...restOfModifiedData } = pageToSave;
+        const { pageTemplate: customPageTemplate, ...restOfModifiedData } = pageToSave;
 
         const regenContext = {
           ...campaignState,
@@ -83,7 +83,7 @@ const PageGeneratorFrontendOnly = ({
           brandElements: restOfModifiedData.brandElements,
           fieldPositions: restOfModifiedData.fieldPositions,
           fieldStyles: restOfModifiedData.fieldStyles,
-          fontScale: fontScale || 1,
+          fontScale: 1,
         };
 
         if (!regenContext.pageTemplate || !regenContext.record) {
@@ -110,7 +110,6 @@ const PageGeneratorFrontendOnly = ({
               customBrandElements: restOfModifiedData.brandElements,
               customFieldPositions: restOfModifiedData.fieldPositions,
               customFieldStyles: restOfModifiedData.fieldStyles,
-              fontScale: fontScale || 1,
               url: managedUrl,
               filename: newPageImageData.filename,
               blob: undefined,
