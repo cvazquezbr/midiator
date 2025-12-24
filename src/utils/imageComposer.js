@@ -463,7 +463,7 @@ export const drawAndComposeImage = async ({
             }
 
             const finalStyle = { ...style, fontSize: (style.fontSize || 24) * fontScale };
-            const padding = (style.padding || 0);
+            const padding = (style.padding || 0) * fontScale;
             const borderRadiusProp = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
 
