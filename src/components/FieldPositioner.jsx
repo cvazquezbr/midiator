@@ -70,9 +70,15 @@ const FieldPositioner = React.forwardRef(({
   const { campaignState } = useCampaign();
   const { aspectRatio: aspectRatioFromContext, pendingAssets } = campaignState;
 
-  const effectiveImageSize = originalImageSize;
-
   const aspectRatio = aspectRatioFromContext ? String(aspectRatioFromContext).replace(':', ' / ') : '1 / 1';
+
+  const effectiveImageSize = useMemo(() => {
+    // Tenta obter as dimensões reais do imageComposer com base no aspectRatio
+    const dimensions = getDimensionsFromAspectRatio(aspectRatioFromContext);
+    if (dimensions) return dimensions;
+    // Fallback para originalImageSize ou default
+    return originalImageSize || { width: 1080, height: 1080 };
+  }, [aspectRatioFromContext, originalImageSize]);
 
   const handleContentChange = useCallback((field, newText) => {
     setEditorState(prevState => {
@@ -243,8 +249,9 @@ const FieldPositioner = React.forwardRef(({
   };
 
   useEffect(() => {
-    if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
-      const previewScale = renderedImageMetrics.width / effectiveImageSize.width;
+    // Usamos dynamicSize.width que é o tamanho real do container do preview
+    if (dynamicSize.width > 0 && effectiveImageSize?.width > 0) {
+      const previewScale = dynamicSize.width / effectiveImageSize.width;
       setFontScale(previewScale);
 
       if (onFontScaleChange) {
@@ -256,7 +263,7 @@ const FieldPositioner = React.forwardRef(({
         onFontScaleChange(1);
       }
     }
-  }, [renderedImageMetrics, effectiveImageSize, onFontScaleChange]);
+  }, [dynamicSize.width, effectiveImageSize, onFontScaleChange]);
 
   useEffect(() => {
     if (isInteracting) {
