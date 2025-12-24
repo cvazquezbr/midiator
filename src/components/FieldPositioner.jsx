@@ -4,6 +4,7 @@ import {
 } from '@mui/material';
 import DraggableElement from './DraggableElement';
 import { useCampaign } from '../context/CampaignContext';
+import { getDimensionsFromAspectRatio } from '../utils/imageComposer';
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
