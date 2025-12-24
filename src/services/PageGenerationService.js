@@ -13,8 +13,8 @@ const PageGenerationService = {
    * @param {object} params.campaignContext - O estado do CampaignContext.
    * @returns {Promise<object>} Uma promessa que resolve com os dados da imagem gerada.
    */
-  async generatePageImage({ record, index, campaignContext, pageData = {} }) {
-    console.log(`[PageGenerationService] Generating page for index: ${index}`);
+  async generatePageImage({ record, index, campaignContext, pageData = {}, fontScale = 1 }) {
+    console.log(`[PageGenerationService] Generating page for index: ${index} with fontScale: ${fontScale}`);
 
     const {
       brandElements: globalBrandElements,
@@ -47,6 +47,7 @@ const PageGenerationService = {
         fieldStyles,
         aspectRatio: aspectRatio || '1:1', // Fallback
         pageTemplate,
+        fontScale,
       });
       return finalPageData;
     } catch (error) {

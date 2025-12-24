@@ -179,7 +179,7 @@ const PageGeneratorFrontendOnly = ({
             fontScale: pageData.fontScale || 1,
             pendingAssets: pendingAssets,
           };
-          return drawAndComposeImage(regenContext).catch(error => {
+          return drawAndComposeImage({...regenContext, fontScale: regenContext.fontScale || 1}).catch(error => {
             console.error(`[Thumbnail-Regen] Failed for index ${pageData.index}:`, error);
             return pageData;
           });
@@ -225,7 +225,7 @@ const PageGeneratorFrontendOnly = ({
     const pagePromises = csvData.filter(Boolean).map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
       const recordWithTitle = { ...record, Título: "CADU" || '' };
-      return drawAndComposeImage({ ...campaignState, record: recordWithTitle, index: i, pendingAssets })
+      return drawAndComposeImage({ ...campaignState, record: recordWithTitle, index: i, pendingAssets, fontScale: campaignState.fontScale || 1 })
         .then(pageData => { setProgress(p => p + 1); return pageData; })
         .catch(error => { toast.error(`Erro ao gerar página ${i}: ${error.message}`); return null; });
     });
@@ -342,7 +342,7 @@ const PageGeneratorFrontendOnly = ({
       throw new Error('Pré-requisitos para regeneração não atendidos.');
     }
     // Ensure pendingAssets is passed through for regeneration.
-    return drawAndComposeImage({ ...pageDataForRegen, pendingAssets });
+    return drawAndComposeImage({ ...pageDataForRegen, pendingAssets, fontScale: pageDataForRegen.fontScale || 1 });
   };
 
   const handleResetPage = async (index) => {

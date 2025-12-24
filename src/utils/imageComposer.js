@@ -332,15 +332,6 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
  * @param {object} params - The parameters for composition.
  * @returns {Promise<object>} A promise that resolves with the final imageData object.
  */
-const DEFAULT_TEXT_STYLE = {
-  fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-  textDecoration: 'none', color: '#000000', textAlign: 'left', verticalAlign: 'top',
-  lineHeightMultiplier: 1.2, textStroke: false, strokeColor: '#ffffff', strokeWidth: 2,
-  textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-  backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
-  borderRadius: 0, padding: 5, backgroundOpacity: 0,
-};
-
 export const drawAndComposeImage = async ({
     record,
     index,
@@ -350,6 +341,7 @@ export const drawAndComposeImage = async ({
     aspectRatio,
     pageTemplate,
     pendingAssets = {},
+    fontScale = 1,
 }) => {
 
     const finalCanvas = document.createElement('canvas');
@@ -449,8 +441,7 @@ export const drawAndComposeImage = async ({
             await drawImageWithEffects(ctx, element, finalCanvas.width, finalCanvas.height, pendingAssets);
         } else if (element.type === 'text') {
             ctx.save();
-            const { content, position } = element;
-            const style = { ...DEFAULT_TEXT_STYLE, ...(element.style || {}) };
+            const { content, position, style } = element;
             if (!content) {
                 ctx.restore();
                 continue;
@@ -471,7 +462,7 @@ export const drawAndComposeImage = async ({
                 ctx.translate(-centerX, -centerY);
             }
 
-            const finalStyle = { ...style, fontSize: (style.fontSize || 24) };
+            const finalStyle = { ...style, fontSize: (style.fontSize || 24) * fontScale };
             const padding = (style.padding || 0);
             const borderRadiusProp = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
