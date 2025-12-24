@@ -330,9 +330,13 @@ const PageEditor = ({
   if (!open || !editorState) return null;
 
   const handleSave = () => {
+    // Ensure we pass the most up-to-date record from the editorState
+    const currentRecord = editorState.csvData && editorState.csvData[0] ? editorState.csvData[0] : pageData.record;
+    
     onSave({
+      ...editorState,
       index: pageData.index,
-      ...editorState
+      record: currentRecord,
     });
     onClose();
   };
@@ -382,17 +386,17 @@ const PageEditor = ({
           {/* --- Preview central --- */}
           <Box
             ref={previewContainerRef}
-            sx={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 0,
-              minHeight: '80vh',
-              overflow: 'hidden',
-              position: 'relative',
-              padding: 1,
-            }}
+              sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 0,
+                minHeight: 0, // Removido 80vh fixo que quebra proporção
+                overflow: 'hidden',
+                position: 'relative',
+                padding: 1,
+              }}
           >
             <Box
               sx={{
