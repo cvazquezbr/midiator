@@ -536,32 +536,40 @@ const DraggableElementInternal = ({
   const lineHeight = baseFontSize * (style.lineHeightMultiplier || 1.2);
   const scaledLineHeight = lineHeight * fontScale;
 
-  // For consistent wrapping between preview and final render, calculate wrapping
-  // in the scaled-down coordinate space of the preview.
-  const scaledPadding = (style.padding || 0) * fontScale;
-
   const textLines = React.useMemo(() => {
     if (enableHtmlRendering) {
       return [content];
     }
-    // Create a temporary canvas context for text measurement
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // The style object for wrapTextInArea needs the font size in pixels
+    // CRITICAL FIX: To ensure the preview's text wrapping matches the final
+    // rendered image from imageComposer, we must calculate the wrapping based
+    // on the full, original dimensions of the element, not the scaled-down
+    // preview dimensions. The visual scaling is handled by CSS transforms,
+    // but the wrapping logic must be identical in both places.
+
+    // 1. Get the element's dimensions in the final image's coordinate space.
+    const fullSizeWidth = (position.width / 100) * (originalImageSize?.width || 1);
+    const fullSizeHeight = (position.height / 100) * (originalImageSize?.height || 1);
+
+    // 2. Use the original, unscaled style values.
+    const unscaledPadding = style.padding || 0;
     const styleForWrapping = {
         ...style,
-        fontSize: scaledFontSize,
+        fontSize: style.fontSize || 24, // Use the base, unscaled font size
     };
 
+    // 3. Call the wrapping function with the full-size dimensions.
     return wrapTextInArea(
       ctx,
       editedContent,
       styleForWrapping,
-      pixelPosition.width - (2 * scaledPadding),
-      pixelPosition.height - (2 * scaledPadding)
+      fullSizeWidth - (2 * unscaledPadding),
+      fullSizeHeight - (2 * unscaledPadding)
     );
-  }, [editedContent, style, scaledFontSize, pixelPosition.width, pixelPosition.height, scaledPadding, enableHtmlRendering, content]);
+    // The dependency array must reflect the source values used in the calculation.
+  }, [editedContent, style, position.width, position.height, originalImageSize, enableHtmlRendering, content]);
 
   const handleSize = isMobile ? 24 : 12;
 
