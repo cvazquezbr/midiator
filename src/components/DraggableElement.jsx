@@ -536,40 +536,32 @@ const DraggableElementInternal = ({
   const lineHeight = baseFontSize * (style.lineHeightMultiplier || 1.2);
   const scaledLineHeight = lineHeight * fontScale;
 
+  // For consistent wrapping between preview and final render, calculate wrapping
+  // in the scaled-down coordinate space of the preview.
+  const scaledPadding = (style.padding || 0) * fontScale;
+
   const textLines = React.useMemo(() => {
     if (enableHtmlRendering) {
       return [content];
     }
+    // Create a temporary canvas context for text measurement
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // CRITICAL FIX: To ensure the preview's text wrapping matches the final
-    // rendered image from imageComposer, we must calculate the wrapping based
-    // on the full, original dimensions of the element, not the scaled-down
-    // preview dimensions. The visual scaling is handled by CSS transforms,
-    // but the wrapping logic must be identical in both places.
-
-    // 1. Get the element's dimensions in the final image's coordinate space.
-    const fullSizeWidth = (position.width / 100) * (originalImageSize?.width || 1);
-    const fullSizeHeight = (position.height / 100) * (originalImageSize?.height || 1);
-
-    // 2. Use the original, unscaled style values.
-    const unscaledPadding = style.padding || 0;
+    // The style object for wrapTextInArea needs the font size in pixels
     const styleForWrapping = {
         ...style,
-        fontSize: style.fontSize || 24, // Use the base, unscaled font size
+        fontSize: scaledFontSize,
     };
 
-    // 3. Call the wrapping function with the full-size dimensions.
     return wrapTextInArea(
       ctx,
       editedContent,
       styleForWrapping,
-      fullSizeWidth - (2 * unscaledPadding),
-      fullSizeHeight - (2 * unscaledPadding)
+      pixelPosition.width - (2 * scaledPadding),
+      pixelPosition.height - (2 * scaledPadding)
     );
-    // The dependency array must reflect the source values used in the calculation.
-  }, [editedContent, style, position.width, position.height, originalImageSize, enableHtmlRendering, content]);
+  }, [editedContent, style, scaledFontSize, pixelPosition.width, pixelPosition.height, scaledPadding, enableHtmlRendering, content]);
 
   const handleSize = isMobile ? 24 : 12;
 
@@ -586,7 +578,8 @@ const DraggableElementInternal = ({
     fontStyle: style.fontStyle || 'normal',
     color: style.color || '#000000',
     textDecoration: style.textDecoration || 'none',
-    lineHeight: `${enableHtmlRendering ? lineHeight : scaledLineHeight}px`,
+    // For HTML, use the unitless multiplier to match htmlRenderer. For plain text, use scaled pixels.
+    lineHeight: enableHtmlRendering ? (style.lineHeightMultiplier || 1.2) : `${scaledLineHeight}px`,
     textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
     pointerEvents: 'none',
