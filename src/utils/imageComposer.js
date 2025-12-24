@@ -450,7 +450,7 @@ export const drawAndComposeImage = async ({
         } else if (element.type === 'text') {
             ctx.save();
             const { content, position } = element;
-            const style = { ...DEFAULT_TEXT_STYLE, ...element.style };
+            const style = { ...DEFAULT_TEXT_STYLE, ...(element.style || {}) };
             if (!content) {
                 ctx.restore();
                 continue;
