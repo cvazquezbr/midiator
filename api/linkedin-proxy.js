@@ -81,7 +81,7 @@ async function handleInitializeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             },
             body: JSON.stringify(payload),
         });
@@ -151,7 +151,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             },
             body: JSON.stringify(payload)
         });
@@ -182,7 +182,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             }
         });
         if (!linkedinResponse.ok) {
@@ -212,7 +212,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             },
         });
         const data = await linkedinResponse.json();
@@ -240,7 +240,7 @@ async function handleRegisterUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             },
             body: JSON.stringify(payload),
         });
@@ -273,7 +273,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202304'
+        'LinkedIn-Version': '202403'
     };
 
     // Step 1: Register Upload (using the modern /rest/images endpoint)
@@ -395,7 +395,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             },
             body: JSON.stringify(payload),
         });
@@ -436,7 +436,7 @@ async function handleGetProfiles(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202304'
+        'LinkedIn-Version': '202403'
     };
 
     try {
@@ -626,7 +626,7 @@ async function handleGetShareStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             }
         });
 
@@ -669,7 +669,7 @@ async function handleGetMemberPostStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202304'
+                'LinkedIn-Version': '202403'
             },
         });
 
