@@ -273,6 +273,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
+        // Standardizing on API version 202403 for compatibility with organizationalEntityAcls endpoint.
         'LinkedIn-Version': '202403'
     };
 
@@ -436,6 +437,7 @@ async function handleGetProfiles(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
+        // Standardizing on API version 202403 for compatibility with organizationalEntityAcls endpoint.
         'LinkedIn-Version': '202403'
     };
 
@@ -443,8 +445,8 @@ async function handleGetProfiles(request, response) {
         // Fetch personal profile and organizational roles in parallel.
         const [personalResponse, orgAclsResponse] = await Promise.all([
             fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-            // Use the modern `organizationalEntityAcls` endpoint with a projection to get details in one go.
-            fetch(`https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organization~(localizedName,logoV2(original~))))`, { headers })
+            // 🛑 CORREÇÃO: A URL e query correta para buscar organizações
+            fetch('https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organizationBrand~(localizedName,logo(original~:playableStreams)),organization~(localizedName,logoV2(original~:playableStreams))))', { headers })
         ]);
 
         // Handle personal profile response.
@@ -457,8 +459,8 @@ async function handleGetProfiles(request, response) {
         }
         const personalData = await personalResponse.json();
         const personal = {
-            id: `urn:li:person:${personalData.id}`, // Standardize to URN format.
-            name: `${personalData.firstName?.localized?.pt_BR || personalData.firstName?.localized?.en_US} ${personalData.lastName?.localized?.pt_BR || personalData.lastName?.localized?.en_US}`,
+            id: `urn:li:person:${personalData.id}`,
+            name: `${personalData.firstName?.localized?.pt_BR || personalData.firstName?.localized?.en_US || ''} ${personalData.lastName?.localized?.pt_BR || personalData.lastName?.localized?.en_US || ''}`.trim(),
             type: 'personal',
             profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
         };
@@ -467,24 +469,37 @@ async function handleGetProfiles(request, response) {
         let organizations = [];
         if (orgAclsResponse.status === 401) {
             console.warn('Unauthorized when fetching organization ACLs. The token may be valid but lack necessary permissions (e.g., r_organization_social).');
-            // Continue without organizations, as the personal profile is still useful.
         } else if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
 
-            // Defensively filter out malformed elements before mapping.
             organizations = (orgAclsData.elements || [])
-                .filter(el => el.organization && el['organization~'])
+                .filter(el => {
+                    // Aceita tanto organization quanto organizationBrand
+                    const hasOrg = el.organization || el.organizationBrand;
+                    const hasOrgData = el['organization~'] || el['organizationBrand~'];
+                    return hasOrg && hasOrgData;
+                })
                 .map(el => {
-                    const orgDetails = el['organization~'];
-                    const orgUrn = el.organization;
+                    // Prioriza organizationBrand (páginas) sobre organization
+                    const orgUrn = el.organizationBrand || el.organization;
+                    const orgDetails = el['organizationBrand~'] || el['organization~'];
+
+                    // Tenta pegar logo de diferentes campos
+                    let logo = null;
+                    if (orgDetails.logo?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier) {
+                        logo = orgDetails.logo['original~'].elements[0].identifiers[0].identifier;
+                    } else if (orgDetails.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier) {
+                        logo = orgDetails.logoV2['original~'].elements[0].identifiers[0].identifier;
+                    }
+
                     return {
-                        id: orgUrn, // Use the full URN as the ID.
+                        id: orgUrn,
                         name: orgDetails.localizedName || 'Nome da Página Indisponível',
                         role: el.role,
-                        logo: orgDetails.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                        logo: logo,
                         type: 'organization'
                     };
-            });
+                });
         } else {
             const errorText = await orgAclsResponse.text();
             console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
