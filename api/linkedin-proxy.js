@@ -451,9 +451,12 @@ async function handleGetProfiles(request, response) {
         }
 
         const personalData = await personalResponse.json();
+        const firstName = personalData.firstName?.localized?.pt_BR ?? personalData.firstName?.localized?.en_US ?? 'Nome';
+        const lastName = personalData.lastName?.localized?.pt_BR ?? personalData.lastName?.localized?.en_US ?? 'Sobrenome';
+
         const personal = {
             id: personalData.id,
-            name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`,
+            name: `${firstName} ${lastName}`,
             type: 'personal',
             profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
         };
@@ -470,19 +473,26 @@ async function handleGetProfiles(request, response) {
 
                 if (batchOrgResponse.ok) {
                     const batchOrgData = await batchOrgResponse.json();
-                    organizations = orgAclsData.elements.map(acl => {
-                        const orgId = acl.organization.split(':').pop();
-                        const orgDetails = batchOrgData.results[orgId];
-                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+                    organizations = orgAclsData.elements
+                        .map(acl => {
+                            const orgId = acl.organization.split(':').pop();
+                            const orgDetails = batchOrgData.results[orgId];
 
-                        return {
-                            id: orgId,
-                            name: orgName,
-                            role: acl.role,
-                            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-                            type: 'organization'
-                        };
-                    });
+                            if (!orgDetails) {
+                                console.warn(`No details found for organization ID: ${orgId}. Skipping.`);
+                                return null;
+                            }
+                            const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+
+                            return {
+                                id: orgId,
+                                name: orgName,
+                                role: acl.role,
+                                logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                                type: 'organization'
+                            };
+                        })
+                        .filter(Boolean);
                 } else {
                     console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
                 }
