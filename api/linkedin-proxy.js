@@ -464,8 +464,9 @@ async function handleGetProfiles(request, response) {
         let organizations = [];
         if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
-            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-            const orgIds = orgUrns.map(urn => urn.split(':').pop());
+            // Defensively filter for elements that have a valid 'organization' URN before processing.
+            const validAcls = orgAclsData.elements?.filter(el => typeof el.organization === 'string') || [];
+            const orgIds = validAcls.map(acl => acl.organization.split(':').pop());
 
             if (orgIds.length > 0) {
                 const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
@@ -473,7 +474,7 @@ async function handleGetProfiles(request, response) {
 
                 if (batchOrgResponse.ok) {
                     const batchOrgData = await batchOrgResponse.json();
-                    organizations = orgAclsData.elements
+                    organizations = validAcls
                         .map(acl => {
                             const orgId = acl.organization.split(':').pop();
                             const orgDetails = batchOrgData.results[orgId];
