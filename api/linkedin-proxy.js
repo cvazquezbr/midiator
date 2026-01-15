@@ -81,7 +81,7 @@ async function handleInitializeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             },
             body: JSON.stringify(payload),
         });
@@ -151,7 +151,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             },
             body: JSON.stringify(payload)
         });
@@ -182,7 +182,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             }
         });
         if (!linkedinResponse.ok) {
@@ -212,7 +212,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             },
         });
         const data = await linkedinResponse.json();
@@ -240,7 +240,7 @@ async function handleRegisterUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             },
             body: JSON.stringify(payload),
         });
@@ -273,7 +273,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202411'
+        'LinkedIn-Version': '202304'
     };
 
     // Step 1: Register Upload (using the modern /rest/images endpoint)
@@ -395,7 +395,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             },
             body: JSON.stringify(payload),
         });
@@ -436,59 +436,58 @@ async function handleGetProfiles(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202411'
+        'LinkedIn-Version': '202304'
     };
 
     try {
+        // Fetch personal profile and organizational roles in parallel.
         const [personalResponse, orgAclsResponse] = await Promise.all([
             fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-            fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee', { headers })
+            // Use the modern `organizationalEntityAcls` endpoint with a projection to get details in one go.
+            fetch(`https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organization~(localizedName,logoV2(original~))))`, { headers })
         ]);
 
+        // Handle personal profile response.
+        if (personalResponse.status === 401) {
+             return response.status(401).json({ error: 'Unauthorized: Invalid or expired access token for personal profile.' });
+        }
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
             throw new Error(`Failed to fetch personal profile: ${personalResponse.status} - ${errorText}`);
         }
-
         const personalData = await personalResponse.json();
         const personal = {
-            id: personalData.id,
-            name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`,
+            id: `urn:li:person:${personalData.id}`, // Standardize to URN format.
+            name: `${personalData.firstName?.localized?.pt_BR || personalData.firstName?.localized?.en_US} ${personalData.lastName?.localized?.pt_BR || personalData.lastName?.localized?.en_US}`,
             type: 'personal',
             profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
         };
 
+        // Handle organization roles response.
         let organizations = [];
-        if (orgAclsResponse.ok) {
+        if (orgAclsResponse.status === 401) {
+            console.warn('Unauthorized when fetching organization ACLs. The token may be valid but lack necessary permissions (e.g., r_organization_social).');
+            // Continue without organizations, as the personal profile is still useful.
+        } else if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
-            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-            const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
-            if (orgIds.length > 0) {
-                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-                const batchOrgResponse = await fetch(batchOrgUrl, { headers });
-
-                if (batchOrgResponse.ok) {
-                    const batchOrgData = await batchOrgResponse.json();
-                    organizations = orgAclsData.elements.map(acl => {
-                        const orgId = acl.organization.split(':').pop();
-                        const orgDetails = batchOrgData.results[orgId];
-                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
-
-                        return {
-                            id: orgId,
-                            name: orgName,
-                            role: acl.role,
-                            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-                            type: 'organization'
-                        };
-                    });
-                } else {
-                    console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
-                }
-            }
+            // Defensively filter out malformed elements before mapping.
+            organizations = (orgAclsData.elements || [])
+                .filter(el => el.organization && el['organization~'])
+                .map(el => {
+                    const orgDetails = el['organization~'];
+                    const orgUrn = el.organization;
+                    return {
+                        id: orgUrn, // Use the full URN as the ID.
+                        name: orgDetails.localizedName || 'Nome da Página Indisponível',
+                        role: el.role,
+                        logo: orgDetails.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                        type: 'organization'
+                    };
+            });
         } else {
-            console.warn('Could not fetch organization ACLs:', orgAclsResponse.status);
+            const errorText = await orgAclsResponse.text();
+            console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
         }
 
         return response.status(200).json({
@@ -498,8 +497,8 @@ async function handleGetProfiles(request, response) {
         });
 
     } catch (error) {
-        console.error('Error in handleGetProfiles:', error);
-        return response.status(500).json({ error: 'Internal Server Error while fetching profiles.' });
+        console.error('Error in handleGetProfiles:', error.message, error.stack);
+        return response.status(500).json({ error: 'Internal Server Error while fetching profiles.', details: error.message });
     }
 }
 
@@ -627,7 +626,7 @@ async function handleGetShareStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             }
         });
 
@@ -670,7 +669,7 @@ async function handleGetMemberPostStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202411'
+                'LinkedIn-Version': '202304'
             },
         });
 
