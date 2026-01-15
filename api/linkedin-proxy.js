@@ -451,12 +451,9 @@ async function handleGetProfiles(request, response) {
         }
 
         const personalData = await personalResponse.json();
-        const firstName = personalData.firstName?.localized?.pt_BR ?? personalData.firstName?.localized?.en_US ?? 'Nome';
-        const lastName = personalData.lastName?.localized?.pt_BR ?? personalData.lastName?.localized?.en_US ?? 'Sobrenome';
-
         const personal = {
             id: personalData.id,
-            name: `${firstName} ${lastName}`,
+            name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`,
             type: 'personal',
             profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
         };
@@ -464,9 +461,8 @@ async function handleGetProfiles(request, response) {
         let organizations = [];
         if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
-            // Defensively filter for elements that have a valid 'organization' URN before processing.
-            const validAcls = orgAclsData.elements?.filter(el => typeof el.organization === 'string') || [];
-            const orgIds = validAcls.map(acl => acl.organization.split(':').pop());
+            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
+            const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
             if (orgIds.length > 0) {
                 const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
@@ -474,26 +470,19 @@ async function handleGetProfiles(request, response) {
 
                 if (batchOrgResponse.ok) {
                     const batchOrgData = await batchOrgResponse.json();
-                    organizations = validAcls
-                        .map(acl => {
-                            const orgId = acl.organization.split(':').pop();
-                            const orgDetails = batchOrgData.results[orgId];
+                    organizations = orgAclsData.elements.map(acl => {
+                        const orgId = acl.organization.split(':').pop();
+                        const orgDetails = batchOrgData.results[orgId];
+                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
 
-                            if (!orgDetails) {
-                                console.warn(`No details found for organization ID: ${orgId}. Skipping.`);
-                                return null;
-                            }
-                            const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
-
-                            return {
-                                id: orgId,
-                                name: orgName,
-                                role: acl.role,
-                                logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-                                type: 'organization'
-                            };
-                        })
-                        .filter(Boolean);
+                        return {
+                            id: orgId,
+                            name: orgName,
+                            role: acl.role,
+                            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                            type: 'organization'
+                        };
+                    });
                 } else {
                     console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
                 }
