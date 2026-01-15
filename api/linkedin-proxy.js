@@ -81,7 +81,7 @@ async function handleInitializeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -151,7 +151,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload)
         });
@@ -182,7 +182,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             }
         });
         if (!linkedinResponse.ok) {
@@ -212,7 +212,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             },
         });
         const data = await linkedinResponse.json();
@@ -240,7 +240,7 @@ async function handleRegisterUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -273,8 +273,8 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        // Standardizing on API version 202403 for compatibility with organizationalEntityAcls endpoint.
-        'LinkedIn-Version': '202403'
+        // Standardizing on API version 202411 for compatibility with organizationalEntityAcls endpoint.
+        'LinkedIn-Version': '202411'
     };
 
     // Step 1: Register Upload (using the modern /rest/images endpoint)
@@ -396,7 +396,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -437,26 +437,29 @@ async function handleGetProfiles(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        // Standardizing on API version 202403 for compatibility with organizationalEntityAcls endpoint.
-        'LinkedIn-Version': '202403'
+        'LinkedIn-Version': '202411'  // ← VERSÃO CORRETA
     };
 
     try {
         // Fetch personal profile and organizational roles in parallel.
         const [personalResponse, orgAclsResponse] = await Promise.all([
             fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-            // 🛑 CORREÇÃO: A URL e query correta para buscar organizações
+            // URL correta com projection completa
             fetch('https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organizationBrand~(localizedName,logo(original~:playableStreams)),organization~(localizedName,logoV2(original~:playableStreams))))', { headers })
         ]);
 
-        // Handle personal profile response.
-        if (personalResponse.status === 401) {
-             return response.status(401).json({ error: 'Unauthorized: Invalid or expired access token for personal profile.' });
+        if (personalResponse.status === 401 || orgAclsResponse.status === 401) {
+            return response.status(401).json({
+                error: 'Token de acesso do LinkedIn expirado.',
+                details: 'O token usado na requisição expirou ou é inválido.'
+            });
         }
+
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
             throw new Error(`Failed to fetch personal profile: ${personalResponse.status} - ${errorText}`);
         }
+
         const personalData = await personalResponse.json();
         const personal = {
             id: `urn:li:person:${personalData.id}`,
@@ -468,19 +471,18 @@ async function handleGetProfiles(request, response) {
         // Handle organization roles response.
         let organizations = [];
         if (orgAclsResponse.status === 401) {
-            console.warn('Unauthorized when fetching organization ACLs. The token may be valid but lack necessary permissions (e.g., r_organization_social).');
+            console.warn('Unauthorized when fetching organization ACLs. Token may lack r_organization_social permission.');
         } else if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
+            console.log('Organizations found:', orgAclsData.elements?.length || 0);
 
             organizations = (orgAclsData.elements || [])
                 .filter(el => {
-                    // Aceita tanto organization quanto organizationBrand
                     const hasOrg = el.organization || el.organizationBrand;
                     const hasOrgData = el['organization~'] || el['organizationBrand~'];
                     return hasOrg && hasOrgData;
                 })
                 .map(el => {
-                    // Prioriza organizationBrand (páginas) sobre organization
                     const orgUrn = el.organizationBrand || el.organization;
                     const orgDetails = el['organizationBrand~'] || el['organization~'];
 
@@ -641,7 +643,7 @@ async function handleGetShareStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             }
         });
 
@@ -684,7 +686,7 @@ async function handleGetMemberPostStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202403'
+                'LinkedIn-Version': '202411'
             },
         });
 
