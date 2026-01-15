@@ -445,6 +445,13 @@ async function handleGetProfiles(request, response) {
             fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee', { headers })
         ]);
 
+        if (personalResponse.status === 401 || orgAclsResponse.status === 401) {
+            return response.status(401).json({
+                error: 'Token de acesso do LinkedIn expirado.',
+                details: 'O token usado na requisição expirou ou é inválido.'
+            });
+        }
+
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
             throw new Error(`Failed to fetch personal profile: ${personalResponse.status} - ${errorText}`);
