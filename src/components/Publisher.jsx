@@ -764,33 +764,36 @@ const Publisher = ({
 
             videoUrn = await uploadVideoForLinkedIn(settings?.linkedin, videoBlob, authorUrn, setPublishingStatusLi);
         } else if (selectedImageIndexes.length > 0) {
-            const imageBlobsToUpload = await Promise.all(
-              selectedImageIndexes.map(async (index, i) => {
-                const media = unifiedMedia[parseInt(index)];
+            let toastId;
+            try {
+                const imageBlobsToUpload = await Promise.all(
+                    selectedImageIndexes.map(async (index, i) => {
+                        const media = unifiedMedia[parseInt(index)];
 
-                // Corrected logic:
-                // 1. Check if the URL corresponds to a pending asset (a local blob).
-                if (media.url && pendingAssets[media.url]) {
-                  return pendingAssets[media.url];
+                        if (media.url && pendingAssets[media.url]) {
+                            return pendingAssets[media.url];
+                        }
+
+                        if (i === 0) { // Create toast only for the first download
+                            toastId = toast.loading(`Baixando ${selectedImageIndexes.length} imagem(ns)...`);
+                        }
+
+                        try {
+                            const blob = await urlToBlob(media.url);
+                            return blob;
+                        } catch (e) {
+                            toast.error(`Falha ao baixar a imagem ${i + 1}.`);
+                            console.error(`Failed to fetch blob for ${media.url}`, e);
+                            return null;
+                        }
+                    })
+                );
+
+                if (toastId) toast.dismiss(toastId);
+
+                if (imageBlobsToUpload.some(blob => !blob)) {
+                    throw new Error("Falha ao baixar uma ou mais imagens. Verifique o console e tente novamente.");
                 }
-
-                // 2. If not, it's a permanent URL that needs to be downloaded.
-                toast.info(`Baixando imagem ${i + 1}/${selectedImageIndexes.length}...`);
-                try {
-                  const blob = await urlToBlob(media.url);
-                  return blob;
-                } catch (e) {
-                  toast.error(`Falha ao baixar a imagem ${i + 1}.`);
-                  console.error(`Failed to fetch blob for ${media.url}`, e);
-                  return null;
-                }
-              })
-            );
-            toast.dismiss(toastId);
-
-            if (imageBlobsToUpload.some(blob => !blob)) {
-                throw new Error("Falha ao baixar uma ou mais imagens. Verifique o console e tente novamente.");
-            }
 
             // JULES - DEBUG LOG
             console.log('--- JULES DEBUG ---');
