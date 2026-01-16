@@ -797,7 +797,8 @@ const Publisher = ({
                 if (toastId) toast.dismiss(toastId);
             }
 
-            imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
+            const personalProfileUrn = linkedinProfiles.personal ? `urn:li:person:${linkedinProfiles.personal.id}` : authorUrn;
+            imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, personalProfileUrn, setPublishingStatusLi);
         }
 
         setPublishingStatusLi('Criando a publicação...');
