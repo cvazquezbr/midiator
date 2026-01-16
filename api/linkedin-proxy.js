@@ -388,7 +388,7 @@ async function handleGetProfiles(request, response) {
     try {
         const [personalResponse, orgAclsResponse] = await Promise.all([
             fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-            fetch('https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organizationBrand~(*,localizedName,logoV2(original~:playableStreams)),organization~(*,localizedName,logoV2(original~:playableStreams))))', { headers })
+            fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED', { headers })
         ]);
 
         if (!personalResponse.ok) {
@@ -411,26 +411,36 @@ async function handleGetProfiles(request, response) {
         let organizations = [];
         if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
-            if (orgAclsData.elements && Array.isArray(orgAclsData.elements)) {
-                organizations = orgAclsData.elements.map(element => {
-                    const entity = element['organizationBrand~'] || element['organization~'];
-                    if (!entity) return null;
+            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
+            const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
-                    const name = entity.localizedName || (entity.name ? entity.name.localized?.en_US : 'Nome da Página Indisponível');
-                    const logo = entity.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier;
+            if (orgIds.length > 0) {
+                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})&projection=(elements*(*,logoV2(original~:playableStreams)))`;
+                const batchOrgResponse = await fetch(batchOrgUrl, { headers });
 
-                    return {
-                        id: entity.urn,
-                        name: name,
-                        role: element.role,
-                        logo: logo,
-                        type: element['organizationBrand~'] ? 'brand' : 'organization',
-                    };
-                }).filter(Boolean); // Filter out any null entries
+                if (batchOrgResponse.ok) {
+                    const batchOrgData = await batchOrgResponse.json();
+                    organizations = orgAclsData.elements.map(acl => {
+                        const orgUrn = acl.organization;
+                        const orgId = orgUrn.split(':').pop();
+                        const orgDetails = batchOrgData.results[orgId];
+                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+
+                        return {
+                            id: orgUrn,
+                            name: orgName,
+                            role: acl.role,
+                            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                            type: 'organization'
+                        };
+                    });
+                } else {
+                    console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
+                }
             }
         } else {
             const errorText = await orgAclsResponse.text();
-            console.warn(`Could not fetch organizationalEntityAcls: ${orgAclsResponse.status} - ${errorText}`);
+            console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
         }
 
 
