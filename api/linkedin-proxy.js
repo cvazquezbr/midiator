@@ -81,7 +81,7 @@ async function handleInitializeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -151,7 +151,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload)
         });
@@ -182,7 +182,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             }
         });
         if (!linkedinResponse.ok) {
@@ -212,7 +212,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             },
         });
         const data = await linkedinResponse.json();
@@ -240,7 +240,7 @@ async function handleRegisterUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -265,127 +265,72 @@ async function handleRegisterUpload(request, response) {
 
 async function handleUploadAndCheckImage(request, response) {
     const { accessToken, authorUrn, imageBase64, imageType } = request.body;
+
     if (!accessToken || !authorUrn || !imageBase64 || !imageType) {
-        return response.status(400).json({ error: 'Missing parameters for uploadAndCheckImage.' });
+        return response.status(400).json({ error: 'Missing parameters for image upload.' });
     }
 
     const headers = {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        // Standardizing on API version 202511 for compatibility with organizationalEntityAcls endpoint.
-        'LinkedIn-Version': '202511'
+        'LinkedIn-Version': '202411'
     };
-
-    // Step 1: Register Upload (using the modern /rest/images endpoint)
-    const registerUploadUrl = 'https://api.linkedin.com/rest/images?action=initializeUpload';
-    const registerPayload = {
-        initializeUploadRequest: {
-            owner: authorUrn
-        }
-    };
-
-    let uploadUrl, assetUrn;
 
     try {
+        // Step 1: Register Upload (using the modern /rest/images endpoint)
+        const registerUploadUrl = 'https://api.linkedin.com/rest/images?action=initializeUpload';
+        const registerPayload = {
+            initializeUploadRequest: {
+                owner: authorUrn
+            }
+        };
+
         const registerResponse = await fetch(registerUploadUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify(registerPayload),
         });
+
         const registerData = await registerResponse.json();
         if (!registerResponse.ok) {
-            console.error('LinkedIn Register Upload Error:', registerData);
-            return response.status(registerResponse.status).json({ error: 'Failed to register image upload.', details: registerData });
-        }
-        // Defensively parse the response to handle API variations
-        uploadUrl = registerData.value?.uploadUrl ||
-            registerData.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;
-
-        assetUrn = registerData.value?.asset || registerData.value?.image || registerData.value?.urn;
-
-        if (!uploadUrl || !assetUrn) {
-            console.error('Raw LinkedIn registration response:', JSON.stringify(registerData, null, 2));
-            throw new Error('Missing uploadUrl or assetUrn in registration response.');
+            console.error('LinkedIn Image Registration Error:', registerData);
+            return response.status(registerResponse.status).json(registerData);
         }
 
-    } catch (error) {
-        console.error('Error during upload registration:', error);
-        return response.status(500).json({ error: 'Internal Server Error during upload registration.' });
-    }
+        const uploadUrl = registerData.value.uploadUrl;
+        const imageUrn = registerData.value.image;
 
-
-    // Step 2: Upload Image Binary
-    try {
+        // Step 2: Upload the image
         const imageBuffer = Buffer.from(imageBase64, 'base64');
         const uploadResponse = await fetch(uploadUrl, {
             method: 'PUT',
-            headers: { 'Content-Type': imageType }, // No Auth header here
+            headers: { 'Content-Type': imageType },
             body: imageBuffer,
         });
 
         if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
-            console.error("LinkedIn Image Upload Error:", errorText);
-            return response.status(uploadResponse.status).json({ error: `Failed to upload image to LinkedIn.`, details: errorText });
-        }
-    } catch (error) {
-        console.error('Error during image upload:', error);
-        return response.status(500).json({ error: 'Internal Server Error during image upload.' });
-    }
-
-
-    // Step 3: Poll for Image Status
-    const statusUrl = `https://api.linkedin.com/rest/images/${encodeURIComponent(assetUrn)}`;
-    const maxRetries = 10; // ~30 seconds total
-    const retryDelay = 3000;
-
-    try {
-        await delay(1000); // Initial delay before first poll
-
-        for (let i = 0; i < maxRetries; i++) {
-            const statusResponse = await fetch(statusUrl, { headers });
-
-            if (statusResponse.status === 401) {
-                return response.status(401).json({ error: 'Unauthorized while checking image status. Token may have expired.' });
-            }
-
-            if (!statusResponse.ok) {
-                console.warn(`Polling attempt ${i + 1}/${maxRetries} failed for ${assetUrn} with status ${statusResponse.status}`);
-                await delay(retryDelay);
-                continue;
-            }
-
-            const statusData = await statusResponse.json();
-            const processingState = statusData.processingState || statusData.status;
-
-            if (processingState === 'AVAILABLE') {
-                console.log(`Image ${assetUrn} is AVAILABLE.`);
-                return response.status(200).json({ assetUrn });
-            }
-            console.log(`Polling attempt ${i + 1}/${maxRetries} for ${assetUrn}: Image status is ${processingState}.`);
-            await delay(retryDelay);
+            console.error('LinkedIn Image Upload Error:', errorText);
+            return response.status(uploadResponse.status).json({ error: 'Failed to upload image to LinkedIn.' });
         }
 
-        console.error(`Polling timed out for asset ${assetUrn}.`);
-        return response.status(500).json({ error: 'Image processing timed out.' });
+        // Step 3: Check status (optional but good for robustness)
+        // For images, they are usually available immediately after a successful PUT.
+        return response.status(200).json({ assetUrn: imageUrn });
 
     } catch (error) {
-        console.error('Error while polling for image status:', error);
-        return response.status(500).json({ error: 'Internal Server Error while polling image status.' });
+        console.error('Error during image upload and check:', error);
+        return response.status(500).json({ error: 'Internal Server Error during image upload' });
     }
 }
-
 
 async function handleCreatePost(request, response) {
     const { accessToken, payload } = request.body;
 
     if (!accessToken || !payload) {
-        return response.status(400).json({ error: 'Missing accessToken or payload for createPost.' });
+        return response.status(400).json({ error: 'Missing accessToken or payload for post creation.' });
     }
-
-
-    console.log('[LinkedIn Proxy] Received createPost request with payload:', JSON.stringify(payload, null, 2));
 
     const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
@@ -396,7 +341,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             },
             body: JSON.stringify(payload),
         });
@@ -437,23 +382,14 @@ async function handleGetProfiles(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202511'  // ← VERSÃO CORRETA
+        'LinkedIn-Version': '202411'
     };
 
     try {
-        // Fetch personal profile and organizational roles in parallel.
         const [personalResponse, orgAclsResponse] = await Promise.all([
             fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-            // URL correta com projection completa
-            fetch('https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organizationBrand~(localizedName,logo(original~:playableStreams)),organization~(localizedName,logoV2(original~:playableStreams))))', { headers })
+            fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee', { headers })
         ]);
-
-        if (personalResponse.status === 401 || orgAclsResponse.status === 401) {
-            return response.status(401).json({
-                error: 'Token de acesso do LinkedIn expirado.',
-                details: 'O token usado na requisição expirou ou é inválido.'
-            });
-        }
 
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
@@ -468,40 +404,36 @@ async function handleGetProfiles(request, response) {
             profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
         };
 
-        // Handle organization roles response.
         let organizations = [];
-        if (orgAclsResponse.status === 401) {
-            console.warn('Unauthorized when fetching organization ACLs. Token may lack r_organization_social permission.');
-        } else if (orgAclsResponse.ok) {
+        if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
-            console.log('Organizations found:', orgAclsData.elements?.length || 0);
+            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
+            const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
-            organizations = (orgAclsData.elements || [])
-                .filter(el => {
-                    const hasOrg = el.organization || el.organizationBrand;
-                    const hasOrgData = el['organization~'] || el['organizationBrand~'];
-                    return hasOrg && hasOrgData;
-                })
-                .map(el => {
-                    const orgUrn = el.organizationBrand || el.organization;
-                    const orgDetails = el['organizationBrand~'] || el['organization~'];
+            if (orgIds.length > 0) {
+                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
+                const batchOrgResponse = await fetch(batchOrgUrl, { headers });
 
-                    // Tenta pegar logo de diferentes campos
-                    let logo = null;
-                    if (orgDetails.logo?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier) {
-                        logo = orgDetails.logo['original~'].elements[0].identifiers[0].identifier;
-                    } else if (orgDetails.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier) {
-                        logo = orgDetails.logoV2['original~'].elements[0].identifiers[0].identifier;
-                    }
+                if (batchOrgResponse.ok) {
+                    const batchOrgData = await batchOrgResponse.json();
+                    organizations = orgAclsData.elements.map(acl => {
+                        const orgUrn = acl.organization;
+                        const orgId = orgUrn.split(':').pop();
+                        const orgDetails = batchOrgData.results[orgId];
+                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
 
-                    return {
-                        id: orgUrn,
-                        name: orgDetails.localizedName || 'Nome da Página Indisponível',
-                        role: el.role,
-                        logo: logo,
-                        type: 'organization'
-                    };
-                });
+                        return {
+                            id: orgUrn,
+                            name: orgName,
+                            role: acl.role,
+                            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                            type: 'organization'
+                        };
+                    });
+                } else {
+                    console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
+                }
+            }
         } else {
             const errorText = await orgAclsResponse.text();
             console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
@@ -514,8 +446,8 @@ async function handleGetProfiles(request, response) {
         });
 
     } catch (error) {
-        console.error('Error in handleGetProfiles:', error.message, error.stack);
-        return response.status(500).json({ error: 'Internal Server Error while fetching profiles.', details: error.message });
+        console.error('Error in handleGetProfiles:', error);
+        return response.status(500).json({ error: 'Internal Server Error while fetching profiles.' });
     }
 }
 
@@ -643,7 +575,7 @@ async function handleGetShareStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             }
         });
 
@@ -686,7 +618,7 @@ async function handleGetMemberPostStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202511'
+                'LinkedIn-Version': '202411'
             },
         });
 
