@@ -416,7 +416,7 @@ async function handleGetProfiles(request, response) {
             const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
             if (orgIds.length > 0) {
-                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})&projection=(localizedName,name,logoV2(original~:playableStreams))`;
+                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
                 const batchOrgResponse = await fetch(batchOrgUrl, { headers });
 
                 if (batchOrgResponse.ok) {
