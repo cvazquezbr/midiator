@@ -388,11 +388,15 @@ async function handleGetProfiles(request, response) {
     try {
         const [personalResponse, orgAclsResponse] = await Promise.all([
             fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-            fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee', { headers })
+            fetch('https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&projection=(elements*(*,organizationBrand~(*,localizedName,logoV2(original~:playableStreams)),organization~(*,localizedName,logoV2(original~:playableStreams))))', { headers })
         ]);
 
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
+            // If the token is invalid, return a 401 Unauthorized
+            if (personalResponse.status === 401) {
+                return response.status(401).json({ error: 'Invalid or expired LinkedIn access token.' });
+            }
             throw new Error(`Failed to fetch personal profile: ${personalResponse.status} - ${errorText}`);
         }
 
@@ -407,37 +411,28 @@ async function handleGetProfiles(request, response) {
         let organizations = [];
         if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
-            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-            const orgIds = orgUrns.map(urn => urn.split(':').pop());
+            if (orgAclsData.elements && Array.isArray(orgAclsData.elements)) {
+                organizations = orgAclsData.elements.map(element => {
+                    const entity = element['organizationBrand~'] || element['organization~'];
+                    if (!entity) return null;
 
-            if (orgIds.length > 0) {
-                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-                const batchOrgResponse = await fetch(batchOrgUrl, { headers });
+                    const name = entity.localizedName || (entity.name ? entity.name.localized?.en_US : 'Nome da Página Indisponível');
+                    const logo = entity.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier;
 
-                if (batchOrgResponse.ok) {
-                    const batchOrgData = await batchOrgResponse.json();
-                    organizations = orgAclsData.elements.map(acl => {
-                        const orgUrn = acl.organization;
-                        const orgId = orgUrn.split(':').pop();
-                        const orgDetails = batchOrgData.results[orgId];
-                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
-
-                        return {
-                            id: orgUrn,
-                            name: orgName,
-                            role: acl.role,
-                            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-                            type: 'organization'
-                        };
-                    });
-                } else {
-                    console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
-                }
+                    return {
+                        id: entity.urn,
+                        name: name,
+                        role: element.role,
+                        logo: logo,
+                        type: element['organizationBrand~'] ? 'brand' : 'organization',
+                    };
+                }).filter(Boolean); // Filter out any null entries
             }
         } else {
             const errorText = await orgAclsResponse.text();
-            console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
+            console.warn(`Could not fetch organizationalEntityAcls: ${orgAclsResponse.status} - ${errorText}`);
         }
+
 
         return response.status(200).json({
             personal,
