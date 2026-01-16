@@ -403,9 +403,9 @@ async function handleGetProfiles(request, response) {
 
         const personalData = await personalResponse.json();
         const personal = {
-            id: `urn:li:person:${personalData.id}`,
+            id: personalData.id,
             name: `${personalData.firstName?.localized?.pt_BR || personalData.firstName?.localized?.en_US || ''} ${personalData.lastName?.localized?.pt_BR || personalData.lastName?.localized?.en_US || ''}`.trim(),
-            type: 'personal',
+            type: 'person',
             profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
         };
 
@@ -428,7 +428,7 @@ async function handleGetProfiles(request, response) {
                         const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
 
                         return {
-                            id: orgUrn,
+                            id: orgId,
                             name: orgName,
                             role: acl.role,
                             logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
