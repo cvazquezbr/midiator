@@ -1,6 +1,7 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 
+const LINKEDIN_API_VERSION = '202601';
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 // A general-purpose, action-based proxy for LinkedIn API calls.
@@ -81,7 +82,7 @@ async function handleInitializeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             },
             body: JSON.stringify(payload),
         });
@@ -151,7 +152,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             },
             body: JSON.stringify(payload)
         });
@@ -182,7 +183,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             }
         });
         if (!linkedinResponse.ok) {
@@ -212,7 +213,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             },
         });
         const data = await linkedinResponse.json();
@@ -240,7 +241,7 @@ async function handleRegisterUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             },
             body: JSON.stringify(payload),
         });
@@ -274,7 +275,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202601'
+        'LinkedIn-Version': LINKEDIN_API_VERSION
     };
 
     try {
@@ -341,7 +342,7 @@ async function handleCreatePost(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             },
             body: JSON.stringify(payload),
         });
@@ -382,7 +383,7 @@ async function handleGetProfiles(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202601'
+        'LinkedIn-Version': LINKEDIN_API_VERSION
     };
 
     try {
@@ -415,7 +416,7 @@ async function handleGetProfiles(request, response) {
             const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
             if (orgIds.length > 0) {
-                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})&projection=(elements*(*,logoV2(original~:playableStreams)))`;
+                const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})&projection=(localizedName,name,logoV2(original~:playableStreams))`;
                 const batchOrgResponse = await fetch(batchOrgUrl, { headers });
 
                 if (batchOrgResponse.ok) {
@@ -580,7 +581,7 @@ async function handleGetShareStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             }
         });
 
@@ -623,7 +624,7 @@ async function handleGetMemberPostStatistics(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202601'
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             },
         });
 
