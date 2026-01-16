@@ -797,8 +797,7 @@ const Publisher = ({
                 if (toastId) toast.dismiss(toastId);
             }
 
-            const personalProfileUrn = linkedinProfiles.personal ? `urn:li:person:${linkedinProfiles.personal.id}` : authorUrn;
-            imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, personalProfileUrn, setPublishingStatusLi);
+            imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
         }
 
         setPublishingStatusLi('Criando a publicação...');
@@ -1117,7 +1116,7 @@ const Publisher = ({
                 size="large"
                 color="primary"
                 onClick={handlePublishLinkedIn}
-                disabled={isPublishingLi || (isScheduled) || !selectedTarget || !content.trim() || content.length > characterLimit}
+                disabled={isPublishingLi || isLoadingProfiles || (isScheduled) || !selectedTarget || !content.trim() || content.length > characterLimit}
               >
                 {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
