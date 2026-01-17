@@ -22,22 +22,13 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Armazena a URL de destino se o usuário for redirecionado para o login
-  useEffect(() => {
-    const from = location.state?.from?.pathname;
-    if (from) {
-      localStorage.setItem('redirectAfterLogin', from);
-    }
-  }, [location]);
-
   // Se o usuário já estiver logado, lida com o redirecionamento
   useEffect(() => {
     if (user) {
-      const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      localStorage.removeItem('redirectAfterLogin'); // Limpa após o uso
-      navigate(redirectUrl || '/', { replace: true });
+      const from = location.state?.from?.pathname || '/';
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

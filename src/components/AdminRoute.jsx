@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useUserAuth } from '../context/UserAuthContext';
 import LoadingDialog from './LoadingDialog';
 
@@ -9,6 +9,7 @@ import LoadingDialog from './LoadingDialog';
  */
 const AdminRoute = () => {
   const { user, loading } = useUserAuth();
+  const location = useLocation();
 
   if (loading) {
     return <LoadingDialog open={true} title="Verificando permissões..." description="Aguarde um momento." />;
@@ -17,7 +18,7 @@ const AdminRoute = () => {
   // First, check if there is a user. If not, they can't be an admin.
   // Redirect to login.
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Then, check if the logged-in user has the 'admin' role.

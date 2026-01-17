@@ -14,11 +14,13 @@ export const useUserAuth = () => {
 export const UserAuthContextProvider = ({ children, initialUser = null, initialToken = null }) => {
   const [user, setUser] = useState(initialUser);
   const [googleAccessToken, setGoogleAccessToken] = useState(initialToken);
-  const [loading, setLoading] = useState(!initialUser); // If a user is provided, we are not loading.
+  const [loading, setLoading] = useState(true); // Always start as loading to check session
 
   const fetchUser = useCallback(async () => {
     // If we have an initial user, don't fetch.
     if (initialUser) {
+      setUser(initialUser);
+      setGoogleAccessToken(initialToken);
       setLoading(false);
       return;
     }
@@ -217,7 +219,6 @@ export const UserAuthContextProvider = ({ children, initialUser = null, initialT
     fetchUser, // Expose fetchUser to allow components to trigger a manual refresh
   };
 
-  // Render children only after the initial loading is complete
   return (
     <UserAuthContext.Provider value={value}>
       {children}
