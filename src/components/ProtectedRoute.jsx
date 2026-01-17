@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useUserAuth } from '../context/UserAuthContext';
 import LoadingDialog from './LoadingDialog';
 
@@ -13,6 +13,7 @@ import LoadingDialog from './LoadingDialog';
  */
 const ProtectedRoute = () => {
   const { user, loading } = useUserAuth();
+  const location = useLocation();
 
   if (loading) {
     // Show a full-screen loading indicator while checking for an active session.
@@ -20,9 +21,8 @@ const ProtectedRoute = () => {
   }
 
   if (!user) {
-    // The `replace` prop is used to replace the current entry in the history stack,
-    // so the user won't be able to navigate back to the protected route after logging in.
-    return <Navigate to="/login" replace />;
+    // Pass the current location to the login page so we can redirect back after login
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // If authenticated, render the child routes defined within this protected route.

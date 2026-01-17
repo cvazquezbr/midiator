@@ -25,25 +25,12 @@ const SignupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Armazena a URL de destino se o usuário for redirecionado para o cadastro
-  useEffect(() => {
-    const from = location.state?.from?.pathname;
-    if (from) {
-      localStorage.setItem('redirectAfterLogin', from);
-    }
-  }, [location]);
-
   useEffect(() => {
     if (user) {
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        localStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate('/'); // Redirecionamento padrão após o login
-      }
+      const from = location.state?.from?.pathname || '/';
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
