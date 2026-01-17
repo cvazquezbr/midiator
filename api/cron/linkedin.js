@@ -161,12 +161,23 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
 
 // Build author URN from target_type/target_id or author field
 function buildAuthorUrn(data) {
-  if (data.author) return data.author; // author can be in the payload
-  const targetId = data.targetId; // targetId is in the payload
-  const targetType = data.targetType; // targetType is in the payload
-  if (targetId && targetType) {
-    return `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
+  if (data.author) {
+    if (data.author.startsWith('urn:li:')) return data.author;
+    // If it's just an ID, we need more info, but usually author is a full URN if present
+    return data.author;
   }
+  
+  let targetId = data.targetId || data.id;
+  let targetType = data.targetType || data.type;
+  
+  if (targetId && targetType) {
+    // Clean targetId if it's already a URN
+    const cleanId = String(targetId).startsWith('urn:li:') ? targetId.split(':').pop() : targetId;
+    // Normalize targetType
+    const type = (targetType === 'organization' || targetType === 'company') ? 'organization' : 'person';
+    return `urn:li:${type}:${cleanId}`;
+  }
+  
   // fallback to user_id-based person urn if available from the db row
   if (data.user_id) return `urn:li:person:${data.user_id}`;
   return null;
@@ -244,7 +255,7 @@ export async function handleRunScheduler(response) {
       }
 
       // Extract authorUrn from the JSON payload (post_content)
-      const authorUrn = payload.authorUrn;
+      const authorUrn = payload.authorUrn || buildAuthorUrn(payload);
       if (!authorUrn) {
         console.error(`[Cron LinkedIn] Could not determine author URN from post_content for post ${postId}.`);
         await query('UPDATE linkedin_schedules SET status = $1, error_message = $2 WHERE id = $3', ['failed', 'missing authorUrn from payload', postId]);
