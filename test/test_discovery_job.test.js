@@ -18,10 +18,10 @@ describe('Discovery Job', () => {
     vi.clearAllMocks();
   });
 
-  it('should process pending and error sessions', async () => {
+  it('should process pending, error, and searching sessions', async () => {
     const mockRows = [
-      { id: 1 },
-      { id: 2 }
+      { id: 1, status: 'pending' },
+      { id: 2, status: 'searching' }
     ];
     query.mockResolvedValueOnce({ rows: mockRows });
     processDiscoverySession.mockResolvedValue(true);
@@ -33,7 +33,7 @@ describe('Discovery Job', () => {
 
     await handleRunDiscovery({}, mockResponse);
 
-    expect(query).toHaveBeenCalledWith(expect.stringContaining("status IN ('pending', 'error')"));
+    expect(query).toHaveBeenCalledWith(expect.stringContaining("status IN ('pending', 'error', 'searching')"));
     expect(processDiscoverySession).toHaveBeenCalledTimes(2);
     expect(processDiscoverySession).toHaveBeenCalledWith(1);
     expect(processDiscoverySession).toHaveBeenCalledWith(2);
@@ -43,8 +43,9 @@ describe('Discovery Job', () => {
     }));
   });
 
-  it('should handle no pending sessions', async () => {
-    query.mockResolvedValueOnce({ rows: [] });
+  it('should handle no sessions to process and show total count', async () => {
+    query.mockResolvedValueOnce({ rows: [] }); // No pending/error/searching
+    query.mockResolvedValueOnce({ rows: [{ count: '10' }] }); // Total count
 
     const mockResponse = {
       status: vi.fn().mockReturnThis(),
@@ -56,7 +57,8 @@ describe('Discovery Job', () => {
     expect(processDiscoverySession).not.toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(200);
     expect(mockResponse.json).toHaveBeenCalledWith({
-      message: 'No pending discovery sessions found.'
+      message: 'No discovery sessions found to process.',
+      debug: { totalSessions: 10 }
     });
   });
 
