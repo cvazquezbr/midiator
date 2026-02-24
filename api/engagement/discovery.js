@@ -18,6 +18,8 @@ const handler = async (req, res) => {
         return await handleUpdatePostDecision(req, res, userId);
       case 'processSession':
         return await handleProcessSession(req, res, userId);
+      case 'processMySessions':
+        return await handleProcessMySessions(req, res, userId);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -51,10 +53,18 @@ async function handleCreateSession(req, res, userId) {
 
 async function handleGetSessions(req, res, userId) {
   const result = await query(
-    `SELECT * FROM linkedin_discovery_sessions WHERE user_id = $1 ORDER BY created_at DESC`,
+    `SELECT s.*, COUNT(p.id) as post_count
+     FROM linkedin_discovery_sessions s
+     LEFT JOIN linkedin_discovered_posts p ON s.id = p.session_id
+     WHERE s.user_id = $1
+     GROUP BY s.id
+     ORDER BY s.created_at DESC`,
     [userId]
   );
-  res.status(200).json(result.rows);
+  res.status(200).json(result.rows.map(row => ({
+    ...row,
+    post_count: parseInt(row.post_count, 10)
+  })));
 }
 
 async function handleGetSessionDetails(req, res, userId) {
@@ -104,6 +114,33 @@ async function handleUpdatePostDecision(req, res, userId) {
   );
   
   res.status(200).json(result.rows[0]);
+}
+
+async function handleProcessMySessions(req, res, userId) {
+  const { rows } = await query(
+    `SELECT id FROM linkedin_discovery_sessions
+     WHERE user_id = $1 AND status IN ('pending', 'error', 'searching')`,
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    return res.status(200).json({ message: 'Nenhuma sessão pendente encontrada.' });
+  }
+
+  const results = [];
+  for (const session of rows) {
+    try {
+      await processDiscoverySession(session.id);
+      results.push({ id: session.id, status: 'success' });
+    } catch (err) {
+      results.push({ id: session.id, status: 'error', error: err.message });
+    }
+  }
+
+  res.status(200).json({
+    message: `Processadas ${rows.length} sessões de descoberta.`,
+    results
+  });
 }
 
 async function handleProcessSession(req, res, userId) {
