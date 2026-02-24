@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, List, ListItem, ListItemText,
   Button, Chip, Divider, CircularProgress, Card, CardContent,
-  IconButton, Tooltip, TextField, Alert
+  IconButton, Tooltip, TextField, Alert, Grid
 } from '@mui/material';
 import {
   ThumbUp, ThumbDown, Comment, OpenInNew, CheckCircle,
@@ -105,28 +105,36 @@ const LinkedInEngagement = () => {
             <Grid container spacing={2}>
               <Grid item xs={12} md={4}>
                 <Typography variant="subtitle1" gutterBottom>Sessões de Descoberta</Typography>
-                <List>
-                  {sessions.map(session => (
-                    <ListItem 
-                      button 
-                      key={session.id} 
-                      selected={selectedSession?.id === session.id}
-                      onClick={() => handleSessionClick(session)}
-                    >
-                      <ListItemText 
-                        primary={`Post: ${session.source_post_content?.substring(0, 30)}...`}
-                        secondary={new Date(session.created_at).toLocaleDateString()}
-                      />
-                      <Chip size="small" label={session.status} color="info" variant="outlined" />
-                    </ListItem>
-                  ))}
-                </List>
+                {loading ? (
+                  <CircularProgress />
+                ) : sessions.length === 0 ? (
+                  <Alert severity="info">Nenhuma sessão de descoberta encontrada. Publique um post para iniciar.</Alert>
+                ) : (
+                  <List>
+                    {sessions.map(session => (
+                      <ListItem 
+                        button 
+                        key={session.id} 
+                        selected={selectedSession?.id === session.id}
+                        onClick={() => handleSessionClick(session)}
+                      >
+                        <ListItemText 
+                          primary={`Post: ${session.source_post_content?.substring(0, 30)}...`}
+                          secondary={new Date(session.created_at).toLocaleDateString()}
+                        />
+                        <Chip size="small" label={session.status} color="info" variant="outlined" />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
               </Grid>
               <Grid item xs={12} md={8}>
                 {selectedSession ? (
                   <Box>
                     <Typography variant="subtitle1" gutterBottom>Posts Sugeridos</Typography>
-                    {loading ? <CircularProgress /> : (
+                    {loading ? <CircularProgress /> : posts.length === 0 ? (
+                      <Alert severity="info">Nenhum post descoberto para esta sessão.</Alert>
+                    ) : (
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {posts.map(post => (
                           <Card key={post.id} variant="outlined">
@@ -173,25 +181,29 @@ const LinkedInEngagement = () => {
           {tabValue === 1 && (
             <Box>
               <Typography variant="subtitle1" gutterBottom>Comentários Gerados</Typography>
-              <List>
-                {comments.map(comment => (
-                  <Paper key={comment.id} sx={{ p: 2, mb: 2, border: '1px solid #eee' }}>
-                    <Typography variant="caption" color="textSecondary">Para o post de {comment.post_author_name}</Typography>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={3}
-                      defaultValue={comment.generated_text}
-                      sx={{ mt: 1, mb: 1 }}
-                    />
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                      <Button size="small" startIcon={<Send />} variant="contained" color="primary">
-                        Aprovar e Comentar
-                      </Button>
-                    </Box>
-                  </Paper>
-                ))}
-              </List>
+              {comments.length === 0 ? (
+                <Alert severity="info">Nenhum comentário gerado. Aprove posts descobertos para gerar comentários.</Alert>
+              ) : (
+                <List>
+                  {comments.map(comment => (
+                    <Paper key={comment.id} sx={{ p: 2, mb: 2, border: '1px solid #eee' }}>
+                      <Typography variant="caption" color="textSecondary">Para o post de {comment.post_author_name}</Typography>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        defaultValue={comment.generated_text}
+                        sx={{ mt: 1, mb: 1 }}
+                      />
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                        <Button size="small" startIcon={<Send />} variant="contained" color="primary">
+                          Aprovar e Comentar
+                        </Button>
+                      </Box>
+                    </Paper>
+                  ))}
+                </List>
+              )}
             </Box>
           )}
         </Box>
