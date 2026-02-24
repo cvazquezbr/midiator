@@ -1,5 +1,6 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
+import { processDiscoverySession } from './ai-worker.js';
 
 const handler = async (req, res) => {
   const { action } = req.body;
@@ -34,7 +35,16 @@ async function handleCreateSession(req, res, userId) {
     [userId, sourcePostId, sourcePostContent]
   );
   
-  res.status(201).json(result.rows[0]);
+  const session = result.rows[0];
+
+  // Trigger background processing
+  // Note: On Vercel, this might be terminated if the response is sent immediately,
+  // but for this implementation we assume a best-effort trigger.
+  processDiscoverySession(session.id).catch(err =>
+    console.error(`Error triggering discovery session ${session.id}:`, err)
+  );
+
+  res.status(201).json(session);
 }
 
 async function handleGetSessions(req, res, userId) {

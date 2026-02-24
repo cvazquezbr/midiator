@@ -832,6 +832,22 @@ const Publisher = ({
                 status: 'published'
             };
             await createSchedule(publicationPayload);
+
+            // Create a discovery session for engagement
+            try {
+              await fetch('/api/engagement/discovery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'createSession',
+                  sourcePostId: result.id,
+                  sourcePostContent: content
+                })
+              });
+            } catch (engError) {
+              console.error("Failed to create engagement discovery session:", engError);
+            }
+
             toast.success("Publicação registrada para monitoramento.");
             fetchSchedules(); // Refresh the schedules list
         } catch (scheduleError) {
