@@ -13,6 +13,7 @@ const LinkedInEngagement = () => {
   const [tabValue, setTabValue] = useState(0);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [processingSessions, setProcessingSessions] = useState({});
   const [selectedSession, setSelectedSession] = useState(null);
   const [posts, setPosts] = useState([]);
   const [comments, setComments] = useState([]);
@@ -88,6 +89,33 @@ const LinkedInEngagement = () => {
     }
   };
 
+  const handleProcessSession = async (e, sessionId) => {
+    e.stopPropagation();
+    setProcessingSessions(prev => ({ ...prev, [sessionId]: true }));
+    try {
+      const response = await fetch('/api/engagement/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'processSession', sessionId })
+      });
+      if (response.ok) {
+        const updatedSession = await response.json();
+        // Refresh sessions to see updated status
+        await fetchSessions();
+        // If it's the currently selected session, refresh its details too
+        if (selectedSession?.id === sessionId) {
+          handleSessionClick(updatedSession);
+        }
+      } else {
+        console.error('Failed to process session');
+      }
+    } catch (error) {
+      console.error('Error processing session:', error);
+    } finally {
+      setProcessingSessions(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -122,7 +150,24 @@ const LinkedInEngagement = () => {
                           primary={`Post: ${session.source_post_content?.substring(0, 30)}...`}
                           secondary={new Date(session.created_at).toLocaleDateString()}
                         />
-                        <Chip size="small" label={session.status} color="info" variant="outlined" />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {processingSessions[session.id] ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            (session.status === 'pending' || session.status === 'error' || session.status === 'searching') && (
+                              <Tooltip title="Processar agora">
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => handleProcessSession(e, session.id)}
+                                  color="primary"
+                                >
+                                  <Refresh />
+                                </IconButton>
+                              </Tooltip>
+                            )
+                          )}
+                          <Chip size="small" label={session.status} color="info" variant="outlined" />
+                        </Box>
                       </ListItem>
                     ))}
                   </List>

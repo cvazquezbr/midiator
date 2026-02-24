@@ -16,6 +16,8 @@ const handler = async (req, res) => {
         return await handleGetSessionDetails(req, res, userId);
       case 'updatePostDecision':
         return await handleUpdatePostDecision(req, res, userId);
+      case 'processSession':
+        return await handleProcessSession(req, res, userId);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -102,6 +104,32 @@ async function handleUpdatePostDecision(req, res, userId) {
   );
   
   res.status(200).json(result.rows[0]);
+}
+
+async function handleProcessSession(req, res, userId) {
+  const { sessionId } = req.body;
+
+  // Verify ownership
+  const sessionCheck = await query(
+    `SELECT id FROM linkedin_discovery_sessions WHERE id = $1 AND user_id = $2`,
+    [sessionId, userId]
+  );
+
+  if (sessionCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Session not found or unauthorized' });
+  }
+
+  try {
+    // We await it here for the manual trigger to give immediate feedback
+    await processDiscoverySession(sessionId);
+
+    // Return the updated session
+    const updated = await query('SELECT * FROM linkedin_discovery_sessions WHERE id = $1', [sessionId]);
+    res.status(200).json(updated.rows[0]);
+  } catch (err) {
+    console.error(`Error processing session ${sessionId}:`, err);
+    res.status(500).json({ error: 'Failed to process session', details: err.message });
+  }
 }
 
 export default withAuth(handler);
