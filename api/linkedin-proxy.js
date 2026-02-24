@@ -604,6 +604,82 @@ async function handleGetShareStatistics(request, response) {
 }
 
 
+export async function handleSearchPostsByHashtag(request, response) {
+    const { accessToken, hashtag, count = 20 } = request.body;
+    if (!accessToken || !hashtag) {
+        return response.status(400).json({ error: 'Missing accessToken or hashtag.' });
+    }
+
+    const searchUrl = `https://api.linkedin.com/rest/posts?q=hashtag&hashtag=${encodeURIComponent(hashtag)}&count=${count}&fields=id,author,commentary,publishedAt,socialDetail`;
+
+    try {
+        const linkedinResponse = await fetch(searchUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+        });
+
+        const data = await linkedinResponse.json();
+        return response.status(linkedinResponse.status).json(data);
+    } catch (error) {
+        console.error('Error during hashtag search:', error);
+        return response.status(500).json({ error: 'Internal Server Error during hashtag search' });
+    }
+}
+
+export async function handleCreateComment(request, response) {
+    const { accessToken, postUrn, actorUrn, text } = request.body;
+    if (!accessToken || !postUrn || !actorUrn || !text) {
+        return response.status(400).json({ error: 'Missing parameters for comment creation.' });
+    }
+
+    const encodedPostUrn = encodeURIComponent(postUrn);
+    const commentUrl = `https://api.linkedin.com/rest/socialActions/${encodedPostUrn}/comments`;
+
+    try {
+        const linkedinResponse = await fetch(commentUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+            body: JSON.stringify({
+                actor: actorUrn,
+                message: {
+                    text: text
+                }
+            }),
+        });
+
+        const responseText = await linkedinResponse.text();
+        let responseData;
+        try {
+            responseData = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            responseData = { raw: responseText };
+        }
+
+        if (!linkedinResponse.ok) {
+            console.error('LinkedIn Comment Creation Error:', responseData);
+            return response.status(linkedinResponse.status).json(responseData);
+        }
+
+        const commentId = linkedinResponse.headers.get('x-restli-id');
+        if (commentId) {
+            responseData.id = commentId;
+        }
+
+        return response.status(linkedinResponse.status).json(responseData);
+    } catch (error) {
+        console.error('Error during comment creation:', error);
+        return response.status(500).json({ error: 'Internal Server Error during comment creation' });
+    }
+}
+
 async function handleGetMemberPostStatistics(request, response) {
     const { accessToken, payload } = request.body;
     const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
@@ -698,6 +774,10 @@ const protectedHandler = async (request, response) => {
             return handleGetShareStatistics(request, response);
         case 'getMemberPostStatistics':
             return handleGetMemberPostStatistics(request, response);
+        case 'searchPostsByHashtag':
+            return handleSearchPostsByHashtag(request, response);
+        case 'createComment':
+            return handleCreateComment(request, response);
         case 'uploadImage':
         case 'uploadAndCheckImage':
             return handleUploadAndCheckImage(request, response);
