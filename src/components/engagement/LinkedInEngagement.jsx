@@ -6,13 +6,15 @@ import {
 } from '@mui/material';
 import {
   ThumbUp, ThumbDown, Comment, OpenInNew, CheckCircle,
-  Refresh, AutoAwesome, Send
+  Refresh, AutoAwesome, Send, PlayCircleFilled
 } from '@mui/icons-material';
+import { toast } from 'sonner';
 
 const LinkedInEngagement = () => {
   const [tabValue, setTabValue] = useState(0);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isGlobalProcessing, setIsGlobalProcessing] = useState(false);
   const [processingSessions, setProcessingSessions] = useState({});
   const [selectedSession, setSelectedSession] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -89,8 +91,31 @@ const LinkedInEngagement = () => {
     }
   };
 
+  const handleRunGlobalDiscovery = async () => {
+    setIsGlobalProcessing(true);
+    toast.info('Iniciando processamento das sessões...');
+    try {
+      const response = await fetch('/api/engagement/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'processMySessions' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || 'Processamento concluído.');
+        await fetchSessions();
+      } else {
+        toast.error(data.error || 'Falha ao processar sessões.');
+      }
+    } catch (error) {
+      toast.error('Erro ao conectar com o servidor.');
+    } finally {
+      setIsGlobalProcessing(false);
+    }
+  };
+
   const handleProcessSession = async (e, sessionId) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setProcessingSessions(prev => ({ ...prev, [sessionId]: true }));
     try {
       const response = await fetch('/api/engagement/discovery', {
@@ -100,6 +125,7 @@ const LinkedInEngagement = () => {
       });
       if (response.ok) {
         const updatedSession = await response.json();
+        toast.success('Sessão processada com sucesso!');
         // Refresh sessions to see updated status
         await fetchSessions();
         // If it's the currently selected session, refresh its details too
@@ -107,10 +133,12 @@ const LinkedInEngagement = () => {
           handleSessionClick(updatedSession);
         }
       } else {
-        console.error('Failed to process session');
+        const data = await response.json();
+        toast.error(data.error || 'Falha ao processar sessão.');
       }
     } catch (error) {
       console.error('Error processing session:', error);
+      toast.error('Erro ao conectar com o servidor.');
     } finally {
       setProcessingSessions(prev => ({ ...prev, [sessionId]: false }));
     }
@@ -132,8 +160,21 @@ const LinkedInEngagement = () => {
           {tabValue === 0 && (
             <Grid container spacing={2}>
               <Grid item xs={12} md={4}>
-                <Typography variant="subtitle1" gutterBottom>Sessões de Descoberta</Typography>
-                {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle1">Sessões de Descoberta</Typography>
+                  <Tooltip title="Executar job global de descoberta">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={isGlobalProcessing ? <CircularProgress size={16} /> : <PlayCircleFilled />}
+                      onClick={handleRunGlobalDiscovery}
+                      disabled={isGlobalProcessing || loading}
+                    >
+                      Processar Todas
+                    </Button>
+                  </Tooltip>
+                </Box>
+                {loading && sessions.length === 0 ? (
                   <CircularProgress />
                 ) : sessions.length === 0 ? (
                   <Alert severity="info">Nenhuma sessão de descoberta encontrada. Publique um post para iniciar.</Alert>
@@ -148,23 +189,32 @@ const LinkedInEngagement = () => {
                       >
                         <ListItemText 
                           primary={`Post: ${session.source_post_content?.substring(0, 30)}...`}
-                          secondary={new Date(session.created_at).toLocaleDateString()}
+                          secondary={
+                            <Box component="span" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                              {new Date(session.created_at).toLocaleDateString()}
+                              {session.post_count > 0 && (
+                                <Chip
+                                  size="small"
+                                  label={`${session.post_count} posts`}
+                                  sx={{ height: 18, fontSize: '0.65rem', ml: 1, backgroundColor: 'success.light', color: 'success.contrastText' }}
+                                />
+                              )}
+                            </Box>
+                          }
                         />
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           {processingSessions[session.id] ? (
                             <CircularProgress size={20} />
                           ) : (
-                            (session.status === 'pending' || session.status === 'error' || session.status === 'searching') && (
-                              <Tooltip title="Processar agora">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => handleProcessSession(e, session.id)}
-                                  color="primary"
-                                >
-                                  <Refresh />
-                                </IconButton>
-                              </Tooltip>
-                            )
+                            <Tooltip title="Processar agora">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleProcessSession(e, session.id)}
+                                color="primary"
+                              >
+                                <Refresh />
+                              </IconButton>
+                            </Tooltip>
                           )}
                           <Chip size="small" label={session.status} color="info" variant="outlined" />
                         </Box>
@@ -178,7 +228,22 @@ const LinkedInEngagement = () => {
                   <Box>
                     <Typography variant="subtitle1" gutterBottom>Posts Sugeridos</Typography>
                     {loading ? <CircularProgress /> : posts.length === 0 ? (
-                      <Alert severity="info">Nenhum post descoberto para esta sessão.</Alert>
+                      <Alert
+                        severity="info"
+                        action={
+                          <Button
+                            color="inherit"
+                            size="small"
+                            onClick={() => handleProcessSession(null, selectedSession.id)}
+                            disabled={processingSessions[selectedSession.id]}
+                            startIcon={processingSessions[selectedSession.id] ? <CircularProgress size={16} color="inherit" /> : <Refresh />}
+                          >
+                            Processar agora
+                          </Button>
+                        }
+                      >
+                        Nenhum post descoberto para esta sessão.
+                      </Alert>
                     ) : (
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {posts.map(post => (

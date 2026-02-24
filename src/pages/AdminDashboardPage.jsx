@@ -259,7 +259,7 @@ const AdminDashboardPage = () => {
               disabled={isSchedulerRunning}
               startIcon={isSchedulerRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
-              {isSchedulerRunning ? 'Running...' : 'Run Scheduler'}
+              {isSchedulerRunning ? 'Executando...' : 'Executar Scheduler'}
             </Button>
             <Button
               variant="contained"
@@ -268,7 +268,7 @@ const AdminDashboardPage = () => {
               disabled={isAnalyticsRunning}
               startIcon={isAnalyticsRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
-              {isAnalyticsRunning ? 'Running...' : 'Run Analytics'}
+              {isAnalyticsRunning ? 'Executando...' : 'Executar Analytics'}
             </Button>
             <Button
               variant="contained"
@@ -277,7 +277,7 @@ const AdminDashboardPage = () => {
               disabled={isDiscoveryRunning}
               startIcon={isDiscoveryRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
-              {isDiscoveryRunning ? 'Running...' : 'Run Discovery'}
+              {isDiscoveryRunning ? 'Executando...' : 'Executar Descoberta de Posts'}
             </Button>
           </Box>
         </TabPanel>
