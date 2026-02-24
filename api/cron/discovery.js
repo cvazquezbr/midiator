@@ -9,20 +9,24 @@ import { processDiscoverySession } from '../engagement/ai-worker.js';
 export async function handleRunDiscovery(request, response) {
   console.log('[Cron Discovery] Starting discovery session processing...');
   try {
-    // Process sessions that are 'pending' or 'error' (to retry)
+    // Process sessions that are 'pending', 'error' (to retry) or 'searching' (potential stuck sessions)
     const { rows } = await query(
-      `SELECT id FROM linkedin_discovery_sessions
-       WHERE status IN ('pending', 'error')
+      `SELECT id, status FROM linkedin_discovery_sessions
+       WHERE status IN ('pending', 'error', 'searching')
        ORDER BY created_at ASC`
     );
 
     if (rows.length === 0) {
-      console.log('[Cron Discovery] No pending or error sessions found.');
-      if (response) return response.status(200).json({ message: 'No pending discovery sessions found.' });
+      const allCount = await query('SELECT COUNT(*) FROM linkedin_discovery_sessions');
+      console.log(`[Cron Discovery] No sessions found with status pending, error, or searching. Total sessions in DB: ${allCount.rows[0].count}`);
+      if (response) return response.status(200).json({
+        message: 'No discovery sessions found to process.',
+        debug: { totalSessions: parseInt(allCount.rows[0].count) }
+      });
       return;
     }
 
-    console.log(`[Cron Discovery] Found ${rows.length} sessions to process.`);
+    console.log(`[Cron Discovery] Found ${rows.length} sessions to process. Statuses: ${rows.map(r => r.status).join(', ')}`);
 
     const results = [];
     for (const row of rows) {

@@ -16,7 +16,37 @@ export async function processDiscoverySession(sessionId) {
     // For this proposal, we assume the hashtags are extracted and we proceed to "discovery"
     
     // 3. Simulate discovery of posts (In reality, call LinkedIn API)
-    // 4. Score posts using Gemini
+    // For this mock version, we insert sample posts if none exist
+    const postCountResult = await query('SELECT COUNT(*) FROM linkedin_discovered_posts WHERE session_id = $1', [sessionId]);
+    if (parseInt(postCountResult.rows[0].count) === 0) {
+      console.log(`[Worker] Populating mock discovered posts for session ${sessionId}...`);
+      const mockPosts = [
+        {
+          post_id: 'mock_1',
+          post_content: 'This is a great insight about artificial intelligence and its impact on modern marketing strategies.',
+          post_url: 'https://www.linkedin.com/feed/update/urn:li:share:mock1',
+          post_author_name: 'Ana Silva',
+          final_score: 85
+        },
+        {
+          post_id: 'mock_2',
+          post_content: 'How to improve your LinkedIn engagement in 2024: A comprehensive guide for content creators.',
+          post_url: 'https://www.linkedin.com/feed/update/urn:li:share:mock2',
+          post_author_name: 'Bruno Costa',
+          final_score: 92
+        }
+      ];
+
+      for (const p of mockPosts) {
+        await query(
+          `INSERT INTO linkedin_discovered_posts (session_id, post_id, post_content, post_url, post_author_name, final_score)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [sessionId, p.post_id, p.post_content, p.post_url, p.post_author_name, p.final_score]
+        );
+      }
+    }
+
+    // 4. Score posts using Gemini (In mock, they already have scores)
     
     await updateSessionStatus(sessionId, 'ready');
   } catch (error) {
