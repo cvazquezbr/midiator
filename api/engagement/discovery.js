@@ -1,6 +1,6 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-import { processDiscoverySession } from './ai-worker.js';
+import { processDiscoverySession, generateCommentForPost } from './ai-worker.js';
 
 const handler = async (req, res) => {
   const { action } = req.body;
@@ -112,8 +112,17 @@ async function handleUpdatePostDecision(req, res, userId) {
      RETURNING *`,
     [decision, postId]
   );
+
+  const updatedPost = result.rows[0];
+
+  // If approved, trigger comment generation
+  if (decision === 'approved') {
+    generateCommentForPost(postId, userId).catch(err =>
+      console.error(`Error generating comment for post ${postId}:`, err)
+    );
+  }
   
-  res.status(200).json(result.rows[0]);
+  res.status(200).json(updatedPost);
 }
 
 async function handleProcessMySessions(req, res, userId) {

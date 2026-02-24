@@ -76,18 +76,76 @@ const LinkedInEngagement = () => {
 
   const handleDecision = async (postId, decision) => {
     try {
-      await fetch('/api/engagement/discovery', {
+      const response = await fetch('/api/engagement/discovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'updatePostDecision', postId, decision })
       });
-      // Refresh posts
-      handleSessionClick(selectedSession);
-      if (decision === 'approved') {
-        fetchComments(); // New comment might be generated
+      if (response.ok) {
+        toast.success(decision === 'approved' ? 'Post aprovado! Gerando comentário...' : 'Post rejeitado.');
+        // Refresh posts
+        handleSessionClick(selectedSession);
+        if (decision === 'approved') {
+          // Poll for comments after a short delay
+          setTimeout(fetchComments, 3000);
+        }
       }
     } catch (error) {
       console.error('Error updating decision:', error);
+      toast.error('Erro ao atualizar decisão.');
+    }
+  };
+
+  const handleUpdateCommentText = async (commentId, text) => {
+    try {
+      await fetch('/api/engagement/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateComment', commentId, finalText: text })
+      });
+    } catch (error) {
+      console.error('Error updating comment:', error);
+    }
+  };
+
+  const handlePublishComment = async (commentId) => {
+    toast.loading('Publicando comentário no LinkedIn...', { id: 'publish' });
+    try {
+      const response = await fetch('/api/engagement/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'publishComment', commentId })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success('Comentário publicado com sucesso!', { id: 'publish' });
+        fetchComments();
+      } else {
+        toast.error(data.error || 'Falha ao publicar comentário.', { id: 'publish' });
+      }
+    } catch (error) {
+      console.error('Error publishing comment:', error);
+      toast.error('Erro ao conectar com o servidor.', { id: 'publish' });
+    }
+  };
+
+  const handleRegenerateComment = async (commentId) => {
+    toast.loading('Regenerando comentário...', { id: 'regen' });
+    try {
+      const response = await fetch('/api/engagement/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'regenerateComment', commentId })
+      });
+      if (response.ok) {
+        toast.success('Novo comentário gerado!', { id: 'regen' });
+        fetchComments();
+      } else {
+        toast.error('Falha ao regenerar comentário.', { id: 'regen' });
+      }
+    } catch (error) {
+      console.error('Error regenerating comment:', error);
+      toast.error('Erro ao conectar com o servidor.', { id: 'regen' });
     }
   };
 
@@ -250,10 +308,29 @@ const LinkedInEngagement = () => {
                           <Card key={post.id} variant="outlined">
                             <CardContent>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="subtitle2" color="primary">{post.post_author_name}</Typography>
-                                <Chip label={`Score: ${post.final_score}`} color="success" size="small" />
+                                <Box>
+                                  <Typography variant="subtitle2" color="primary">{post.post_author_name || 'Autor Desconhecido'}</Typography>
+                                  <Typography variant="caption" color="textSecondary">{post.post_author_title}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                                  <Chip
+                                    label={`Relevância: ${post.final_score}%`}
+                                    color={post.final_score >= 80 ? "success" : post.final_score >= 60 ? "primary" : "default"}
+                                    size="small"
+                                  />
+                                  {post.relation_type && (
+                                    <Typography variant="caption" sx={{ fontStyle: 'italic' }}>
+                                      {post.relation_type}
+                                    </Typography>
+                                  )}
+                                </Box>
                               </Box>
-                              <Typography variant="body2" sx={{ mb: 2 }}>{post.post_content}</Typography>
+                              <Typography variant="body2" sx={{ mb: 1 }}>{post.post_content}</Typography>
+                              {post.score_justification && (
+                                <Typography variant="caption" display="block" sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                  <strong>IA:</strong> {post.score_justification}
+                                </Typography>
+                              )}
                               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                                 <Button 
                                   size="small" 
@@ -290,29 +367,78 @@ const LinkedInEngagement = () => {
 
           {tabValue === 1 && (
             <Box>
-              <Typography variant="subtitle1" gutterBottom>Comentários Gerados</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1">Comentários Gerados</Typography>
+                <Button size="small" startIcon={<Refresh />} onClick={fetchComments}>Atualizar</Button>
+              </Box>
               {comments.length === 0 ? (
                 <Alert severity="info">Nenhum comentário gerado. Aprove posts descobertos para gerar comentários.</Alert>
               ) : (
-                <List>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {comments.map(comment => (
-                    <Paper key={comment.id} sx={{ p: 2, mb: 2, border: '1px solid #eee' }}>
-                      <Typography variant="caption" color="textSecondary">Para o post de {comment.post_author_name}</Typography>
+                    <Paper key={comment.id} sx={{ p: 2, border: '1px solid #eee' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" color="textSecondary">
+                          Para o post de <strong>{comment.post_author_name}</strong>
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          {comment.generation_version > 1 && (
+                            <Chip label={`v${comment.generation_version}`} size="small" variant="outlined" />
+                          )}
+                          <Chip
+                            label={comment.status === 'published' ? 'Publicado' : 'Pendente'}
+                            color={comment.status === 'published' ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </Box>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary', mb: 1, fontSize: '0.8rem' }}>
+                        "{comment.post_content?.substring(0, 150)}..."
+                      </Typography>
                       <TextField
                         fullWidth
                         multiline
                         rows={3}
-                        defaultValue={comment.generated_text}
+                        defaultValue={comment.final_text || comment.generated_text}
+                        onBlur={(e) => handleUpdateCommentText(comment.id, e.target.value)}
                         sx={{ mt: 1, mb: 1 }}
+                        disabled={comment.status === 'published'}
                       />
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                        <Button size="small" startIcon={<Send />} variant="contained" color="primary">
-                          Aprovar e Comentar
-                        </Button>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                        <Box>
+                            <Button
+                                size="small"
+                                startIcon={<Refresh />}
+                                onClick={() => handleRegenerateComment(comment.id)}
+                                disabled={comment.status === 'published'}
+                            >
+                                Regenerar
+                            </Button>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                size="small"
+                                startIcon={<OpenInNew />}
+                                href={comment.post_url}
+                                target="_blank"
+                            >
+                                Ver Post
+                            </Button>
+                            <Button
+                                size="small"
+                                startIcon={<Send />}
+                                variant="contained"
+                                color="primary"
+                                onClick={() => handlePublishComment(comment.id)}
+                                disabled={comment.status === 'published'}
+                            >
+                                {comment.status === 'published' ? 'Publicado' : 'Publicar Agora'}
+                            </Button>
+                        </Box>
                       </Box>
                     </Paper>
                   ))}
-                </List>
+                </Box>
               )}
             </Box>
           )}

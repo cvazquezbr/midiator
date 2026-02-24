@@ -1,5 +1,7 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
+import { handleCreateComment } from '../linkedin-proxy.js';
+import { generateCommentForPost } from './ai-worker.js';
 
 const handler = async (req, res) => {
   const { action } = req.body;
@@ -13,6 +15,10 @@ const handler = async (req, res) => {
         return await handleApproveComment(req, res, userId);
       case 'updateComment':
         return await handleUpdateComment(req, res, userId);
+      case 'publishComment':
+        return await handlePublishComment(req, res, userId);
+      case 'regenerateComment':
+        return await handleRegenerateComment(req, res, userId);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -50,6 +56,114 @@ async function handleApproveComment(req, res, userId) {
   }
   
   res.status(200).json(result.rows[0]);
+}
+
+async function handlePublishComment(req, res, userId) {
+  const { commentId } = req.body;
+
+  // 1. Get comment and post details
+  const result = await query(
+    `SELECT c.*, p.linkedin_post_id, p.post_author_urn, u.linkedin_access_token
+     FROM linkedin_generated_comments c
+     JOIN linkedin_discovered_posts p ON c.discovered_post_id = p.id
+     JOIN users u ON c.user_id = u.id
+     WHERE c.id = $1 AND c.user_id = $2`,
+    [commentId, userId]
+  );
+
+  const comment = result.rows[0];
+  if (!comment) return res.status(404).json({ error: 'Comment not found' });
+  if (comment.status === 'published') return res.status(400).json({ error: 'Comment already published' });
+
+  // Use final_text if available, otherwise generated_text
+  const textToPublish = comment.final_text || comment.generated_text;
+
+  // 2. Call LinkedIn API via proxy handler
+  try {
+    let responseData;
+    const mockReq = {
+      body: {
+        accessToken: comment.linkedin_access_token,
+        postUrn: `urn:li:share:${comment.linkedin_post_id}`, // Might need to check URN format
+        actorUrn: `urn:li:person:${comment.linkedin_post_id.split(':').pop()}`, // Wait, actor should be the current user's URN
+        text: textToPublish
+      }
+    };
+
+    // Correcting actorUrn: we need the user's URN.
+    // Let's fetch it if we don't have it.
+    // For now, let's assume we can get it from the profile.
+
+    const profileRes = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/linkedin-proxy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': req.headers.authorization },
+        body: JSON.stringify({ action: 'getProfile', accessToken: comment.linkedin_access_token })
+    });
+    const profile = await profileRes.json();
+    const userUrn = `urn:li:person:${profile.id}`;
+
+    const mockResponse = {
+      status: (code) => ({
+        json: (data) => { responseData = data; return mockResponse; }
+      }),
+      json: (data) => { responseData = data; return mockResponse; }
+    };
+
+    const publishReq = {
+        body: {
+            accessToken: comment.linkedin_access_token,
+            postUrn: comment.linkedin_post_id.startsWith('urn:li:') ? comment.linkedin_post_id : `urn:li:share:${comment.linkedin_post_id}`,
+            actorUrn: userUrn,
+            text: textToPublish
+        }
+    };
+
+    await handleCreateComment(publishReq, mockResponse);
+
+    if (responseData && responseData.id) {
+        // 3. Update database
+        await query(
+            `UPDATE linkedin_generated_comments
+             SET status = 'published', linkedin_comment_id = $1, published_at = NOW(), updated_at = NOW()
+             WHERE id = $2`,
+            [responseData.id, commentId]
+        );
+        return res.status(200).json({ success: true, commentId: responseData.id });
+    } else {
+        return res.status(500).json({ error: 'Failed to publish to LinkedIn', details: responseData });
+    }
+  } catch (err) {
+    console.error('Publish error:', err);
+    res.status(500).json({ error: 'Internal error during publication', details: err.message });
+  }
+}
+
+async function handleRegenerateComment(req, res, userId) {
+  const { commentId } = req.body;
+
+  const result = await query(
+    `SELECT discovered_post_id, generation_version FROM linkedin_generated_comments WHERE id = $1 AND user_id = $2`,
+    [commentId, userId]
+  );
+
+  if (result.rows.length === 0) return res.status(404).json({ error: 'Comment not found' });
+
+  const { discovered_post_id, generation_version } = result.rows[0];
+
+  try {
+    const newComment = await generateCommentForPost(discovered_post_id, userId);
+
+    // Increment version in the new record (or we could update the existing one,
+    // but the document suggests versions)
+    await query(
+        'UPDATE linkedin_generated_comments SET generation_version = $1 WHERE id = $2',
+        [generation_version + 1, newComment.id]
+    );
+
+    res.status(200).json(newComment);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to regenerate comment', details: err.message });
+  }
 }
 
 async function handleUpdateComment(req, res, userId) {
