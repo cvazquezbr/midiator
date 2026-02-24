@@ -22,14 +22,14 @@ export async function processDiscoverySession(sessionId) {
       console.log(`[Worker] Populating mock discovered posts for session ${sessionId}...`);
       const mockPosts = [
         {
-          post_id: 'mock_1',
+          linkedin_post_id: 'mock_1',
           post_content: 'This is a great insight about artificial intelligence and its impact on modern marketing strategies.',
           post_url: 'https://www.linkedin.com/feed/update/urn:li:share:mock1',
           post_author_name: 'Ana Silva',
           final_score: 85
         },
         {
-          post_id: 'mock_2',
+          linkedin_post_id: 'mock_2',
           post_content: 'How to improve your LinkedIn engagement in 2024: A comprehensive guide for content creators.',
           post_url: 'https://www.linkedin.com/feed/update/urn:li:share:mock2',
           post_author_name: 'Bruno Costa',
@@ -39,9 +39,9 @@ export async function processDiscoverySession(sessionId) {
 
       for (const p of mockPosts) {
         await query(
-          `INSERT INTO linkedin_discovered_posts (session_id, post_id, post_content, post_url, post_author_name, final_score)
+          `INSERT INTO linkedin_discovered_posts (session_id, linkedin_post_id, post_content, post_url, post_author_name, final_score)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [sessionId, p.post_id, p.post_content, p.post_url, p.post_author_name, p.final_score]
+          [sessionId, p.linkedin_post_id, p.post_content, p.post_url, p.post_author_name, p.final_score]
         );
       }
     }
