@@ -40,6 +40,7 @@ const AdminDashboardPage = () => {
   const [error, setError] = useState('');
   const [isSchedulerRunning, setIsSchedulerRunning] = useState(false);
   const [isAnalyticsRunning, setIsAnalyticsRunning] = useState(false);
+  const [isDiscoveryRunning, setIsDiscoveryRunning] = useState(false);
   const { user: adminUser, logout } = useUserAuth();
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
@@ -125,6 +126,24 @@ const AdminDashboardPage = () => {
       toast.error(`Analytics run failed: ${err.message}`);
     } finally {
       setIsAnalyticsRunning(false);
+    }
+  };
+
+  const handleRunDiscovery = async () => {
+    setIsDiscoveryRunning(true);
+    toast.info('Discovery job initiated...');
+    try {
+      const res = await fetch('/api/schedule/run-discovery', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Discovery job completed successfully.');
+      } else {
+        throw new Error(data.error || 'Failed to run discovery');
+      }
+    } catch (err) {
+      toast.error(`Discovery job failed: ${err.message}`);
+    } finally {
+      setIsDiscoveryRunning(false);
     }
   };
 
@@ -250,6 +269,15 @@ const AdminDashboardPage = () => {
               startIcon={isAnalyticsRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
               {isAnalyticsRunning ? 'Running...' : 'Run Analytics'}
+            </Button>
+            <Button
+              variant="contained"
+              color="info"
+              onClick={handleRunDiscovery}
+              disabled={isDiscoveryRunning}
+              startIcon={isDiscoveryRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
+            >
+              {isDiscoveryRunning ? 'Running...' : 'Run Discovery'}
             </Button>
           </Box>
         </TabPanel>
