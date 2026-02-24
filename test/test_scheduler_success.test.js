@@ -41,6 +41,7 @@ describe('Scheduler Success Test', () => {
         query
             .mockResolvedValueOnce({ rows: [testPost] }) // Get first batch
             .mockResolvedValueOnce({ rowCount: 1 })      // DB update status
+            .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // Engagement session creation
             .mockResolvedValueOnce({ rows: [] });        // Get second batch (empty)
 
         const responsePayload = { id: 'urn:li:share:12345' };
@@ -87,10 +88,12 @@ describe('Scheduler Success Test', () => {
             },
         };
 
-        // Mock DB calls in order: get post, get parent, update post
+        // Mock DB calls in order: get post, get parent, update post, create session
         query.mockResolvedValueOnce({ rows: [followUpPost] });
         query.mockResolvedValueOnce({ rows: [parentPostInDb] });
-        query.mockResolvedValueOnce({ rows: [] });
+        query.mockResolvedValueOnce({ rowCount: 1 }); // Update schedule
+        query.mockResolvedValueOnce({ rows: [{ id: 2 }] }); // Create session
+        query.mockResolvedValueOnce({ rows: [] }); // Final check
 
         const responsePayload = { id: 'urn:li:share:67890' };
         const mockHeaders = new Map([['x-restli-id', 'urn:li:share:67890']]);
@@ -142,6 +145,7 @@ describe('Scheduler Success Test', () => {
         query
             .mockResolvedValueOnce({ rows: [imagePost] })
             .mockResolvedValueOnce({ rowCount: 1 })
+            .mockResolvedValueOnce({ rows: [{ id: 3 }] })
             .mockResolvedValueOnce({ rows: [] });
 
         const createPostPayload = { id: 'urn:li:share:image-post' };

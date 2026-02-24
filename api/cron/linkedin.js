@@ -1,6 +1,7 @@
 // api/cron/linkedin.js
 import { query } from '../db.js';
 import fetch from 'node-fetch';
+import { processDiscoverySession } from '../engagement/ai-worker.js';
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const PROXY_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
@@ -486,6 +487,26 @@ export async function handleRunScheduler(response) {
             ['published', postIdFromApi, postUrl, postId]
           );
           console.log(`[Cron LinkedIn DB] Update result for post ${postId}:`, JSON.stringify(updateResult));
+
+          // Create engagement discovery session
+          try {
+            const sessionResult = await query(
+                `INSERT INTO linkedin_discovery_sessions (user_id, source_post_id, source_post_content, status)
+                 VALUES ($1, $2, $3, 'pending')
+                 RETURNING id`,
+                [row.user_id, postIdFromApi, commentary]
+            );
+            const sessionId = sessionResult?.rows?.[0]?.id;
+            console.log(`[Cron LinkedIn Engagement] Discovery session created for post ${postId} (Session: ${sessionId}).`);
+
+            if (sessionId) {
+              processDiscoverySession(sessionId).catch(err =>
+                console.error(`[Cron LinkedIn Engagement] Error processing session ${sessionId}:`, err)
+              );
+            }
+          } catch (engErr) {
+            console.error(`[Cron LinkedIn Engagement] Failed to create discovery session for post ${postId}:`, engErr);
+          }
 
           if (updateResult.rowCount === 0) {
             throw new Error(`DB update failed for post ${postId}. Post was published but its status could not be updated in the database.`);
