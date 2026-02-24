@@ -198,7 +198,7 @@ async function handleCheckVideoStatus(request, response) {
     }
 }
 
-async function handleGetProfile(request, response) {
+export async function handleGetProfile(request, response) {
     const { accessToken } = request.body;
 
     if (!accessToken) {
