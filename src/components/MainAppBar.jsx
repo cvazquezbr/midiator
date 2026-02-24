@@ -28,6 +28,7 @@ import {
   Palette,
   BarChart,
   Layers as LayersIcon,
+  AutoAwesome,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -42,6 +43,7 @@ const MainAppBar = ({
   onShowCampaigns,
   onShowSharedCampaigns,
   onShowMonitor,
+  onShowEngagement,
   setShowSetupModal,
   onMenuClick,
   isMobile,
@@ -206,6 +208,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowMonitor(); }}>
             <BarChart sx={{ mr: 1 }} />
             Monitorar
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowEngagement(); }}>
+            <AutoAwesome sx={{ mr: 1 }} />
+            Engajamento LinkedIn
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>

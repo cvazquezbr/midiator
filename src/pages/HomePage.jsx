@@ -37,6 +37,7 @@ import VideoGenerator2 from '../components/VideoGenerator2';
 import PostsCurtosStep from '../components/PostsCurtosStep';
 import Publisher from '../components/Publisher';
 import Monitor from '../components/Monitor';
+import LinkedInEngagement from '../components/engagement/LinkedInEngagement';
 import SetupModal from '../components/SetupModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
 import ImageGallerySelector from '../components/ImageGallerySelector';
@@ -148,6 +149,7 @@ function HomePage() {
   const [initialSetupTab, setInitialSetupTab] = useState(0);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [engagementDrawerOpen, setEngagementDrawerOpen] = useState(!isMobile);
   const [showImageGallery, setShowImageGallery] = useState(false);
   const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -1050,6 +1052,7 @@ function HomePage() {
             onShowCampaigns: () => handleNavigation(() => { setCurrentView('campaigns'); setCampaignsView('my-campaigns'); }),
             onShowSharedCampaigns: () => { setCurrentView('campaigns'); setCampaignsView('shared-campaigns'); },
             onShowMonitor: () => handleNavigation(() => setCurrentView('monitor')),
+            onShowEngagement: () => handleNavigation(() => setCurrentView('engagement')),
             campaignsView,
             currentView,
             onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen),
@@ -1132,6 +1135,7 @@ function HomePage() {
           {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true), onUpdate: fetchPalettesForCampaign }} />}
           {currentView === 'pagesets' && <PageSetsPage {...{ drawerOpen: pageSetDrawerOpen, setDrawerOpen: setPageSetDrawerOpen, onSwitchView: setCurrentView, onNoPageSetSelected: () => setPageSetDrawerOpen(true), onCreationCancelled: () => handleCreationDone('pagesets') }} />}
           {currentView === 'monitor' && <Monitor {...{ currentCampaign }} />}
+          {currentView === 'engagement' && <LinkedInEngagement />}
         </Box>
       </Box>
       <UnsavedChangesDialog {...{ open: showUnsavedDialog, onClose: handleDialogClose, onConfirmDiscard: handleDialogDiscard, onConfirmSave: handleDialogSaveAndNavigate }} />
