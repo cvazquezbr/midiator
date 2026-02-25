@@ -81,16 +81,7 @@ async function handlePublishComment(req, res, userId) {
   // 2. Call LinkedIn API via proxy handler
   try {
     let responseData;
-    const mockReq = {
-      body: {
-        accessToken: comment.linkedin_access_token,
-        postUrn: `urn:li:share:${comment.linkedin_post_id}`, // Might need to check URN format
-        actorUrn: `urn:li:person:${comment.linkedin_post_id.split(':').pop()}`, // Wait, actor should be the current user's URN
-        text: textToPublish
-      }
-    };
-
-    // Correcting actorUrn: we need the user's URN.
+    // We'll fetch the profile first to get the correct actorUrn
     let profileData;
     const mockReqProfile = { body: { accessToken: comment.linkedin_access_token } };
     const mockResProfile = {

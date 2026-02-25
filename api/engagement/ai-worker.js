@@ -206,29 +206,34 @@ export async function processDiscoverySession(sessionId) {
     }
 
     // 5. Save to database
-    for (const p of scoredPosts) {
-      await query(
-        `INSERT INTO linkedin_discovered_posts
-         (session_id, linkedin_post_id, post_content, post_author_name, post_author_urn, post_url, post_published_at, relevance_score, opportunity_score, final_score, relation_type, score_justification)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          sessionId,
-          p.id,
-          p.commentary?.text,
-          p.author, // We don't have author name yet, might need another API call or Gemini to guess
-          p.author,
-          `https://www.linkedin.com/feed/update/${p.id}`,
-          p.publishedAt,
-          p.relevance_score,
-          p.opportunity_score,
-          p.final_score,
-          p.relation_type,
-          p.score_justification
-        ]
-      );
+    if (scoredPosts.length > 0) {
+      for (const p of scoredPosts) {
+        await query(
+          `INSERT INTO linkedin_discovered_posts
+           (session_id, linkedin_post_id, post_content, post_author_name, post_author_urn, post_url, post_published_at, relevance_score, opportunity_score, final_score, relation_type, score_justification)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           ON CONFLICT (linkedin_post_id, session_id) DO NOTHING`,
+          [
+            sessionId,
+            p.id,
+            p.commentary?.text,
+            p.author, // We don't have author name yet, might need another API call or Gemini to guess
+            p.author,
+            `https://www.linkedin.com/feed/update/${p.id}`,
+            p.publishedAt,
+            p.relevance_score,
+            p.opportunity_score,
+            p.final_score,
+            p.relation_type,
+            p.score_justification
+          ]
+        );
+      }
+      await updateSessionStatus(sessionId, 'ready');
+    } else {
+      console.log(`[Worker] No relevant posts found for session ${sessionId}.`);
+      await updateSessionStatus(sessionId, 'completed');
     }
-    
-    await updateSessionStatus(sessionId, 'ready');
   } catch (error) {
     console.error('Worker Error:', error);
     await updateSessionStatus(sessionId, 'error');
