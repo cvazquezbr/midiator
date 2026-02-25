@@ -1,6 +1,6 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-import { handleCreateComment } from '../linkedin-proxy.js';
+import { handleCreateComment, handleGetProfile } from '../linkedin-proxy.js';
 import { generateCommentForPost } from './ai-worker.js';
 
 const handler = async (req, res) => {
@@ -91,16 +91,20 @@ async function handlePublishComment(req, res, userId) {
     };
 
     // Correcting actorUrn: we need the user's URN.
-    // Let's fetch it if we don't have it.
-    // For now, let's assume we can get it from the profile.
+    let profileData;
+    const mockReqProfile = { body: { accessToken: comment.linkedin_access_token } };
+    const mockResProfile = {
+      status: () => ({ json: (data) => { profileData = data; } }),
+      json: (data) => { profileData = data; }
+    };
 
-    const profileRes = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/linkedin-proxy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': req.headers.authorization },
-        body: JSON.stringify({ action: 'getProfile', accessToken: comment.linkedin_access_token })
-    });
-    const profile = await profileRes.json();
-    const userUrn = `urn:li:person:${profile.id}`;
+    await handleGetProfile(mockReqProfile, mockResProfile);
+
+    if (!profileData || !profileData.id) {
+        return res.status(500).json({ error: 'Could not fetch user profile from LinkedIn' });
+    }
+
+    const userUrn = `urn:li:person:${profileData.id}`;
 
     const mockResponse = {
       status: (code) => ({
