@@ -125,10 +125,14 @@ export async function processDiscoverySession(sessionId) {
     }
 
     for (let i = 0; i < waves.length; i++) {
-      const currentWaveTerms = waves[i]
-        .map(h => h.startsWith('#') ? h.substring(1) : h)
-        .filter((v, j, a) => a.indexOf(v) === j) // unique
-        .slice(0, 15);
+      // Create a set of unique terms, including slugified versions
+      const baseTerms = waves[i].map(h => h.startsWith('#') ? h.substring(1) : h);
+      const currentWaveTerms = [
+        ...baseTerms,
+        ...baseTerms.map(t => slugify(t)),
+        ...baseTerms.map(t => t.toLowerCase())
+      ].filter((v, j, a) => a.indexOf(v) === j && v.length > 0)
+       .slice(0, 30);
 
       if (currentWaveTerms.length === 0) continue;
 
@@ -136,8 +140,14 @@ export async function processDiscoverySession(sessionId) {
 
       for (const term of currentWaveTerms) {
         try {
-          // Try searching with both the plain string and the URN format for maximum compatibility
-          const formatsToTry = [term, `urn:li:hashtag:${term}`];
+          // LinkedIn discovery is notoriously picky.
+          // We try multiple formats for each term.
+          const formatsToTry = [
+            term,
+            `#${term}`,
+            `urn:li:hashtag:${term}`,
+            `{hashtag|#|${term}}` // Some internal LinkedIn formats use this template
+          ];
 
           for (const searchTerm of formatsToTry) {
             const mockReq = {
@@ -149,15 +159,21 @@ export async function processDiscoverySession(sessionId) {
             };
 
             let searchData;
+            let statusCode = 200;
             const mockResponse = {
-              status: (code) => ({ json: (data) => { searchData = data; return mockResponse; } }),
+              status: (code) => { statusCode = code; return { json: (data) => { searchData = data; return mockResponse; } }; },
               json: (data) => { searchData = data; return mockResponse; }
             };
 
             await handleSearchPostsByHashtag(mockReq, mockResponse);
 
+            if (statusCode !== 200) {
+              console.error(`[Worker] LinkedIn Search failed for "${searchTerm}" (Status ${statusCode}):`, JSON.stringify(searchData));
+            } else if (searchData && searchData.elements) {
+              console.log(`[Worker] Term "${searchTerm}" returned ${searchData.elements.length} raw results.`);
+            }
+
             if (searchData && searchData.elements && searchData.elements.length > 0) {
-              console.log(`[Worker] Found ${searchData.elements.length} raw results for term "${searchTerm}"`);
               for (const post of searchData.elements) {
                 const publishedAt = new Date(post.publishedAt);
                 if (publishedAt < thirtyDaysAgo) continue;
@@ -282,6 +298,16 @@ async function getLinkedinAccessToken(userId) {
 
 async function updateSessionStatus(sessionId, status) {
   await query('UPDATE linkedin_discovery_sessions SET status = $1, updated_at = NOW() WHERE id = $2', [status, sessionId]);
+}
+
+function slugify(text) {
+  return text
+    .toString()
+    .normalize('NFD')                   // separate accents from letters
+    .replace(/[\u0300-\u036f]/g, '')   // remove accents
+    .replace(/[^\w\s-]/g, '')          // remove non-word chars
+    .replace(/[\s-]+/g, '')            // remove spaces and hyphens
+    .trim();
 }
 
 export async function generateCommentForPost(postId, userId) {
