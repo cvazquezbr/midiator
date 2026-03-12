@@ -53,24 +53,34 @@ export async function processDiscoverySession(sessionId) {
 
     await updateSessionStatus(sessionId, 'searching');
 
-    // 2. Extract hashtags using Gemini
-    console.log(`[Worker] Extracting hashtags for session ${sessionId}...`);
+    // 2. Expand search strategy using Gemini
+    console.log(`[Worker] Expanding search strategy for session ${sessionId}...`);
     const extractionPrompt = `
-      Dado o seguinte post publicado no LinkedIn:
+      Você é um especialista em Growth e Social Selling no LinkedIn.
+      Seu objetivo é expandir o alcance da descoberta de posts relevantes baseando-se no conteúdo abaixo.
+
+      Post publicado pelo usuário:
       "${session.source_post_content}"
 
-      Extraia no formato JSON:
+      Gere uma estratégia de busca em JSON que inclua tanto termos extraídos quanto sugestões expandidas para maximizar a descoberta:
       {
-        "hashtags_primarias": [],       // máx 5, ordenadas por relevância
-        "hashtags_secundarias": [],     // máx 10
-        "palavras_chave": [],           // termos semânticos centrais
-        "temas": [],                    // temas conceituais (ex: "liderança", "IA generativa")
+        "hashtags_pt": [],              // hashtags em português (mais relevantes e populares)
+        "hashtags_en": [],              // hashtags equivalentes em inglês para ampliar o alcance
+        "termos_busca_pt": [],          // termos de busca (keywords) em português
+        "termos_busca_en": [],          // termos de busca (keywords) em inglês
+        "temas_relacionados": [],        // temas amplos ou correlatos (ex: se o post é sobre "IA", incluir "Futuro do Trabalho")
+        "hashtags_especificas": [],     // hashtags de nicho (long tail)
         "audiencia": {
           "cargos": [],
           "setores": [],
           "senioridade": ""
         }
       }
+
+      Instruções importantes:
+      1. NÃO se limite ao que está escrito no texto. Pense em como pessoas interessadas nesse assunto buscam conteúdo.
+      2. Inclua variações, sinônimos e termos correlatos que podem gerar debates interessantes.
+      3. Forneça pelo menos 15-20 hashtags/termos no total.
     `;
 
     const extractedData = await callGemini(geminiConfig, extractionPrompt);
@@ -88,11 +98,16 @@ export async function processDiscoverySession(sessionId) {
     }
 
     const allHashtags = [
-      ...(extractedData.hashtags_primarias || []),
-      ...(extractedData.hashtags_secundarias || [])
-    ].slice(0, 10); // Limit to 10 hashtags total for discovery
+      ...(extractedData.hashtags_pt || []),
+      ...(extractedData.hashtags_en || []),
+      ...(extractedData.hashtags_especificas || []),
+      ...(extractedData.termos_busca_pt || []),
+      ...(extractedData.termos_busca_en || [])
+    ].map(h => h.startsWith('#') ? h.substring(1) : h)
+     .filter((v, i, a) => a.indexOf(v) === i) // unique
+     .slice(0, 20); // Limit to 20 search terms total
 
-    console.log(`[Worker] Searching posts for hashtags: ${allHashtags.join(', ')}`);
+    console.log(`[Worker] Searching posts for terms: ${allHashtags.join(', ')}`);
 
     const discoveredPostsMap = new Map();
     const sevenDaysAgo = new Date();
@@ -161,20 +176,23 @@ export async function processDiscoverySession(sessionId) {
     let scoredPosts = [];
     if (candidatePosts.length > 0) {
       const scoringPrompt = `
-        Você é um especialista em marketing de conteúdo B2B.
+        Você é um especialista em marketing de conteúdo B2B e Social Selling.
 
         Post original publicado pelo usuário:
         "${session.source_post_content}"
 
         Palavras-chave e temas centrais: ${allHashtags.join(', ')}
 
-        Avalie cada post candidato abaixo e retorne um JSON com:
+        Avalie cada post candidato abaixo. Valorizamos a diversidade de opiniões, incluindo posts que tragam contrapontos ou perspectivas complementares.
+        Aceitamos posts com relevância moderada se eles oferecerem uma boa oportunidade de debate.
+
+        Retorne um JSON com:
         {
           "scores": [
             {
               "post_id": "",
-              "relevancia": 0-100,       // afinidade temática com o post original
-              "oportunidade": 0-100,     // potencial de engajamento/visibilidade
+              "relevancia": 0-100,       // afinidade temática com o post original ou temas correlatos
+              "oportunidade": 0-100,     // potencial de engajamento/visibilidade/debate
               "justificativa": "",        // 1 frase explicando o score
               "tipo_relacao": "",         // "complementar" | "debate" | "caso_de_uso" | "tendencia"
               "autor_nome": ""           // Tente identificar o nome do autor pelo conteúdo se possível, ou deixe vazio
@@ -204,7 +222,7 @@ export async function processDiscoverySession(sessionId) {
           score_justification: scoreInfo.justificativa,
           author_name: scoreInfo.autor_nome || 'Autor no LinkedIn'
         };
-      }).filter(p => p !== null && p.final_score >= 40); // Slightly lower threshold for saving to DB, frontend can filter more
+      }).filter(p => p !== null && p.final_score >= 25); // Lower threshold to allow "mornos" as requested
     }
 
     // 5. Save to database
@@ -280,25 +298,26 @@ export async function generateCommentForPost(postId, userId) {
       Você é ${persona.name || 'um profissional'}, ${persona.cargo || 'especialista'} na área de ${persona.setor || 'negócios'}.
       Tom de voz: ${persona.voz || 'Profissional e autêntico'}
 
-      Você acabou de publicar no LinkedIn:
+      Seu contexto (post que você publicou recentemente):
       "${post.source_post_content}"
 
-      E encontrou o seguinte post de ${post.post_author_name}:
+      Post de ${post.post_author_name} que você quer comentar:
       "${post.post_content}"
 
       Gere um comentário para este post que:
-      1. Seja autêntico e agregue valor ao debate
-      2. Faça uma conexão natural com sua perspectiva (sem forçar autopromoção)
-      3. Convide ao diálogo com uma pergunta ou insight
-      4. Tenha entre 3 e 6 linhas
-      5. NÃO mencione explicitamente seu próprio post
-      6. Use linguagem natural e profissional, sem excessos de emojis
+      1. Seja autêntico e agregue valor ao debate.
+      2. Se for um post de "debate" ou "complementar", use sua experiência descrita no seu contexto para enriquecer a discussão.
+      3. Se o post for apenas vagamente relacionado (relevância média), encontre um ponto de contato criativo e profissional.
+      4. Convide ao diálogo com uma pergunta ou insight.
+      5. Tenha entre 3 e 6 linhas.
+      6. NÃO mencione explicitamente seu próprio post ("como eu disse no meu post..."), apenas use o conhecimento dele.
+      7. Use linguagem natural, humana e profissional, sem excessos de emojis.
 
       Tipo de relação detectada: ${post.relation_type}
-      - "complementar": expanda ou valide o ponto com sua experiência
-      - "debate": ofereça uma perspectiva complementar, respeitosamente
-      - "caso_de_uso": traga um exemplo prático
-      - "tendencia": conecte com contexto de mercado mais amplo
+      - "complementar": expanda ou valide o ponto com sua experiência.
+      - "debate": ofereça uma perspectiva diferente ou complementar, sempre respeitosamente e visando o aprendizado mútuo.
+      - "caso_de_uso": traga um exemplo prático ou cenário onde isso se aplica.
+      - "tendencia": conecte com contexto de mercado mais amplo.
 
       Retorne apenas o texto do comentário, sem aspas ou formatação extra.
     `;
