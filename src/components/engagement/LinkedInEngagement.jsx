@@ -74,6 +74,18 @@ const LinkedInEngagement = () => {
     }
   };
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pending': return 'Pendente';
+      case 'searching': return 'Buscando...';
+      case 'scoring': return 'Avaliando...';
+      case 'ready': return 'Pronto';
+      case 'completed': return 'Concluído (Sem posts)';
+      case 'error': return 'Erro';
+      default: return status;
+    }
+  };
+
   const handleDecision = async (postId, decision) => {
     try {
       const response = await fetch('/api/engagement/discovery', {
@@ -248,15 +260,20 @@ const LinkedInEngagement = () => {
                         <ListItemText 
                           primary={`Post: ${session.source_post_content?.substring(0, 30)}...`}
                           secondary={
-                            <Box component="span" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                              {new Date(session.created_at).toLocaleDateString()}
-                              {session.post_count > 0 && (
-                                <Chip
-                                  size="small"
-                                  label={`${session.post_count} posts`}
-                                  sx={{ height: 18, fontSize: '0.65rem', ml: 1, backgroundColor: 'success.light', color: 'success.contrastText' }}
-                                />
-                              )}
+                            <Box component="span" sx={{ display: 'flex', flexDirection: 'column', mt: 0.5 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                {new Date(session.created_at).toLocaleDateString()}
+                                {session.post_count > 0 && (
+                                  <Chip
+                                    size="small"
+                                    label={`${session.post_count} posts`}
+                                    sx={{ height: 18, fontSize: '0.65rem', ml: 1, backgroundColor: 'success.light', color: 'success.contrastText' }}
+                                  />
+                                )}
+                              </Box>
+                              <Typography variant="caption" color={session.status === 'error' ? 'error' : 'textSecondary'}>
+                                Status: {getStatusLabel(session.status)}
+                              </Typography>
                             </Box>
                           }
                         />
@@ -287,7 +304,7 @@ const LinkedInEngagement = () => {
                     <Typography variant="subtitle1" gutterBottom>Posts Sugeridos</Typography>
                     {loading ? <CircularProgress /> : posts.length === 0 ? (
                       <Alert
-                        severity="info"
+                        severity={selectedSession.status === 'completed' ? "warning" : "info"}
                         action={
                           <Button
                             color="inherit"
@@ -296,11 +313,13 @@ const LinkedInEngagement = () => {
                             disabled={processingSessions[selectedSession.id]}
                             startIcon={processingSessions[selectedSession.id] ? <CircularProgress size={16} color="inherit" /> : <Refresh />}
                           >
-                            Processar agora
+                            {selectedSession.status === 'completed' ? 'Tentar novamente' : 'Processar agora'}
                           </Button>
                         }
                       >
-                        Nenhum post descoberto para esta sessão.
+                        {selectedSession.status === 'completed' 
+                          ? "A busca foi concluída, mas nenhum post relevante foi encontrado para os temas deste conteúdo."
+                          : "Nenhum post descoberto para esta sessão."}
                       </Alert>
                     ) : (
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

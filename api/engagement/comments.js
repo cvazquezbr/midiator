@@ -63,7 +63,7 @@ async function handlePublishComment(req, res, userId) {
 
   // 1. Get comment and post details
   const result = await query(
-    `SELECT c.*, p.linkedin_post_id, p.post_author_urn, u.linkedin_access_token
+    `SELECT c.*, p.linkedin_post_id, p.post_author_urn, p.session_id, u.linkedin_access_token
      FROM linkedin_generated_comments c
      JOIN linkedin_discovered_posts p ON c.discovered_post_id = p.id
      JOIN users u ON c.user_id = u.id
@@ -81,30 +81,40 @@ async function handlePublishComment(req, res, userId) {
   // 2. Call LinkedIn API via proxy handler
   try {
     let responseData;
-    const mockReq = {
-      body: {
-        accessToken: comment.linkedin_access_token,
-        postUrn: `urn:li:share:${comment.linkedin_post_id}`, // Might need to check URN format
-        actorUrn: `urn:li:person:${comment.linkedin_post_id.split(':').pop()}`, // Wait, actor should be the current user's URN
-        text: textToPublish
-      }
-    };
+    // To determine the correct actorUrn, we check the source post's author.
+    // If the user published as an organization, they must comment as that organization.
+    // We fetch the source post details from linkedin_schedules to find the authorUrn used.
+    const sourcePostResult = await query(
+      `SELECT post_content FROM linkedin_schedules 
+       WHERE linkedin_post_id = (SELECT source_post_id FROM linkedin_discovery_sessions WHERE id = $1)`,
+      [comment.session_id]
+    );
 
-    // Correcting actorUrn: we need the user's URN.
-    let profileData;
-    const mockReqProfile = { body: { accessToken: comment.linkedin_access_token } };
-    const mockResProfile = {
-      status: () => ({ json: (data) => { profileData = data; } }),
-      json: (data) => { profileData = data; }
-    };
-
-    await handleGetProfile(mockReqProfile, mockResProfile);
-
-    if (!profileData || !profileData.id) {
-        return res.status(500).json({ error: 'Could not fetch user profile from LinkedIn' });
+    let actorUrn = null;
+    if (sourcePostResult.rows.length > 0) {
+      const postContent = typeof sourcePostResult.rows[0].post_content === 'string' 
+        ? JSON.parse(sourcePostResult.rows[0].post_content) 
+        : sourcePostResult.rows[0].post_content;
+      actorUrn = postContent.authorUrn;
     }
 
-    const userUrn = `urn:li:person:${profileData.id}`;
+    // Fallback: if we can't find the original authorUrn, we default to the personal profile
+    if (!actorUrn) {
+      let profileData;
+      const mockReqProfile = { body: { accessToken: comment.linkedin_access_token } };
+      const mockResProfile = {
+        status: () => ({ json: (data) => { profileData = data; } }),
+        json: (data) => { profileData = data; }
+      };
+      await handleGetProfile(mockReqProfile, mockResProfile);
+      if (profileData && profileData.id) {
+        actorUrn = `urn:li:person:${profileData.id}`;
+      }
+    }
+
+    if (!actorUrn) {
+        return res.status(500).json({ error: 'Could not determine actor URN for LinkedIn comment' });
+    }
 
     const mockResponse = {
       status: (code) => ({
@@ -117,7 +127,7 @@ async function handlePublishComment(req, res, userId) {
         body: {
             accessToken: comment.linkedin_access_token,
             postUrn: comment.linkedin_post_id.startsWith('urn:li:') ? comment.linkedin_post_id : `urn:li:share:${comment.linkedin_post_id}`,
-            actorUrn: userUrn,
+            actorUrn: actorUrn,
             text: textToPublish
         }
     };
