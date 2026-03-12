@@ -176,7 +176,8 @@ export async function processDiscoverySession(sessionId) {
               "relevancia": 0-100,       // afinidade temática com o post original
               "oportunidade": 0-100,     // potencial de engajamento/visibilidade
               "justificativa": "",        // 1 frase explicando o score
-              "tipo_relacao": ""         // "complementar" | "debate" | "caso_de_uso" | "tendencia"
+              "tipo_relacao": "",         // "complementar" | "debate" | "caso_de_uso" | "tendencia"
+              "autor_nome": ""           // Tente identificar o nome do autor pelo conteúdo se possível, ou deixe vazio
             }
           ]
         }
@@ -200,7 +201,8 @@ export async function processDiscoverySession(sessionId) {
           opportunity_score: scoreInfo.oportunidade,
           final_score: finalScore,
           relation_type: scoreInfo.tipo_relacao,
-          score_justification: scoreInfo.justificativa
+          score_justification: scoreInfo.justificativa,
+          author_name: scoreInfo.autor_nome || 'Autor no LinkedIn'
         };
       }).filter(p => p !== null && p.final_score >= 40); // Slightly lower threshold for saving to DB, frontend can filter more
     }
@@ -214,12 +216,12 @@ export async function processDiscoverySession(sessionId) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            ON CONFLICT (linkedin_post_id, session_id) DO NOTHING`,
           [
-            sessionId,
-            p.id,
-            p.commentary?.text,
-            p.author, // We don't have author name yet, might need another API call or Gemini to guess
-            p.author,
-            `https://www.linkedin.com/feed/update/${p.id}`,
+          sessionId,
+          p.id,
+          p.commentary?.text,
+          p.author_name,
+          p.author,
+          `https://www.linkedin.com/feed/update/${p.id}`,
             p.publishedAt,
             p.relevance_score,
             p.opportunity_score,
