@@ -622,6 +622,9 @@ export async function handleSearchPostsByHashtag(request, response) {
         });
 
         const data = await linkedinResponse.json();
+        if (!linkedinResponse.ok) {
+            console.error(`[LinkedIn Proxy] Search Error: ${linkedinResponse.status}`, data);
+        }
         return response.status(linkedinResponse.status).json(data);
     } catch (error) {
         console.error('Error during hashtag search:', error);
