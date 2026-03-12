@@ -62,14 +62,11 @@ export async function processDiscoverySession(sessionId) {
       Post publicado pelo usuário:
       "${session.source_post_content}"
 
-      Gere uma estratégia de busca em JSON que inclua tanto termos extraídos quanto sugestões expandidas para maximizar a descoberta:
+      Gere uma estratégia de busca em JSON organizada em duas ondas (específica e ampla) para garantir volume:
       {
-        "hashtags_pt": [],              // hashtags em português (mais relevantes e populares)
-        "hashtags_en": [],              // hashtags equivalentes em inglês para ampliar o alcance
-        "termos_busca_pt": [],          // termos de busca (keywords) em português
-        "termos_busca_en": [],          // termos de busca (keywords) em inglês
-        "temas_relacionados": [],        // temas amplos ou correlatos (ex: se o post é sobre "IA", incluir "Futuro do Trabalho")
-        "hashtags_especificas": [],     // hashtags de nicho (long tail)
+        "onda_1_especifica": [],        // hashtags e termos MUITO específicos (ex: "IAparaFinanças", "GestãoContábilDigital")
+        "onda_2_ampla": [],             // hashtags e termos ÂNCORA de alto volume (ex: "IA", "ERP", "Finanças", "Tecnologia")
+        "hashtags_en": [],              // termos em inglês para ampliar o alcance global
         "audiencia": {
           "cargos": [],
           "setores": [],
@@ -78,9 +75,9 @@ export async function processDiscoverySession(sessionId) {
       }
 
       Instruções importantes:
-      1. NÃO se limite ao que está escrito no texto. Pense em como pessoas interessadas nesse assunto buscam conteúdo.
-      2. Inclua variações, sinônimos e termos correlatos que podem gerar debates interessantes.
-      3. Forneça pelo menos 15-20 hashtags/termos no total.
+      1. A onda 2 deve conter termos curtos e genéricos que garantam que SEMPRE encontraremos algo.
+      2. Inclua variações em inglês na lista "hashtags_en".
+      3. Forneça pelo menos 15-20 termos no total.
     `;
 
     const extractedData = await callGemini(geminiConfig, extractionPrompt);
@@ -97,21 +94,17 @@ export async function processDiscoverySession(sessionId) {
       return;
     }
 
-    const allHashtags = [
-      ...(extractedData.hashtags_pt || []),
-      ...(extractedData.hashtags_en || []),
-      ...(extractedData.hashtags_especificas || []),
-      ...(extractedData.termos_busca_pt || []),
-      ...(extractedData.termos_busca_en || [])
-    ].map(h => h.startsWith('#') ? h.substring(1) : h)
-     .filter((v, i, a) => a.indexOf(v) === i) // unique
-     .slice(0, 20); // Limit to 20 search terms total
-
-    console.log(`[Worker] Searching posts for terms: ${allHashtags.join(', ')}`);
-
     const discoveredPostsMap = new Map();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); // Increased window to 30 days
+
+    // Search logic in waves
+    const waves = [
+      [...(extractedData.onda_1_especifica || []), ...(extractedData.hashtags_en || [])],
+      [...(extractedData.onda_2_ampla || [])]
+    ];
+
+    let totalDiscovered = 0;
 
     // Fetch user's URN to avoid self-engagement
     let userUrn = null;
@@ -131,41 +124,63 @@ export async function processDiscoverySession(sessionId) {
       console.warn('Could not fetch user profile for self-engagement filter:', err);
     }
 
-    for (const hashtag of allHashtags) {
-      try {
-        const mockReq = {
-          body: {
-            accessToken: linkedinToken,
-            hashtag: hashtag.startsWith('#') ? hashtag.substring(1) : hashtag,
-            count: 20
-          }
-        };
+    for (let i = 0; i < waves.length; i++) {
+      const currentWaveTerms = waves[i]
+        .map(h => h.startsWith('#') ? h.substring(1) : h)
+        .filter((v, j, a) => a.indexOf(v) === j) // unique
+        .slice(0, 15);
 
-        let searchData;
-        const mockResponse = {
-          status: (code) => ({
-            json: (data) => { searchData = data; return mockResponse; }
-          }),
-          json: (data) => { searchData = data; return mockResponse; }
-        };
+      if (currentWaveTerms.length === 0) continue;
 
-        await handleSearchPostsByHashtag(mockReq, mockResponse);
+      console.log(`[Worker] Wave ${i + 1}: Searching posts for terms: ${currentWaveTerms.join(', ')}`);
 
-        if (searchData && searchData.elements) {
-          for (const post of searchData.elements) {
-            const publishedAt = new Date(post.publishedAt);
-            if (publishedAt < sevenDaysAgo) continue;
+      for (const term of currentWaveTerms) {
+        try {
+          // Try searching with both the plain string and the URN format for maximum compatibility
+          const formatsToTry = [term, `urn:li:hashtag:${term}`];
 
-            // Filter out self-engagement
-            if (userUrn && post.author === userUrn) continue;
+          for (const searchTerm of formatsToTry) {
+            const mockReq = {
+              body: {
+                accessToken: linkedinToken,
+                hashtag: searchTerm,
+                count: 20
+              }
+            };
 
-            if (!discoveredPostsMap.has(post.id)) {
-              discoveredPostsMap.set(post.id, post);
+            let searchData;
+            const mockResponse = {
+              status: (code) => ({ json: (data) => { searchData = data; return mockResponse; } }),
+              json: (data) => { searchData = data; return mockResponse; }
+            };
+
+            await handleSearchPostsByHashtag(mockReq, mockResponse);
+
+            if (searchData && searchData.elements && searchData.elements.length > 0) {
+              console.log(`[Worker] Found ${searchData.elements.length} raw results for term "${searchTerm}"`);
+              for (const post of searchData.elements) {
+                const publishedAt = new Date(post.publishedAt);
+                if (publishedAt < thirtyDaysAgo) continue;
+
+                // Filter out self-engagement
+                if (userUrn && post.author === userUrn) continue;
+
+                if (!discoveredPostsMap.has(post.id)) {
+                  discoveredPostsMap.set(post.id, post);
+                  totalDiscovered++;
+                }
+              }
             }
           }
+        } catch (err) {
+          console.error(`Error searching for term ${term}:`, err);
         }
-      } catch (err) {
-        console.error(`Error searching for hashtag ${hashtag}:`, err);
+      }
+
+      // If we found at least 10 valid posts in wave 1, don't proceed to wave 2 to keep relevance high
+      if (totalDiscovered >= 10 && i === 0) {
+        console.log(`[Worker] Wave 1 sufficient (${totalDiscovered} posts). Skipping Wave 2.`);
+        break;
       }
     }
 
@@ -181,7 +196,7 @@ export async function processDiscoverySession(sessionId) {
         Post original publicado pelo usuário:
         "${session.source_post_content}"
 
-        Palavras-chave e temas centrais: ${allHashtags.join(', ')}
+        Palavras-chave e temas centrais: ${waves.flat().join(', ')}
 
         Avalie cada post candidato abaixo. Valorizamos a diversidade de opiniões, incluindo posts que tragam contrapontos ou perspectivas complementares.
         Aceitamos posts com relevância moderada se eles oferecerem uma boa oportunidade de debate.
