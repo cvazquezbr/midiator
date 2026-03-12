@@ -124,80 +124,76 @@ export async function processDiscoverySession(sessionId) {
       console.warn('Could not fetch user profile for self-engagement filter:', err);
     }
 
-    for (let i = 0; i < waves.length; i++) {
-      // Create a set of unique terms, including slugified versions
-      const baseTerms = waves[i].map(h => h.startsWith('#') ? h.substring(1) : h);
-      const currentWaveTerms = [
-        ...baseTerms,
-        ...baseTerms.map(t => slugify(t)),
-        ...baseTerms.map(t => t.toLowerCase())
-      ].filter((v, j, a) => a.indexOf(v) === j && v.length > 0)
-       .slice(0, 30);
+    // Google Discovery Fallback (Since LinkedIn 404ed the hashtag endpoint)
+    console.log(`[Worker] Using Google Search fallback for discovery...`);
+    const googleSearchApiKey = process.env.GOOGLE_SEARCH_API_KEY;
+    const googleSearchCx = process.env.GOOGLE_SEARCH_CX;
 
-      if (currentWaveTerms.length === 0) continue;
+    if (!googleSearchApiKey || !googleSearchCx) {
+      console.warn('[Worker] Google Search credentials missing. Falling back to LinkedIn API anyway.');
+    }
 
-      console.log(`[Worker] Wave ${i + 1}: Searching posts for terms: ${currentWaveTerms.join(', ')}`);
+    const allDiscoveryTerms = waves.flat().filter((v, i, a) => a.indexOf(v) === i);
 
-      for (const term of currentWaveTerms) {
-        try {
-          // LinkedIn discovery is notoriously picky.
-          // We try multiple formats for each term.
-          const formatsToTry = [
-            term,
-            `#${term}`,
-            `urn:li:hashtag:${term}`,
-            `{hashtag|#|${term}}` // Some internal LinkedIn formats use this template
-          ];
+    for (const term of allDiscoveryTerms.slice(0, 10)) {
+      try {
+        if (googleSearchApiKey && googleSearchCx) {
+          console.log(`[Worker] Searching Google for term: "${term}"`);
+          const query = `site:linkedin.com/posts "${term}"`;
+          const url = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(query)}`;
 
-          for (const searchTerm of formatsToTry) {
-            const mockReq = {
-              body: {
-                accessToken: linkedinToken,
-                hashtag: searchTerm,
-                count: 20
-              }
-            };
+          const gRes = await fetch(url);
+          const gData = await gRes.json();
 
-            let searchData;
-            let statusCode = 200;
-            const mockResponse = {
-              status: (code) => { statusCode = code; return { json: (data) => { searchData = data; return mockResponse; } }; },
-              json: (data) => { searchData = data; return mockResponse; }
-            };
+          if (gData.items) {
+            console.log(`[Worker] Google found ${gData.items.length} potential posts for "${term}"`);
+            for (const item of gData.items) {
+              // LinkedIn URLs can have various formats. We try to extract a meaningful ID or use the URL.
+              // Formats: /posts/activity-723..., /feed/update/urn:li:activity:723..., /pulse/...
+              const match = item.link.match(/(activity-|activity:|pulse\/)([a-zA-Z0-9_-]+)/);
+              const postId = match ? match[2] : item.link;
 
-            await handleSearchPostsByHashtag(mockReq, mockResponse);
-
-            if (statusCode !== 200) {
-              console.error(`[Worker] LinkedIn Search failed for "${searchTerm}" (Status ${statusCode}):`, JSON.stringify(searchData));
-            } else if (searchData && searchData.elements) {
-              console.log(`[Worker] Term "${searchTerm}" returned ${searchData.elements.length} raw results.`);
-            }
-
-            if (searchData && searchData.elements && searchData.elements.length > 0) {
-              for (const post of searchData.elements) {
-                const publishedAt = new Date(post.publishedAt);
-                if (publishedAt < thirtyDaysAgo) continue;
-
-                // Filter out self-engagement
-                if (userUrn && post.author === userUrn) continue;
-
-                if (!discoveredPostsMap.has(post.id)) {
-                  discoveredPostsMap.set(post.id, post);
-                  totalDiscovered++;
-                }
+              if (!discoveredPostsMap.has(postId)) {
+                console.log(`[Worker] Google Discovery: Found post ${postId} for term "${term}"`);
+                discoveredPostsMap.set(postId, {
+                  id: postId,
+                  link: item.link,
+                  commentary: { text: item.snippet }, // Use snippet as text since we can't scrape the full post easily
+                  author: 'Unknown (via Google)',
+                  author_name: item.title?.split(' | ')[0]?.split(' - ')[0] || 'Autor no LinkedIn',
+                  publishedAt: new Date().toISOString() // Google doesn't always give exact publishedAt
+                });
+                totalDiscovered++;
               }
             }
           }
-        } catch (err) {
-          console.error(`Error searching for term ${term}:`, err);
         }
-      }
 
-      // If we found at least 10 valid posts in wave 1, don't proceed to wave 2 to keep relevance high
-      if (totalDiscovered >= 10 && i === 0) {
-        console.log(`[Worker] Wave 1 sufficient (${totalDiscovered} posts). Skipping Wave 2.`);
-        break;
+        // If Google fails or we want to try LinkedIn anyway (maybe it's a temporary 404?)
+        const formatsToTry = [term, `urn:li:hashtag:${term.toLowerCase()}`];
+        for (const searchTerm of formatsToTry) {
+          const mockReq = { body: { accessToken: linkedinToken, hashtag: searchTerm, count: 10 } };
+          let searchData, statusCode = 200;
+          const mockRes = {
+            status: (code) => { statusCode = code; return { json: (d) => { searchData = d; return mockRes; } }; },
+            json: (d) => { searchData = d; return mockRes; }
+          };
+
+          await handleSearchPostsByHashtag(mockReq, mockRes);
+          if (statusCode === 200 && searchData?.elements?.length > 0) {
+            console.log(`[Worker] LinkedIn unexpectedly returned ${searchData.elements.length} results for "${searchTerm}"`);
+            for (const post of searchData.elements) {
+              if (!discoveredPostsMap.has(post.id)) {
+                discoveredPostsMap.set(post.id, post);
+                totalDiscovered++;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`Error during term "${term}" discovery:`, err);
       }
+      if (totalDiscovered >= 20) break;
     }
 
     const candidatePosts = Array.from(discoveredPostsMap.values()).slice(0, 50);
