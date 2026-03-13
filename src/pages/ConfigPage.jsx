@@ -149,6 +149,9 @@ const ConfigPage = () => {
                         helperText="Identificador do seu mecanismo de busca customizado"
                     />
                 </Box>
+                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button variant="contained" onClick={saveSettings}>Salvar Todas as Configurações</Button>
+                </Box>
             </Paper>
         </Container>
     );
