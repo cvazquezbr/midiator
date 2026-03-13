@@ -126,8 +126,13 @@ export async function processDiscoverySession(sessionId) {
 
     // Google Discovery Fallback (Since LinkedIn 404ed the hashtag endpoint)
     console.log(`[Worker] Using Google Search fallback for discovery...`);
-    const googleSearchApiKey = process.env.GOOGLE_SEARCH_API_KEY;
-    const googleSearchCx = process.env.GOOGLE_SEARCH_CX;
+
+    // Prioritize user-specific settings for Google Search
+    const { rows: settingsRows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [session.user_id]);
+    const userSettings = settingsRows[0]?.settings_data || {};
+
+    const googleSearchApiKey = userSettings.google_search_api_key || process.env.GOOGLE_SEARCH_API_KEY;
+    const googleSearchCx = userSettings.google_search_cx || process.env.GOOGLE_SEARCH_CX;
 
     if (!googleSearchApiKey || !googleSearchCx) {
       console.warn('[Worker] Google Search credentials missing. Falling back to LinkedIn API anyway.');
@@ -136,11 +141,12 @@ export async function processDiscoverySession(sessionId) {
     const allDiscoveryTerms = waves.flat().filter((v, i, a) => a.indexOf(v) === i);
 
     for (const term of allDiscoveryTerms.slice(0, 10)) {
+      const slugifiedTerm = slugify(term);
       try {
         if (googleSearchApiKey && googleSearchCx) {
           console.log(`[Worker] Searching Google for term: "${term}"`);
-          const query = `site:linkedin.com/posts "${term}"`;
-          const url = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(query)}`;
+          const gQuery = `(site:linkedin.com/posts OR site:linkedin.com/pulse) "${term}"`;
+          const url = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(gQuery)}`;
 
           const gRes = await fetch(url);
           const gData = await gRes.json();
@@ -170,7 +176,7 @@ export async function processDiscoverySession(sessionId) {
         }
 
         // If Google fails or we want to try LinkedIn anyway (maybe it's a temporary 404?)
-        const formatsToTry = [term, `urn:li:hashtag:${term.toLowerCase()}`];
+        const formatsToTry = [term, slugifiedTerm, `urn:li:hashtag:${slugifiedTerm}`];
         for (const searchTerm of formatsToTry) {
           const mockReq = { body: { accessToken: linkedinToken, hashtag: searchTerm, count: 10 } };
           let searchData, statusCode = 200;

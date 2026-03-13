@@ -10,7 +10,10 @@ import {
     FormControl,
     InputLabel,
     CircularProgress,
-    Alert
+    Alert,
+    TextField,
+    Button,
+    Divider
 } from '@mui/material';
 import { useSettings } from '../context/SettingsContext';
 import { saveGeminiModel, saveGeminiImageModel } from '../utils/geminiCredentials';
@@ -22,7 +25,8 @@ const ConfigPage = () => {
         loadingModels,
         errorModels,
         settings,
-        updateSetting
+        updateSetting,
+        saveSettings
     } = useSettings();
 
     const [selectedModel, setSelectedModel] = useState(settings.gemini_model || '');
@@ -61,9 +65,12 @@ const ConfigPage = () => {
                 Configurações
             </Typography>
             <Paper sx={{ p: 3, mt: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    Modelos de IA (Google Gemini)
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                        Modelos de IA (Google Gemini)
+                    </Typography>
+                    <Button variant="contained" size="small" onClick={saveSettings}>Salvar Alterações</Button>
+                </Box>
 
                 {loadingModels && <CircularProgress />}
                 {errorModels && <Alert severity="error">{errorModels}</Alert>}
@@ -113,6 +120,35 @@ const ConfigPage = () => {
                         </FormControl>
                     </Box>
                 )}
+
+                <Divider sx={{ my: 4 }} />
+
+                <Typography variant="h6" gutterBottom>
+                    Google Search API (Descoberta LinkedIn)
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+                    Configurações necessárias para a descoberta de posts relevantes quando a API oficial do LinkedIn falha.
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <TextField
+                        fullWidth
+                        label="Google Search API Key"
+                        type="password"
+                        value={settings.google_search_api_key || ''}
+                        onChange={(e) => updateSetting('google_search_api_key', e.target.value)}
+                        placeholder="AIza..."
+                        helperText="Obtida no Google Cloud Console"
+                    />
+                    <TextField
+                        fullWidth
+                        label="Google Search Engine ID (CX)"
+                        value={settings.google_search_cx || ''}
+                        onChange={(e) => updateSetting('google_search_cx', e.target.value)}
+                        placeholder="0123456789..."
+                        helperText="Identificador do seu mecanismo de busca customizado"
+                    />
+                </Box>
             </Paper>
         </Container>
     );
