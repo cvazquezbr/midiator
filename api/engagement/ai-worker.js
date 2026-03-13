@@ -140,12 +140,13 @@ export async function processDiscoverySession(sessionId) {
 
     const allDiscoveryTerms = waves.flat().filter((v, i, a) => a.indexOf(v) === i);
 
-    for (const term of allDiscoveryTerms.slice(0, 10)) {
+    for (const term of allDiscoveryTerms.slice(0, 15)) {
       const slugifiedTerm = slugify(term);
       try {
         if (googleSearchApiKey && googleSearchCx) {
           console.log(`[Worker] Searching Google for term: "${term}"`);
-          const gQuery = `(site:linkedin.com/posts OR site:linkedin.com/pulse) "${term}"`;
+          // Removed strict quotes around ${term} to broaden search
+          const gQuery = `(site:linkedin.com/posts OR site:linkedin.com/pulse) ${term}`;
           const url = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(gQuery)}`;
 
           const gRes = await fetch(url);
@@ -199,7 +200,7 @@ export async function processDiscoverySession(sessionId) {
       } catch (err) {
         console.error(`Error during term "${term}" discovery:`, err);
       }
-      if (totalDiscovered >= 20) break;
+      if (totalDiscovered >= 40) break;
     }
 
     const candidatePosts = Array.from(discoveredPostsMap.values()).slice(0, 50);
