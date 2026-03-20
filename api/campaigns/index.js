@@ -48,7 +48,7 @@ const handler = async (req, res) => {
       const final_palette_id = (palette_id === '' || palette_id === 'custom') ? null : palette_id;
 
       const { rows } = await query(
-        'INSERT INTO campaigns (user_id, name, campaign_data, autor_id, persona_id, palette_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, updated_at',
+        'INSERT INTO campaigns (user_id, name, campaign_data, autor_id, persona_id, palette_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, updated_at, autor_id, persona_id, palette_id',
         [userId, name, campaign_data, final_autor_id, final_persona_id, final_palette_id]
       );
       return res.status(201).json(rows[0]);
