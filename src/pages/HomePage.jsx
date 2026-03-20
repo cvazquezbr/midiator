@@ -444,6 +444,8 @@ function HomePage() {
             name: loadedCampaign.name,
             campaign_data: finalCampaignData,
             pendingAssets: loadedCampaign.pendingAssets, // Pass the pending assets
+            autor_id: loadedCampaign.autor_id,
+            persona_id: loadedCampaign.persona_id,
         };
 
         // **MIGRATION**: Ensure all records have a stable ID for editing.

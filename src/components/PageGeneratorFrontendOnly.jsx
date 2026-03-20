@@ -99,24 +99,31 @@ const PageGeneratorFrontendOnly = ({
           return;
         }
 
-        setCampaignState(current => ({
-          ...current,
-          generatedPagesData: current.generatedPagesData.map(page => {
-            if (page.index !== restOfModifiedData.index) return page;
-            return {
-              ...page,
-              record: restOfModifiedData.csvData[0],
-              customPageTemplate,
-              customBrandElements: restOfModifiedData.brandElements,
-              customFieldPositions: restOfModifiedData.fieldPositions,
-              customFieldStyles: restOfModifiedData.fieldStyles,
-              url: managedUrl,
-              filename: newPageImageData.filename,
-              blob: undefined,
-              dataUrl: null,
-            };
-          }),
-        }));
+        setCampaignState(current => {
+          const modifiedRecord = restOfModifiedData.csvData[0];
+          return {
+            ...current,
+            // Sincroniza o registro editado de volta para o csvData global
+            csvData: current.csvData.map((record, idx) =>
+              idx === restOfModifiedData.index ? { ...record, ...modifiedRecord } : record
+            ),
+            generatedPagesData: current.generatedPagesData.map(page => {
+              if (page.index !== restOfModifiedData.index) return page;
+              return {
+                ...page,
+                record: modifiedRecord,
+                customPageTemplate,
+                customBrandElements: restOfModifiedData.brandElements,
+                customFieldPositions: restOfModifiedData.fieldPositions,
+                customFieldStyles: restOfModifiedData.fieldStyles,
+                url: managedUrl,
+                filename: newPageImageData.filename,
+                blob: undefined,
+                dataUrl: null,
+              };
+            }),
+          };
+        });
 
         toast.success(`Página #${pageToSave.index + 1} salva.`);
       } catch (error) {
