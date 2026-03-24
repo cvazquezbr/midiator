@@ -11,3 +11,10 @@ export const markdownToLinkedinText = (markdown) => {
     return text;
 };
 
+export function escapeLinkedinText(text) {
+    if (text === null || text === undefined) return '';
+    if (typeof text !== 'string') {
+        try { text = String(text); } catch (e) { return ''; }
+    }
+    return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
+}

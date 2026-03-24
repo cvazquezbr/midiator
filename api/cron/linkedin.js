@@ -287,13 +287,14 @@ export async function handleRunScheduler(response) {
             const hashtags = (parentData.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ');
             const parentUrl = parentData.url;
 
-            const escapedContent = escapeLinkedinText(stripEmojis(mainContent));
-            const escapedCta = escapeLinkedinText(stripEmojis(cta));
+            const isPerson = authorUrn.includes(':person:');
+            const finalMainContent = isPerson ? escapeLinkedinText(stripEmojis(mainContent)) : stripEmojis(mainContent);
+            const finalCta = isPerson ? escapeLinkedinText(stripEmojis(cta)) : stripEmojis(cta);
 
             commentary = [
-                escapedContent,
+                finalMainContent,
                 '----',
-                escapedCta,
+                finalCta,
                 '----',
                 hashtags, // Hashtags should not be escaped
                 `\nPost original: ${parentUrl}` // URL should not be escaped
@@ -302,7 +303,8 @@ export async function handleRunScheduler(response) {
              console.error(`[Cron LinkedIn] Could not find parent post data for follow-up ${postId}. Skipping formatting.`);
              // Fallback to original content if parent is not found
              const commentaryRaw = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || payload.content || payload.commentary || '';
-             commentary = escapeLinkedinText(stripEmojis(commentaryRaw));
+             const isPerson = authorUrn.includes(':person:');
+             commentary = isPerson ? escapeLinkedinText(stripEmojis(commentaryRaw)) : stripEmojis(commentaryRaw);
         }
       } else {
         // This is a main post. The payload's fullText contains everything.
@@ -310,8 +312,9 @@ export async function handleRunScheduler(response) {
         const fullTextRaw = (payload.content && payload.content.fullText) || payload.fullText || '';
         const parts = fullTextRaw.split('----');
 
-        const contentPart = parts[0] ? escapeLinkedinText(stripEmojis(parts[0].trim())) : '';
-        const ctaPart = parts[1] ? escapeLinkedinText(stripEmojis(parts[1].trim())) : '';
+        const isPerson = authorUrn.includes(':person:');
+        const contentPart = parts[0] ? (isPerson ? escapeLinkedinText(stripEmojis(parts[0].trim())) : stripEmojis(parts[0].trim())) : '';
+        const ctaPart = parts[1] ? (isPerson ? escapeLinkedinText(stripEmojis(parts[1].trim())) : stripEmojis(parts[1].trim())) : '';
         const hashtagsPart = parts[2] ? parts[2].trim() : ''; // Do not escape hashtags
 
         let commentaryParts = [];
