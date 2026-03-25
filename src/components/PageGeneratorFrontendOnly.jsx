@@ -929,7 +929,6 @@ const PageGeneratorFrontendOnly = ({
           addPendingAsset={addPendingAsset}
           csvData={csvData}
           currentPreviewIndex={editingGeneratedPageIndex}
-          palettes={palettes}
         />
       )}
       <input type="file" accept="image/*" style={{ display: 'none' }} ref={individualImageInputRef} onChange={handleIndividualImageUpload} />

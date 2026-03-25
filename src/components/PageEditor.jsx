@@ -68,7 +68,6 @@ const PageEditor = ({
   addPendingAsset,
   csvData: fullCsvData,
   currentPreviewIndex,
-  palettes, // Receive the list of standard palettes
 }) => {
   console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
 
@@ -313,19 +312,6 @@ const PageEditor = ({
       toast.error(`Falha ao salvar no Drive: ${error.message}`);
     }
   };
-
-  const campaignSwatches = React.useMemo(() => {
-    if (!editorState) return [];
-    const { pageTemplate } = editorState;
-    if (pageTemplate?.customPalette?.colors?.length > 0) {
-      return pageTemplate.customPalette.colors;
-    }
-    if (pageTemplate?.paletteId && palettes) {
-      const standardPalette = palettes.find(p => p.id === pageTemplate.paletteId);
-      return standardPalette?.colors || [];
-    }
-    return [];
-  }, [editorState, palettes]);
 
   if (!open || !editorState) return null;
 

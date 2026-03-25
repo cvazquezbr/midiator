@@ -378,6 +378,24 @@ function HomePage() {
     extractColorPalette(pageTemplate?.images?.[0]?.src, (p) => setCampaignState(prev => ({ ...prev, imageColorPalette: p })));
   }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setCampaignState]);
 
+  // Sincroniza as cores da campanha com base na paleta selecionada (ou customizada)
+  useEffect(() => {
+    let campaignColors = [];
+    if (customPalette?.colors && customPalette.colors.length > 0) {
+      campaignColors = customPalette.colors;
+    } else if (paletteId && palettes && palettes.length > 0) {
+      const selectedPalette = palettes.find(p => p.id === paletteId);
+      if (selectedPalette) {
+        campaignColors = selectedPalette.colors;
+      }
+    }
+
+    // Só atualiza se as cores realmente mudaram para evitar loops de renderização
+    if (JSON.stringify(campaignColors) !== JSON.stringify(campaignState.colors)) {
+      setCampaignState(prev => ({ ...prev, colors: campaignColors }));
+    }
+  }, [paletteId, customPalette, palettes, campaignState.colors, setCampaignState]);
+
   useEffect(() => { if (isMobile) setSidebarOpen(false); }, [isMobile]);
   useEffect(() => { setOriginalImageSize(getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE); }, [aspectRatio]);
 
