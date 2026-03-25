@@ -2,6 +2,7 @@ import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 import { handleCreateComment, handleGetProfile } from '../linkedin-proxy.js';
 import { generateCommentForPost } from './ai-worker.js';
+import { escapeLinkedinText } from '../utils.js';
 
 const handler = async (req, res) => {
   const { action } = req.body;
@@ -123,12 +124,15 @@ async function handlePublishComment(req, res, userId) {
       json: (data) => { responseData = data; return mockResponse; }
     };
 
+    const isPerson = actorUrn.includes(':person:');
+    const finalText = isPerson ? escapeLinkedinText(textToPublish) : textToPublish;
+
     const publishReq = {
         body: {
             accessToken: comment.linkedin_access_token,
             postUrn: comment.linkedin_post_id.startsWith('urn:li:') ? comment.linkedin_post_id : `urn:li:share:${comment.linkedin_post_id}`,
             actorUrn: actorUrn,
-            text: textToPublish
+            text: finalText
         }
     };
 

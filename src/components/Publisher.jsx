@@ -448,8 +448,8 @@ const Publisher = ({
             // It escapes the main content and CTA, but leaves hashtags untouched.
 
             const titlePart = campaignContent.titulo?.toUpperCase() || '';
-            const contentPart = escapeLinkedinText(markdownToLinkedinText(sourceContent));
-            const ctaPart = escapeLinkedinText(campaignContent.cta || '');
+            const contentPart = markdownToLinkedinText(sourceContent);
+            const ctaPart = campaignContent.cta || '';
             const hashtagsPart = (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ');
 
             const finalParts = [];
@@ -801,8 +801,26 @@ const Publisher = ({
         }
 
         setPublishingStatusLi('Criando a publicação...');
+
+        // Conditional escaping for personal accounts.
+        // We split by '----' to avoid escaping hashtags, similar to the cron logic.
+        let finalContent = content.trim();
+        if (selectedTarget.type === 'person') {
+            const parts = finalContent.split('----');
+            const contentPart = parts[0] ? escapeLinkedinText(parts[0].trim()) : '';
+            const ctaPart = parts[1] ? escapeLinkedinText(parts[1].trim()) : '';
+            const hashtagsPart = parts[2] ? parts[2].trim() : '';
+
+            let commentaryParts = [];
+            if (contentPart) commentaryParts.push(contentPart);
+            if (ctaPart) commentaryParts.push(ctaPart);
+            if (hashtagsPart) commentaryParts.push(hashtagsPart);
+
+            finalContent = commentaryParts.join('\n----\n');
+        }
+
         const campaignData = {
-            content: content.trim(),
+            content: finalContent,
             targetId: selectedTarget.id,
             targetType: selectedTarget.type,
             images: imageUrns,
