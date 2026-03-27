@@ -130,7 +130,7 @@ async function handlePublishComment(req, res, userId) {
     const publishReq = {
         body: {
             accessToken: comment.linkedin_access_token,
-            postUrn: comment.linkedin_post_id.startsWith('urn:li:') ? comment.linkedin_post_id : `urn:li:share:${comment.linkedin_post_id}`,
+            postUrn: comment.linkedin_post_id.startsWith('urn:li:') ? comment.linkedin_post_id : `urn:li:activity:${comment.linkedin_post_id}`,
             actorUrn: actorUrn,
             text: finalText
         }
