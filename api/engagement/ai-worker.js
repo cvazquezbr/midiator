@@ -155,15 +155,17 @@ export async function processDiscoverySession(sessionId) {
           if (gData.items) {
             console.log(`[Worker] Google found ${gData.items.length} potential posts for "${term}"`);
             for (const item of gData.items) {
-              // LinkedIn URLs can have various formats. We try to extract a meaningful ID or use the URL.
-              // Formats: /posts/activity-723..., /feed/update/urn:li:activity:723..., /pulse/...
-              const match = item.link.match(/(activity-|activity:|pulse\/)([a-zA-Z0-9_-]+)/);
-              const postId = match ? match[2] : item.link;
+              const extraction = extractLinkedinUrn(item.link);
+              if (!extraction || extraction.commentable === false) {
+                continue;
+              }
 
-              if (!discoveredPostsMap.has(postId)) {
-                console.log(`[Worker] Google Discovery: Found post ${postId} for term "${term}"`);
-                discoveredPostsMap.set(postId, {
-                  id: postId,
+              const urn = extraction.urn;
+
+              if (!discoveredPostsMap.has(urn)) {
+                console.log(`[Worker] Google Discovery: Found post ${urn} for term "${term}"`);
+                discoveredPostsMap.set(urn, {
+                  id: urn,
                   link: item.link,
                   commentary: { text: item.snippet }, // Use snippet as text since we can't scrape the full post easily
                   author: 'Unknown (via Google)',
@@ -190,8 +192,10 @@ export async function processDiscoverySession(sessionId) {
           if (statusCode === 200 && searchData?.elements?.length > 0) {
             console.log(`[Worker] LinkedIn unexpectedly returned ${searchData.elements.length} results for "${searchTerm}"`);
             for (const post of searchData.elements) {
-              if (!discoveredPostsMap.has(post.id)) {
-                discoveredPostsMap.set(post.id, post);
+              const extraction = extractLinkedinUrn(post.id.startsWith('urn:li:') ? post.id : `https://www.linkedin.com/feed/update/${post.id}`);
+              const urn = extraction?.urn || post.id;
+              if (!discoveredPostsMap.has(urn)) {
+                discoveredPostsMap.set(urn, { ...post, id: urn });
                 totalDiscovered++;
               }
             }
@@ -204,7 +208,53 @@ export async function processDiscoverySession(sessionId) {
     }
 
     const candidatePosts = Array.from(discoveredPostsMap.values()).slice(0, 50);
-    console.log(`[Worker] Scoring ${candidatePosts.length} candidate posts.`);
+
+    // [Enrichment Step]
+    const postsToEnrich = candidatePosts.slice(0, 30);
+    const globalTimeout = 300000; // 300s
+    const startTime = Date.now();
+    let enrichedCount = 0;
+
+    console.log(`[Worker] Enriching ${postsToEnrich.length} candidate posts via Open Graph...`);
+
+    for (let i = 0; i < postsToEnrich.length; i += 5) {
+      if (Date.now() - startTime > globalTimeout) {
+        console.warn('[Worker] Enrichment timed out, proceeding with what we have.');
+        break;
+      }
+
+      const batch = postsToEnrich.slice(i, i + 5);
+      const results = await Promise.allSettled(batch.map(async (p) => {
+        if (p.commentary.text && p.commentary.text.length >= 200) return;
+
+        const ogData = await fetchOpenGraphData(p.link);
+        if (ogData.description && ogData.description.length > (p.commentary.text?.length || 0)) {
+          let newText = ogData.description;
+          if (ogData.title) {
+            newText = `${ogData.title}\n\n${ogData.description}`;
+          }
+          p.commentary.text = newText;
+          enrichedCount++;
+        }
+
+        // Author name enrichment
+        if (ogData.author) {
+          p.author_name = ogData.author;
+        } else if (ogData.siteName && ogData.siteName !== 'LinkedIn') {
+          p.author_name = ogData.siteName;
+        } else if (ogData.title && ogData.title.includes(' on LinkedIn')) {
+          // Fallback: extract from title "Name on LinkedIn: Title"
+          const namePart = ogData.title.split(' on LinkedIn')[0];
+          if (namePart) p.author_name = namePart;
+        }
+      }));
+
+      if (i + 5 < postsToEnrich.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    console.log(`[Worker] Enriched ${enrichedCount}/${postsToEnrich.length} posts successfully. Scoring ${candidatePosts.length} candidates.`);
 
     // 4. Score posts using Gemini in batch
     let scoredPosts = [];
@@ -301,6 +351,66 @@ async function getLinkedinAccessToken(userId) {
 
 async function updateSessionStatus(sessionId, status) {
   await query('UPDATE linkedin_discovery_sessions SET status = $1, updated_at = NOW() WHERE id = $2', [status, sessionId]);
+}
+
+async function fetchOpenGraphData(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) return {};
+
+    const html = await response.text();
+
+    // Simple regex extraction to avoid heavy dependencies
+    const ogDescription = html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)?.[1];
+    const ogTitle = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1];
+    const ogSiteName = html.match(/<meta[^>]+property="og:site_name"[^>]+content="([^"]+)"/i)?.[1];
+    const authorMeta = html.match(/<meta[^>]+name="author"[^>]+content="([^"]+)"/i)?.[1];
+
+    // Clean up entities
+    const decode = (str) => str?.replace(/&quot;/g, '"')?.replace(/&amp;/g, '&')?.replace(/&#39;/g, "'")?.replace(/&lt;/g, '<')?.replace(/&gt;/g, '>');
+
+    return {
+      description: decode(ogDescription),
+      title: decode(ogTitle),
+      siteName: decode(ogSiteName),
+      author: decode(authorMeta)
+    };
+  } catch (err) {
+    return {};
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export function extractLinkedinUrn(url) {
+  // 1. Check for Pulse (not commentable via API)
+  if (url.includes('/pulse/')) {
+    return { urn: url, commentable: false };
+  }
+
+  // 2. Check for explicit URN in URL (feed/update/urn:li:...)
+  const urnMatch = url.match(/urn:li:(activity|ugcPost):([0-9]+)/);
+  if (urnMatch) {
+    return { urn: urnMatch[0], commentable: true };
+  }
+
+  // 3. Check for activity ID in /posts/ format (e.g. activity-7234567890)
+  const activityMatch = url.match(/activity-([0-9]+)/);
+  if (activityMatch) {
+    return { urn: `urn:li:activity:${activityMatch[1]}`, commentable: true };
+  }
+
+  return null;
 }
 
 function slugify(text) {
