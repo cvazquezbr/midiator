@@ -160,7 +160,12 @@ export async function processDiscoverySession(sessionId) {
 
           try {
             console.log(`[Worker] Requesting Google API: ${maskedUrl}`);
-            const gRes = await fetch(url);
+            const gRes = await fetch(url, {
+              headers: {
+                'Referer': 'https://midiator.vercel.app',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+              }
+            });
             const gResText = await gRes.text();
             let gData;
             try {
