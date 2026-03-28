@@ -145,36 +145,43 @@ export async function processDiscoverySession(sessionId) {
       try {
         if (googleSearchApiKey && googleSearchCx) {
           console.log(`[Worker] Searching Google for term: "${term}"`);
-          // Removed strict quotes around ${term} to broaden search
           const gQuery = `(site:linkedin.com/posts OR site:linkedin.com/pulse) ${term}`;
           const url = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(gQuery)}`;
 
-          const gRes = await fetch(url);
-          const gData = await gRes.json();
+          try {
+            const gRes = await fetch(url);
+            const gData = await gRes.json();
 
-          if (gData.items) {
-            console.log(`[Worker] Google found ${gData.items.length} potential posts for "${term}"`);
-            for (const item of gData.items) {
-              const extraction = extractLinkedinUrn(item.link);
-              if (!extraction || extraction.commentable === false) {
-                continue;
+            if (!gRes.ok) {
+              console.error(`[Worker] Google Search API error ${gRes.status}:`, JSON.stringify(gData, null, 2));
+            } else if (gData.items && gData.items.length > 0) {
+              console.log(`[Worker] Google found ${gData.items.length} potential posts for "${term}"`);
+              for (const item of gData.items) {
+                const extraction = extractLinkedinUrn(item.link);
+                if (!extraction || extraction.commentable === false) {
+                  continue;
+                }
+
+                const urn = extraction.urn;
+
+                if (!discoveredPostsMap.has(urn)) {
+                  console.log(`[Worker] Google Discovery: Found post ${urn} for term "${term}"`);
+                  discoveredPostsMap.set(urn, {
+                    id: urn,
+                    link: item.link,
+                    commentary: { text: item.snippet },
+                    author: 'Unknown (via Google)',
+                    author_name: item.title?.split(' | ')[0]?.split(' - ')[0] || 'Autor no LinkedIn',
+                    publishedAt: new Date().toISOString()
+                  });
+                  totalDiscovered++;
+                }
               }
-
-              const urn = extraction.urn;
-
-              if (!discoveredPostsMap.has(urn)) {
-                console.log(`[Worker] Google Discovery: Found post ${urn} for term "${term}"`);
-                discoveredPostsMap.set(urn, {
-                  id: urn,
-                  link: item.link,
-                  commentary: { text: item.snippet }, // Use snippet as text since we can't scrape the full post easily
-                  author: 'Unknown (via Google)',
-                  author_name: item.title?.split(' | ')[0]?.split(' - ')[0] || 'Autor no LinkedIn',
-                  publishedAt: new Date().toISOString() // Google doesn't always give exact publishedAt
-                });
-                totalDiscovered++;
-              }
+            } else {
+              console.log(`[Worker] Google Search returned 0 results for "${term}"`);
             }
+          } catch (googleErr) {
+            console.error(`[Worker] Fatal error during Google Search for "${term}":`, googleErr);
           }
         }
 
