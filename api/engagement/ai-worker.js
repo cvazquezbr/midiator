@@ -134,8 +134,15 @@ export async function processDiscoverySession(sessionId) {
     const googleSearchApiKey = userSettings.google_search_api_key || process.env.GOOGLE_SEARCH_API_KEY;
     const googleSearchCx = userSettings.google_search_cx || process.env.GOOGLE_SEARCH_CX;
 
+    const keySource = userSettings.google_search_api_key ? 'User Settings' : 'Environment';
+    const cxSource = userSettings.google_search_cx ? 'User Settings' : 'Environment';
+
     if (!googleSearchApiKey || !googleSearchCx) {
-      console.warn('[Worker] Google Search credentials missing. Falling back to LinkedIn API anyway.');
+      console.warn(`[Worker] Google Search credentials missing (Key: ${googleSearchApiKey ? 'OK' : 'MISSING'}, CX: ${googleSearchCx ? 'OK' : 'MISSING'}). Falling back to LinkedIn API anyway.`);
+    } else {
+      const maskedKey = googleSearchApiKey.substring(0, 4) + '...' + googleSearchApiKey.substring(googleSearchApiKey.length - 4);
+      const maskedCx = googleSearchCx.substring(0, 4) + '...' + googleSearchCx.substring(googleSearchCx.length - 4);
+      console.log(`[Worker] Google Search credentials from ${keySource}/${cxSource} (Key: ${maskedKey}, CX: ${maskedCx})`);
     }
 
     const allDiscoveryTerms = waves.flat().filter((v, i, a) => a.indexOf(v) === i);
@@ -144,13 +151,24 @@ export async function processDiscoverySession(sessionId) {
       const slugifiedTerm = slugify(term);
       try {
         if (googleSearchApiKey && googleSearchCx) {
-          console.log(`[Worker] Searching Google for term: "${term}"`);
-          const gQuery = `(site:linkedin.com/posts OR site:linkedin.com/pulse) ${term}`;
+          // Use the spaced/cleaned term for Google as it's more likely to match natural language indexing
+          const gTerm = slugifiedTerm || term;
+          console.log(`[Worker] Searching Google for term: "${gTerm}" (Original: "${term}")`);
+          const gQuery = `(site:linkedin.com/posts OR site:linkedin.com/pulse) ${gTerm}`;
           const url = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(gQuery)}`;
+          const maskedUrl = url.replace(googleSearchApiKey, '***').replace(googleSearchCx, '***');
 
           try {
+            console.log(`[Worker] Requesting Google API: ${maskedUrl}`);
             const gRes = await fetch(url);
-            const gData = await gRes.json();
+            const gResText = await gRes.text();
+            let gData;
+            try {
+              gData = JSON.parse(gResText);
+            } catch (e) {
+              console.error(`[Worker] Google Search returned non-JSON response (Status ${gRes.status}):`, gResText);
+              continue;
+            }
 
             if (!gRes.ok) {
               console.error(`[Worker] Google Search API error ${gRes.status}:`, JSON.stringify(gData, null, 2));
@@ -158,7 +176,12 @@ export async function processDiscoverySession(sessionId) {
               console.log(`[Worker] Google found ${gData.items.length} potential posts for "${term}"`);
               for (const item of gData.items) {
                 const extraction = extractLinkedinUrn(item.link);
-                if (!extraction || extraction.commentable === false) {
+                if (!extraction) {
+                  console.log(`[Worker] Google Result skipped: URL format not recognized (${item.link})`);
+                  continue;
+                }
+                if (extraction.commentable === false) {
+                  console.log(`[Worker] Google Result skipped: Not commentable via API (Pulse) (${item.link})`);
                   continue;
                 }
 
@@ -178,10 +201,10 @@ export async function processDiscoverySession(sessionId) {
                 }
               }
             } else {
-              console.log(`[Worker] Google Search returned 0 results for "${term}"`);
+              console.log(`[Worker] Google Search returned 0 results for "${term}" (Full data: ${JSON.stringify(gData)})`);
             }
           } catch (googleErr) {
-            console.error(`[Worker] Fatal error during Google Search for "${term}":`, googleErr);
+            console.error(`[Worker] Fatal error during Google Search fetch for "${term}":`, googleErr);
           }
         }
 
@@ -421,12 +444,15 @@ export function extractLinkedinUrn(url) {
 }
 
 function slugify(text) {
-  return text
+  if (!text) return '';
+  // Convert CamelCase to spaced text for better searching
+  const spacedText = text.replace(/([a-z])([A-Z])/g, '$1 $2');
+  return spacedText
     .toString()
     .normalize('NFD')                   // separate accents from letters
     .replace(/[\u0300-\u036f]/g, '')   // remove accents
     .replace(/[^\w\s-]/g, '')          // remove non-word chars
-    .replace(/[\s-]+/g, '')            // remove spaces and hyphens
+    .replace(/[\s-]+/g, ' ')           // replace hyphens/multiple spaces with single space
     .trim();
 }
 
