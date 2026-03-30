@@ -7,15 +7,11 @@
     {
       "path": "/api/cron/linkedin-analytics",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/discovery",
-      "schedule": "30 * * * *"
     }
   ],
   "rewrites": [
     {
-      "source": "/((?!api/|_next/|favicon.ico|.*\\\\..*).*)",
+      "source": "/((?!api/|_next/|favicon.ico|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
