@@ -124,8 +124,7 @@ async function handlePublishComment(req, res, userId) {
       json: (data) => { responseData = data; return mockResponse; }
     };
 
-    const isPerson = actorUrn.includes(':person:');
-    const finalText = isPerson ? escapeLinkedinText(textToPublish) : textToPublish;
+    const finalText = escapeLinkedinText(textToPublish);
 
     const publishReq = {
         body: {

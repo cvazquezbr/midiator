@@ -173,11 +173,6 @@ function buildAuthorUrn(data) {
   return null;
 }
 
-function stripEmojis(text) {
-  if (!text) return text;
-  return String(text).replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
-}
-
 function escapeLinkedinText(text) {
   if (text === null || text === undefined) return '';
   if (typeof text !== 'string') {
@@ -287,9 +282,8 @@ export async function handleRunScheduler(response) {
             const hashtags = (parentData.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ');
             const parentUrl = parentData.url;
 
-            const isPerson = authorUrn.includes(':person:');
-            const finalMainContent = isPerson ? escapeLinkedinText(stripEmojis(mainContent)) : stripEmojis(mainContent);
-            const finalCta = isPerson ? escapeLinkedinText(stripEmojis(cta)) : stripEmojis(cta);
+            const finalMainContent = escapeLinkedinText(mainContent);
+            const finalCta = escapeLinkedinText(cta);
 
             commentary = [
                 finalMainContent,
@@ -303,8 +297,7 @@ export async function handleRunScheduler(response) {
              console.error(`[Cron LinkedIn] Could not find parent post data for follow-up ${postId}. Skipping formatting.`);
              // Fallback to original content if parent is not found
              const commentaryRaw = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || payload.content || payload.commentary || '';
-             const isPerson = authorUrn.includes(':person:');
-             commentary = isPerson ? escapeLinkedinText(stripEmojis(commentaryRaw)) : stripEmojis(commentaryRaw);
+             commentary = escapeLinkedinText(commentaryRaw);
         }
       } else {
         // This is a main post. The payload's fullText contains everything.
@@ -312,9 +305,8 @@ export async function handleRunScheduler(response) {
         const fullTextRaw = (payload.content && payload.content.fullText) || payload.fullText || '';
         const parts = fullTextRaw.split('----');
 
-        const isPerson = authorUrn.includes(':person:');
-        const contentPart = parts[0] ? (isPerson ? escapeLinkedinText(stripEmojis(parts[0].trim())) : stripEmojis(parts[0].trim())) : '';
-        const ctaPart = parts[1] ? (isPerson ? escapeLinkedinText(stripEmojis(parts[1].trim())) : stripEmojis(parts[1].trim())) : '';
+        const contentPart = parts[0] ? escapeLinkedinText(parts[0].trim()) : '';
+        const ctaPart = parts[1] ? escapeLinkedinText(parts[1].trim()) : '';
         const hashtagsPart = parts[2] ? parts[2].trim() : ''; // Do not escape hashtags
 
         let commentaryParts = [];
