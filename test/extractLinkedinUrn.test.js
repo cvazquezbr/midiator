@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLinkedinUrn } from '../api/engagement/ai-worker.js';
+import { extractLinkedinUrn } from '../api/utils.js';
 
 describe('extractLinkedinUrn', () => {
   it('should extract activity URN from /posts/ format', () => {

@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import {
   ThumbUp, ThumbDown, Comment, OpenInNew, CheckCircle,
-  Refresh, AutoAwesome, Send, PlayCircleFilled
+  Refresh, AutoAwesome, Send, PlayCircleFilled, Download
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 
@@ -78,6 +78,7 @@ const LinkedInEngagement = () => {
     switch (status) {
       case 'pending': return 'Pendente';
       case 'searching': return 'Buscando...';
+      case 'awaiting_external_search': return 'Aguardando Busca Externa';
       case 'scoring': return 'Avaliando...';
       case 'ready': return 'Pronto';
       case 'completed': return 'Concluído (Sem posts)';
@@ -214,6 +215,35 @@ const LinkedInEngagement = () => {
     }
   };
 
+  const handleExportJSON = async (e, sessionId) => {
+    if (e) e.stopPropagation();
+    try {
+      const response = await fetch('/api/engagement/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'exportSessionJSON', sessionId })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `linkedin-discovery-${sessionId}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success('JSON exportado com sucesso!');
+      } else {
+        toast.error(data.error || 'Falha ao exportar JSON.');
+      }
+    } catch (error) {
+      console.error('Error exporting JSON:', error);
+      toast.error('Erro ao conectar com o servidor.');
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -291,7 +321,18 @@ const LinkedInEngagement = () => {
                               </IconButton>
                             </Tooltip>
                           )}
-                          <Chip size="small" label={session.status} color="info" variant="outlined" />
+                          {session.status === 'awaiting_external_search' && (
+                            <Tooltip title="Exportar JSON para busca">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleExportJSON(e, session.id)}
+                                color="secondary"
+                              >
+                                <Download />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Chip size="small" label={getStatusLabel(session.status)} color="info" variant="outlined" />
                         </Box>
                       </ListItem>
                     ))}
