@@ -64,40 +64,6 @@ function TabPanel(props) {
   );
 }
 
-const GoogleSearchSettings = () => {
-  const { settings, updateSetting } = useSettings();
-
-  return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Google Search API (Descoberta LinkedIn)
-      </Typography>
-      <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-        Configurações necessárias para a descoberta de posts relevantes quando a API oficial do LinkedIn falha.
-      </Typography>
-
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <TextField
-          fullWidth
-          label="Google Search API Key"
-          type="password"
-          value={settings.google_search_api_key || ''}
-          onChange={(e) => updateSetting('google_search_api_key', e.target.value)}
-          placeholder="AIza..."
-          helperText="Obtida no Google Cloud Console"
-        />
-        <TextField
-          fullWidth
-          label="Google Search Engine ID (CX)"
-          value={settings.google_search_cx || ''}
-          onChange={(e) => updateSetting('google_search_cx', e.target.value)}
-          placeholder="0123456789..."
-          helperText="Identificador do seu mecanismo de busca customizado"
-        />
-      </Box>
-    </Box>
-  );
-};
 
 
 const GeneralSettings = () => {
@@ -220,7 +186,6 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
           <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(3)} />
           <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(4)} />
           <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
-          <Tab icon={<SearchIcon />} iconPosition="start" label="Busca Google" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(6)} />
         </Tabs>
         <TabPanel value={value} index={0}>
           <GeneralSettings />
@@ -239,9 +204,6 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
         </TabPanel>
         <TabPanel value={value} index={5}>
           <LinkedinAuthSetup onBeforeRedirect={handleSaveForRedirect} />
-        </TabPanel>
-        <TabPanel value={value} index={6}>
-          <GoogleSearchSettings />
         </TabPanel>
       </DialogContent>
       <DialogActions>

@@ -121,34 +121,6 @@ const ConfigPage = () => {
                     </Box>
                 )}
 
-                <Divider sx={{ my: 4 }} />
-
-                <Typography variant="h6" gutterBottom>
-                    Google Search API (Descoberta LinkedIn)
-                </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-                    Configurações necessárias para a descoberta de posts relevantes quando a API oficial do LinkedIn falha.
-                </Typography>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <TextField
-                        fullWidth
-                        label="Google Search API Key"
-                        type="password"
-                        value={settings.google_search_api_key || ''}
-                        onChange={(e) => updateSetting('google_search_api_key', e.target.value)}
-                        placeholder="AIza..."
-                        helperText="Obtida no Google Cloud Console"
-                    />
-                    <TextField
-                        fullWidth
-                        label="Google Search Engine ID (CX)"
-                        value={settings.google_search_cx || ''}
-                        onChange={(e) => updateSetting('google_search_cx', e.target.value)}
-                        placeholder="0123456789..."
-                        helperText="Identificador do seu mecanismo de busca customizado"
-                    />
-                </Box>
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
                     <Button variant="contained" onClick={saveSettings}>Salvar Todas as Configurações</Button>
                 </Box>

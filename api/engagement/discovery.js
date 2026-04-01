@@ -20,6 +20,8 @@ const handler = async (req, res) => {
         return await handleProcessSession(req, res, userId);
       case 'processMySessions':
         return await handleProcessMySessions(req, res, userId);
+      case 'exportSessionJSON':
+        return await handleExportSessionJSON(req, res, userId);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -176,6 +178,43 @@ async function handleProcessSession(req, res, userId) {
     console.error(`Error processing session ${sessionId}:`, err);
     res.status(500).json({ error: 'Failed to process session', details: err.message });
   }
+}
+
+async function handleExportSessionJSON(req, res, userId) {
+  const { sessionId } = req.body;
+
+  const result = await query(
+    `SELECT id, extracted_hashtags FROM linkedin_discovery_sessions WHERE id = $1 AND user_id = $2`,
+    [sessionId, userId]
+  );
+
+  const session = result.rows[0];
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  const hashtagsData = typeof session.extracted_hashtags === 'string'
+    ? JSON.parse(session.extracted_hashtags)
+    : session.extracted_hashtags;
+
+  if (!hashtagsData) {
+    return res.status(400).json({ error: 'Nenhum termo de busca gerado ainda para esta sessão.' });
+  }
+
+  // Collect all terms from different fields
+  const allTerms = [
+    ...(hashtagsData.onda_1_especifica || []),
+    ...(hashtagsData.onda_2_ampla || []),
+    ...(hashtagsData.hashtags_en || [])
+  ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+
+  // Map to Google search queries
+  const searchQueries = allTerms.map(term => `(site:linkedin.com/posts OR site:linkedin.com/pulse) ${term}`);
+
+  res.status(200).json({
+    sessionId: session.id,
+    searchQueries: searchQueries
+  });
 }
 
 export default withAuth(handler);

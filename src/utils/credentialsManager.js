@@ -14,8 +14,6 @@ const CREDENTIAL_KEYS = {
   TIMEZONE: 'user_timezone',
   GEMINI_MODEL: 'gemini_model',
   GEMINI_IMAGE_MODEL: 'gemini_image_model',
-  GOOGLE_SEARCH_API_KEY: 'google_search_api_key',
-  GOOGLE_SEARCH_CX: 'google_search_cx',
 };
 
 /**
@@ -54,12 +52,6 @@ export const gatherCredentials = () => {
 
   const geminiImageModel = getGeminiImageModel();
   if (geminiImageModel) credentials[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL] = geminiImageModel;
-
-  const googleSearchApiKey = localStorage.getItem(CREDENTIAL_KEYS.GOOGLE_SEARCH_API_KEY);
-  if (googleSearchApiKey) credentials[CREDENTIAL_KEYS.GOOGLE_SEARCH_API_KEY] = googleSearchApiKey;
-
-  const googleSearchCx = localStorage.getItem(CREDENTIAL_KEYS.GOOGLE_SEARCH_CX);
-  if (googleSearchCx) credentials[CREDENTIAL_KEYS.GOOGLE_SEARCH_CX] = googleSearchCx;
 
   return credentials;
 };
@@ -105,12 +97,6 @@ export const applySettings = (settings) => {
   }
   if (settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]) {
     saveGeminiImageModel(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]);
-  }
-  if (settings[CREDENTIAL_KEYS.GOOGLE_SEARCH_API_KEY]) {
-    localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_SEARCH_API_KEY, settings[CREDENTIAL_KEYS.GOOGLE_SEARCH_API_KEY]);
-  }
-  if (settings[CREDENTIAL_KEYS.GOOGLE_SEARCH_CX]) {
-    localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_SEARCH_CX, settings[CREDENTIAL_KEYS.GOOGLE_SEARCH_CX]);
   }
 };
 
