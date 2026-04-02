@@ -170,6 +170,12 @@ export async function enrichAndScoreSession(sessionId) {
       [sessionId]
     );
 
+    if (pendingScoring.rows.length === 0) {
+        const anyPosts = await query('SELECT id FROM linkedin_discovered_posts WHERE session_id = $1', [sessionId]);
+        await updateSessionStatus(sessionId, anyPosts.rows.length > 0 ? 'ready' : 'completed');
+        return;
+    }
+
     if (pendingScoring.rows.length > 0) {
       const geminiConfig = await getGeminiConfig(userId);
 
