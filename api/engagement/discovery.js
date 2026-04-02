@@ -186,23 +186,51 @@ async function handleProcessSession(req, res, userId) {
 }
 
 async function handleImportExternalResults(req, res, userId) {
-  const { sessionId, resultados } = req.body;
+  const { sessionId, resultados, isGlobal } = req.body;
+
+  // Se for importação via botão na sessão, valida se o ID do arquivo bate com o da sessão
+  if (!isGlobal && req.body.fileSessionId && String(req.body.fileSessionId) !== String(sessionId)) {
+    return res.status(400).json({
+      error: `Incompatibilidade de Sessão: O arquivo é da sessão ${req.body.fileSessionId}, mas você está importando na sessão ${sessionId}.`
+    });
+  }
+
+  // Determina qual sessionId usar (o da rota/botão ou o do arquivo se for global)
+  const targetSessionId = isGlobal ? req.body.fileSessionId : sessionId;
+
+  if (!targetSessionId) {
+    return res.status(400).json({ error: 'ID da sessão não identificado no arquivo.' });
+  }
 
   // 1. Verify session ownership
   const sessionCheck = await query(
     `SELECT id FROM linkedin_discovery_sessions WHERE id = $1 AND user_id = $2`,
-    [sessionId, userId]
+    [targetSessionId, userId]
   );
   if (sessionCheck.rows.length === 0) {
-    return res.status(404).json({ error: 'Session not found or unauthorized' });
+    return res.status(404).json({ error: `Sessão ${targetSessionId} não encontrada ou não pertence ao seu usuário.` });
   }
 
-  // 2. Extract unique links
-  const allLinks = resultados?.flatMap(r => r.links || []) || [];
-  const uniqueLinks = [...new Set(allLinks)];
+  // 2. Extract links and queries
+  // Agrupamos por link para saber qual query gerou aquele resultado (se houver múltiplos, pegamos o primeiro)
+  const linkToQuery = {};
+  if (resultados && Array.isArray(resultados)) {
+    for (const res of resultados) {
+      if (res.links && Array.isArray(res.links)) {
+        for (const link of res.links) {
+          if (!linkToQuery[link]) linkToQuery[link] = res.query;
+        }
+      }
+    }
+  }
 
-  // 3. Process each link - Fast insert as "stubs"
-  const importedCount = { count: 0 };
+  const uniqueLinks = Object.keys(linkToQuery);
+  if (uniqueLinks.length === 0) {
+    return res.status(400).json({ error: 'Nenhum link encontrado no arquivo.' });
+  }
+
+  // 3. Process each link
+  const importedCount = { new: 0, updated: 0 };
   for (const link of uniqueLinks) {
     try {
       const urnInfo = extractLinkedinUrn(link);
@@ -212,37 +240,52 @@ async function handleImportExternalResults(req, res, userId) {
 
       // Check if already exists for this session
       const existing = await query(
-        'SELECT id FROM linkedin_discovered_posts WHERE session_id = $1 AND (linkedin_post_id = $2 OR post_url = $3)',
-        [sessionId, postUrn, link]
+        'SELECT id, post_content FROM linkedin_discovered_posts WHERE session_id = $1 AND (linkedin_post_id = $2 OR post_url = $3)',
+        [targetSessionId, postUrn, link]
       );
-      if (existing.rows.length > 0) continue;
+
+      if (existing.rows.length > 0) {
+        // Se já existe, apenas marcamos para re-enriquecimento se não tiver conteúdo
+        // Ou poderíamos atualizar metadados se o arquivo trouxesse algo novo futuramente.
+        // Por enquanto, se existir, apenas garantimos que o status da sessão reflita a necessidade de análise se novos foram adicionados.
+        importedCount.updated++;
+        continue;
+      }
 
       // Save "stub" to database - worker will enrich it later
+      // Armazenamos a query original se quisermos usar na justificativa da IA depois
       await query(
         `INSERT INTO linkedin_discovered_posts
          (session_id, linkedin_post_id, post_url, user_decision)
          VALUES ($1, $2, $3, 'pending')`,
-        [sessionId, postUrn, link]
+        [targetSessionId, postUrn, link]
       );
-      importedCount.count++;
+      importedCount.new++;
     } catch (err) {
       console.error(`Error stubbing link ${link}:`, err);
     }
   }
 
   // 4. Trigger enrichment and scoring in background
-  if (importedCount.count > 0) {
-    enrichAndScoreSession(sessionId).catch(err =>
-      console.error(`Error triggering enrichment for session ${sessionId}:`, err)
+  if (importedCount.new > 0 || importedCount.updated > 0) {
+    enrichAndScoreSession(targetSessionId).catch(err =>
+      console.error(`Error triggering enrichment for session ${targetSessionId}:`, err)
     );
+
+    const msg = importedCount.new > 0
+      ? `Importados ${importedCount.new} novos posts. Iniciando análise por IA...`
+      : `Posts sincronizados. Atualizando análise...`;
+
     res.status(200).json({
-      message: `Importados ${importedCount.count} novos posts. Iniciando enriquecimento e análise por IA...`,
-      count: importedCount.count
+      message: msg,
+      newCount: importedCount.new,
+      updatedCount: importedCount.updated
     });
   } else {
     res.status(200).json({
       message: 'Nenhum novo post importado (todos já existiam ou eram inválidos).',
-      count: 0
+      newCount: 0,
+      updatedCount: 0
     });
   }
 }

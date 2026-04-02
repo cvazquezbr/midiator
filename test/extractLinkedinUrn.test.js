@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { extractLinkedinUrn } from '../api/utils.js';
 
 describe('extractLinkedinUrn', () => {
-  it('should extract activity URN from /posts/ format', () => {
+  it('should extract activity URN and convert to ugcPost from /posts/ format', () => {
     const url = 'https://www.linkedin.com/posts/fulano_titulo-activity-7234567890';
-    expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:activity:7234567890', commentable: true });
+    expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:ugcPost:7234567890', commentable: true });
   });
 
-  it('should extract activity URN from /feed/update/urn:li:activity: format', () => {
+  it('should extract activity URN and convert to ugcPost from /feed/update/urn:li:activity: format', () => {
     const url = 'https://www.linkedin.com/feed/update/urn:li:activity:7234567890';
-    expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:activity:7234567890', commentable: true });
+    expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:ugcPost:7234567890', commentable: true });
   });
 
   it('should extract ugcPost URN from /feed/update/urn:li:ugcPost: format', () => {
@@ -17,7 +17,12 @@ describe('extractLinkedinUrn', () => {
     expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:ugcPost:7234567890', commentable: true });
   });
 
-  it('should identify Pulse articles as not commentable', () => {
+  it('should identify Pulse articles as commentable if ID is present', () => {
+    const url = 'https://www.linkedin.com/pulse/titulo-do-artigo-fulano-723456789012345';
+    expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:ugcPost:723456789012345', commentable: true });
+  });
+
+  it('should return original URL for Pulse without numeric ID', () => {
     const url = 'https://www.linkedin.com/pulse/titulo-do-artigo-fulano';
     expect(extractLinkedinUrn(url)).toEqual({ urn: url, commentable: false });
   });
@@ -27,8 +32,13 @@ describe('extractLinkedinUrn', () => {
     expect(extractLinkedinUrn(url)).toBeNull();
   });
 
-  it('should handle activity ID without full URL', () => {
+  it('should handle activity ID and convert to ugcPost', () => {
      const url = 'activity-7234567890';
-     expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:activity:7234567890', commentable: true });
+     expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:ugcPost:7234567890', commentable: true });
+  });
+
+  it('should handle search result URLs with HTML entities', () => {
+     const url = 'https://pt.linkedin.com/posts/xyz-activity-7443296059130515456-Uiii&amp;sa=U';
+     expect(extractLinkedinUrn(url)).toEqual({ urn: 'urn:li:ugcPost:7443296059130515456', commentable: true });
   });
 });

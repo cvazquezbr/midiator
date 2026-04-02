@@ -263,7 +263,7 @@ const LinkedInEngagement = () => {
     }
   };
 
-  const handleImportJSON = async (e, sessionId) => {
+  const handleImportJSON = async (e, sessionId = null) => {
     if (e) e.stopPropagation();
 
     const input = document.createElement('input');
@@ -278,7 +278,10 @@ const LinkedInEngagement = () => {
       reader.onload = async (e) => {
         try {
           const content = JSON.parse(e.target.result);
-          toast.loading('Importando resultados e iniciando análise...', { id: 'import' });
+          const isGlobal = sessionId === null;
+          const fileSessionId = content.sessionId;
+
+          toast.loading('Importando resultados...', { id: 'import' });
 
           const response = await fetch('/api/engagement/discovery', {
             method: 'POST',
@@ -286,6 +289,8 @@ const LinkedInEngagement = () => {
             body: JSON.stringify({
               action: 'importExternalResults',
               sessionId,
+              fileSessionId,
+              isGlobal,
               resultados: content.resultados
             })
           });
@@ -294,15 +299,19 @@ const LinkedInEngagement = () => {
           if (response.ok) {
             toast.success(data.message || 'Importação concluída.', { id: 'import' });
             await fetchSessions();
-            if (selectedSession?.id === sessionId) {
-              handleSessionClick({ ...selectedSession });
+
+            const targetId = isGlobal ? fileSessionId : sessionId;
+            if (selectedSession?.id === targetId || isGlobal) {
+               // Se global ou se for a selecionada, atualiza detalhes
+               const updatedSession = sessions.find(s => s.id === targetId);
+               if (updatedSession) handleSessionClick(updatedSession);
             }
           } else {
             toast.error(data.error || 'Falha ao importar resultados.', { id: 'import' });
           }
         } catch (error) {
           console.error('Error importing JSON:', error);
-          toast.error('Arquivo JSON inválido.', { id: 'import' });
+          toast.error('Erro ao processar o arquivo. Verifique se é um JSON válido.', { id: 'import' });
         }
       };
       reader.readAsText(file);
@@ -358,17 +367,30 @@ const LinkedInEngagement = () => {
               <Grid item xs={12} md={4}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle1">Sessões de Descoberta</Typography>
-                  <Tooltip title="Executar job global de descoberta">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={isGlobalProcessing ? <CircularProgress size={16} /> : <PlayCircleFilled />}
-                      onClick={handleRunGlobalDiscovery}
-                      disabled={isGlobalProcessing || loading}
-                    >
-                      Processar Todas
-                    </Button>
-                  </Tooltip>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="Importação Global">
+                      <IconButton
+                        size="small"
+                        color="success"
+                        onClick={(e) => handleImportJSON(e, null)}
+                        disabled={loading}
+                        sx={{ border: '1px solid', borderColor: 'success.light' }}
+                      >
+                        <UploadFile fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Executar job global de descoberta">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={isGlobalProcessing ? <CircularProgress size={16} /> : <PlayCircleFilled />}
+                        onClick={handleRunGlobalDiscovery}
+                        disabled={isGlobalProcessing || loading}
+                      >
+                        Processar Todas
+                      </Button>
+                    </Tooltip>
+                  </Box>
                 </Box>
                 {loading && sessions.length === 0 ? (
                   <CircularProgress />
