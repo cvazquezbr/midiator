@@ -1,4 +1,5 @@
 import { query } from '../db.js';
+import { getPostDetails, getAuthorDetails } from '../linkedin-proxy.js';
 
 async function getGeminiConfig(userId) {
   const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
@@ -94,6 +95,143 @@ export async function processDiscoverySession(sessionId) {
 
 async function updateSessionStatus(sessionId, status) {
   await query('UPDATE linkedin_discovery_sessions SET status = $1, updated_at = NOW() WHERE id = $2', [status, sessionId]);
+}
+
+export async function enrichAndScoreSession(sessionId) {
+  try {
+    const sessionResult = await query('SELECT * FROM linkedin_discovery_sessions WHERE id = $1', [sessionId]);
+    const session = sessionResult.rows[0];
+    if (!session) return;
+
+    const userId = session.user_id;
+    const userResult = await query('SELECT linkedin_access_token FROM users WHERE id = $1', [userId]);
+    const accessToken = userResult.rows[0]?.linkedin_access_token;
+
+    if (!accessToken) {
+      console.error(`LinkedIn Access Token not found for user ${userId}`);
+      await updateSessionStatus(sessionId, 'error');
+      return;
+    }
+
+    await updateSessionStatus(sessionId, 'scoring');
+
+    // 1. Fetch posts needing enrichment (missing content)
+    const pendingEnrichment = await query(
+      'SELECT id, linkedin_post_id FROM linkedin_discovered_posts WHERE session_id = $1 AND post_content IS NULL',
+      [sessionId]
+    );
+
+    for (const post of pendingEnrichment.rows) {
+      try {
+        console.log(`[Worker] Enriching post ${post.linkedin_post_id}...`);
+        const postData = await getPostDetails(accessToken, post.linkedin_post_id);
+        const authorUrn = postData.author;
+
+        let authorName = 'Unknown';
+        let authorTitle = '';
+
+        try {
+          const authorData = await getAuthorDetails(accessToken, authorUrn);
+          if (authorUrn.includes(':person:')) {
+            authorName = `${authorData.firstName?.localized?.pt_BR || authorData.firstName?.localized?.en_US || ''} ${authorData.lastName?.localized?.pt_BR || authorData.lastName?.localized?.en_US || ''}`.trim();
+            authorTitle = authorData.headline?.localized?.pt_BR || authorData.headline?.localized?.en_US || '';
+          } else if (authorUrn.includes(':organization:')) {
+            authorName = authorData.localizedName || 'Organization';
+          }
+        } catch (authErr) {
+          console.warn(`Could not fetch author details for ${authorUrn}:`, authErr.message);
+        }
+
+        await query(
+          `UPDATE linkedin_discovered_posts SET
+            post_content = $1,
+            post_author_name = $2,
+            post_author_title = $3,
+            post_author_urn = $4,
+            post_published_at = $5
+           WHERE id = $6`,
+          [
+            postData.commentary || '',
+            authorName,
+            authorTitle,
+            authorUrn,
+            postData.publishedAt ? new Date(postData.publishedAt) : new Date(),
+            post.id
+          ]
+        );
+      } catch (err) {
+        console.error(`Error enriching post ${post.linkedin_post_id}:`, err);
+      }
+    }
+
+    // 2. Score posts that have content but no score
+    const pendingScoring = await query(
+      'SELECT id, post_content FROM linkedin_discovered_posts WHERE session_id = $1 AND post_content IS NOT NULL AND relevance_score IS NULL',
+      [sessionId]
+    );
+
+    if (pendingScoring.rows.length > 0) {
+      const geminiConfig = await getGeminiConfig(userId);
+
+      for (const post of pendingScoring.rows) {
+        console.log(`[Worker] Scoring post ${post.id}...`);
+        const scoringPrompt = `
+          Você é um especialista em análise de conteúdo e social selling no LinkedIn.
+          Seu objetivo é avaliar a relevância de um post descoberto em relação ao conteúdo original do usuário.
+
+          Conteúdo Original do Usuário:
+          "${session.source_post_content}"
+
+          Post Descoberto:
+          "${post.post_content}"
+
+          Analise o post descoberto e retorne um JSON com:
+          {
+            "relevance_score": 0-100,      // O quanto o tema do post está alinhado ao conteúdo original
+            "opportunity_score": 0-100,    // Potencial para gerar uma conversa produtiva ou conversão
+            "relation_type": "complementar" | "debate" | "caso_de_uso" | "tendencia",
+            "justification": "Breve explicação do porquê deste score"
+          }
+
+          Critérios:
+          - "complementar": O post expande ou valida o que o usuário escreveu.
+          - "debate": O post traz uma visão que pode ser enriquecida com uma perspectiva diferente (mas construtiva).
+          - "caso_de_uso": O post apresenta um problema real que o conteúdo do usuário ajuda a resolver.
+          - "tendencia": O post fala de um movimento de mercado relacionado.
+        `;
+
+        try {
+          const scoreData = await callGemini(geminiConfig, scoringPrompt);
+          const finalScore = Math.round((scoreData.relevance_score * 0.7) + (scoreData.opportunity_score * 0.3));
+
+          await query(
+            `UPDATE linkedin_discovered_posts SET
+              relevance_score = $1,
+              opportunity_score = $2,
+              final_score = $3,
+              relation_type = $4,
+              score_justification = $5
+             WHERE id = $6`,
+            [
+              scoreData.relevance_score,
+              scoreData.opportunity_score,
+              finalScore,
+              scoreData.relation_type,
+              scoreData.justification,
+              post.id
+            ]
+          );
+        } catch (err) {
+          console.error(`Error scoring post ${post.id}:`, err);
+        }
+      }
+    }
+
+    await updateSessionStatus(sessionId, 'ready');
+  } catch (error) {
+    console.error('Enrich/Score Error:', error);
+    await updateSessionStatus(sessionId, 'error');
+  }
 }
 
 export async function generateCommentForPost(postId, userId) {
