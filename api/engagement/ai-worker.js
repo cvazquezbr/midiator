@@ -1,5 +1,6 @@
 import { query } from '../db.js';
 import { getPostDetails, getAuthorDetails } from '../linkedin-proxy.js';
+import { fetchWithRetry } from '../utils.js';
 
 async function getGeminiConfig(userId) {
   const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
@@ -14,7 +15,7 @@ async function callGemini(config, prompt) {
   const model = config.model.replace('models/', '');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -296,7 +297,7 @@ export async function generateCommentForPost(postId, userId) {
     // We don't use response_mime_type: "application/json" here because we want plain text
     const model = geminiConfig.model.replace('models/', '');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiConfig.apiKey}`;
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
