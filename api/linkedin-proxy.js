@@ -1,8 +1,8 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
+import { delay, fetchWithRetry } from './utils.js';
 
 const LINKEDIN_API_VERSION = '202601';
-const delay = ms => new Promise(res => setTimeout(res, ms));
 
 // A general-purpose, action-based proxy for LinkedIn API calls.
 // This is more secure than an endpoint-based proxy as it doesn't allow calling arbitrary URLs.
@@ -522,29 +522,6 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
-async function fetchWithRetry(url, options, retries = 5, initialBackoff = 3000) {
-    let backoff = initialBackoff;
-    for (let i = 0; i < retries; i++) {
-        const response = await fetch(url, options);
-        // Retry on rate limit or server errors
-        if (response.status === 429 || response.status >= 500) {
-            const isRateLimit = response.status === 429;
-            const retryAfterHeader = response.headers.get('Retry-After');
-            // Use Retry-After header if present (for 429), otherwise use exponential backoff
-            const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
-            const jitter = Math.random() * 1000;
-
-            const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
-            console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter) / 1000)}s... (Attempt ${i + 1}/${retries})`);
-            await delay(retryAfter + jitter);
-
-            backoff *= 2;
-            continue;
-        }
-        return response;
-    }
-    throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
-}
 
 async function handleGetShareStatistics(request, response) {
     const { accessToken, payload } = request.body;
@@ -634,7 +611,7 @@ export async function handleSearchPostsByHashtag(request, response) {
 
 export async function getPostDetails(accessToken, postUrn) {
     const postUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(postUrn)}?fields=id,author,commentary,publishedAt`;
-    const linkedinResponse = await fetch(postUrl, {
+    const linkedinResponse = await fetchWithRetry(postUrl, {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
             'X-Restli-Protocol-Version': '2.0.0',
@@ -661,7 +638,7 @@ export async function getAuthorDetails(accessToken, authorUrn) {
         throw new Error('Unsupported author URN type.');
     }
 
-    const linkedinResponse = await fetch(profileUrl, {
+    const linkedinResponse = await fetchWithRetry(profileUrl, {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
             'X-Restli-Protocol-Version': '2.0.0',
