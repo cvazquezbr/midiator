@@ -627,11 +627,12 @@ export async function getPostDetails(accessToken, postUrn) {
     let result = await tryFetch(postUrn);
     if (result.ok) return result.data;
 
-    // If 404, try fallbacks for different URN types
-    if (result.status === 404 && postUrn.includes(':')) {
+    // If 404 or 400 (invalid URN type), try fallbacks for different URN types
+    if ((result.status === 404 || result.status === 400) && postUrn.includes(':')) {
         const parts = postUrn.split(':');
         const id = parts.pop();
-        const prefixes = ['share', 'post', 'ugcPost'];
+        // Modern API usually expects ugcPost, but legacy IDs might be share or post
+        const prefixes = ['ugcPost', 'share', 'post', 'activity'];
 
         for (const prefix of prefixes) {
             const fallbackUrn = `urn:li:${prefix}:${id}`;
