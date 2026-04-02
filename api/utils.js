@@ -59,7 +59,18 @@ export function extractLinkedinUrn(url) {
   // Decodificar entidades HTML como &amp; que aparecem em resultados de busca do Google
   const decodedUrl = url.replace(/&amp;/g, '&');
 
-  // 1. Check for Pulse
+  // 1. Expressão regular unificada baseada no Guia Técnico
+  // Captura IDs de activity, ugcPost, share ou post
+  const unifiedRegex = /(?:activity|ugcPost|share|post)-(\d{15,})|urn:li:(?:activity|ugcPost|share|post):(\d{15,})/;
+  const match = decodedUrl.match(unifiedRegex);
+
+  if (match) {
+    const id = match[1] || match[2];
+    // Sempre normaliza para ugcPost pois é o que a Posts API espera
+    return { urn: `urn:li:ugcPost:${id}`, commentable: true };
+  }
+
+  // 2. Fallback para Pulse
   if (decodedUrl.includes('/pulse/')) {
     // Tenta extrair o ID numérico que às vezes aparece no final de URLs de Pulse
     const pulseMatch = decodedUrl.match(/pulse\/.*-([0-9]+)/);
@@ -69,21 +80,7 @@ export function extractLinkedinUrn(url) {
     return { urn: decodedUrl, commentable: false };
   }
 
-  // 2. Check for explicit URN in URL (feed/update/urn:li:...)
-  // Aceita activity, ugcPost, share ou post e converte para ugcPost por padrão
-  const urnMatch = decodedUrl.match(/urn:li:(activity|ugcPost|share|post):([0-9]+)/);
-  if (urnMatch) {
-    return { urn: `urn:li:ugcPost:${urnMatch[2]}`, commentable: true };
-  }
-
-  // 3. Check for activity ID in /posts/ format (e.g. activity-7234567890)
-  // Comum em URLs de compartilhamento direto
-  const activityMatch = decodedUrl.match(/activity-([0-9]+)/);
-  if (activityMatch) {
-    return { urn: `urn:li:ugcPost:${activityMatch[1]}`, commentable: true };
-  }
-
-  // 4. Fallback para IDs numéricos longos que parecem URNs no final da URL antes de parâmetros
+  // 3. Fallback para IDs numéricos longos que parecem URNs no final da URL antes de parâmetros
   const genericIdMatch = decodedUrl.match(/-([0-9]{15,})/);
   if (genericIdMatch) {
      return { urn: `urn:li:ugcPost:${genericIdMatch[1]}`, commentable: true };
