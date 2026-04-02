@@ -632,6 +632,80 @@ export async function handleSearchPostsByHashtag(request, response) {
     }
 }
 
+export async function getPostDetails(accessToken, postUrn) {
+    const postUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(postUrn)}?fields=id,author,commentary,publishedAt,socialDetail`;
+    const linkedinResponse = await fetch(postUrl, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'X-Restli-Protocol-Version': '2.0.0',
+            'LinkedIn-Version': LINKEDIN_API_VERSION
+        },
+    });
+
+    const data = await linkedinResponse.json();
+    if (!linkedinResponse.ok) {
+        throw new Error(`LinkedIn Get Post Error: ${linkedinResponse.status} - ${JSON.stringify(data)}`);
+    }
+    return data;
+}
+
+export async function getAuthorDetails(accessToken, authorUrn) {
+    let profileUrl;
+    if (authorUrn.includes(':person:')) {
+        const personId = authorUrn.split(':').pop();
+        profileUrl = `https://api.linkedin.com/v2/people/(id:${personId})?projection=(id,firstName,lastName,headline,profilePicture(displayImage~:playableStreams))`;
+    } else if (authorUrn.includes(':organization:')) {
+        const orgId = authorUrn.split(':').pop();
+        profileUrl = `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`;
+    } else {
+        throw new Error('Unsupported author URN type.');
+    }
+
+    const linkedinResponse = await fetch(profileUrl, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'X-Restli-Protocol-Version': '2.0.0',
+            'LinkedIn-Version': LINKEDIN_API_VERSION
+        },
+    });
+
+    const data = await linkedinResponse.json();
+    if (!linkedinResponse.ok) {
+        throw new Error(`LinkedIn Get Author Profile Error: ${linkedinResponse.status} - ${JSON.stringify(data)}`);
+    }
+    return data;
+}
+
+export async function handleGetPost(request, response) {
+    const { accessToken, postUrn } = request.body;
+    if (!accessToken || !postUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or postUrn.' });
+    }
+
+    try {
+        const data = await getPostDetails(accessToken, postUrn);
+        return response.status(200).json(data);
+    } catch (error) {
+        console.error('Error during get post:', error);
+        return response.status(500).json({ error: error.message });
+    }
+}
+
+export async function handleGetAuthorProfile(request, response) {
+    const { accessToken, authorUrn } = request.body;
+    if (!accessToken || !authorUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or authorUrn.' });
+    }
+
+    try {
+        const data = await getAuthorDetails(accessToken, authorUrn);
+        return response.status(200).json(data);
+    } catch (error) {
+        console.error('Error during get author profile:', error);
+        return response.status(500).json({ error: error.message });
+    }
+}
+
 export async function handleCreateComment(request, response) {
     const { accessToken, postUrn, actorUrn, text } = request.body;
     if (!accessToken || !postUrn || !actorUrn || !text) {
@@ -779,6 +853,10 @@ const protectedHandler = async (request, response) => {
             return handleGetMemberPostStatistics(request, response);
         case 'searchPostsByHashtag':
             return handleSearchPostsByHashtag(request, response);
+        case 'getPost':
+            return handleGetPost(request, response);
+        case 'getAuthorProfile':
+            return handleGetAuthorProfile(request, response);
         case 'createComment':
             return handleCreateComment(request, response);
         case 'uploadImage':

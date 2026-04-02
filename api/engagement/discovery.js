@@ -1,6 +1,7 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-import { processDiscoverySession, generateCommentForPost } from './ai-worker.js';
+import { processDiscoverySession, generateCommentForPost, enrichAndScoreSession } from './ai-worker.js';
+import { extractLinkedinUrn } from '../utils.js';
 
 const handler = async (req, res) => {
   const { action } = req.body;
@@ -22,6 +23,8 @@ const handler = async (req, res) => {
         return await handleProcessMySessions(req, res, userId);
       case 'exportSessionJSON':
         return await handleExportSessionJSON(req, res, userId);
+      case 'importExternalResults':
+        return await handleImportExternalResults(req, res, userId);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -177,6 +180,68 @@ async function handleProcessSession(req, res, userId) {
   } catch (err) {
     console.error(`Error processing session ${sessionId}:`, err);
     res.status(500).json({ error: 'Failed to process session', details: err.message });
+  }
+}
+
+async function handleImportExternalResults(req, res, userId) {
+  const { sessionId, resultados } = req.body;
+
+  // 1. Verify session ownership
+  const sessionCheck = await query(
+    `SELECT id FROM linkedin_discovery_sessions WHERE id = $1 AND user_id = $2`,
+    [sessionId, userId]
+  );
+  if (sessionCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Session not found or unauthorized' });
+  }
+
+  // 2. Extract unique links
+  const allLinks = resultados?.flatMap(r => r.links || []) || [];
+  const uniqueLinks = [...new Set(allLinks)];
+
+  // 3. Process each link - Fast insert as "stubs"
+  const importedCount = { count: 0 };
+  for (const link of uniqueLinks) {
+    try {
+      const urnInfo = extractLinkedinUrn(link);
+      if (!urnInfo || !urnInfo.commentable) continue;
+
+      const postUrn = urnInfo.urn;
+
+      // Check if already exists for this session
+      const existing = await query(
+        'SELECT id FROM linkedin_discovered_posts WHERE session_id = $1 AND (linkedin_post_id = $2 OR post_url = $3)',
+        [sessionId, postUrn, link]
+      );
+      if (existing.rows.length > 0) continue;
+
+      // Save "stub" to database - worker will enrich it later
+      await query(
+        `INSERT INTO linkedin_discovered_posts
+         (session_id, linkedin_post_id, post_url, user_decision)
+         VALUES ($1, $2, $3, 'pending')`,
+        [sessionId, postUrn, link]
+      );
+      importedCount.count++;
+    } catch (err) {
+      console.error(`Error stubbing link ${link}:`, err);
+    }
+  }
+
+  // 4. Trigger enrichment and scoring in background
+  if (importedCount.count > 0) {
+    enrichAndScoreSession(sessionId).catch(err =>
+      console.error(`Error triggering enrichment for session ${sessionId}:`, err)
+    );
+    res.status(200).json({
+      message: `Importados ${importedCount.count} novos posts. Iniciando enriquecimento e análise por IA...`,
+      count: importedCount.count
+    });
+  } else {
+    res.status(200).json({
+      message: 'Nenhum novo post importado (todos já existiam ou eram inválidos).',
+      count: 0
+    });
   }
 }
 

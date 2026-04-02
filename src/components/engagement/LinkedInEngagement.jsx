@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import {
   ThumbUp, ThumbDown, Comment, OpenInNew, CheckCircle,
-  Refresh, AutoAwesome, Send, PlayCircleFilled, Download
+  Refresh, AutoAwesome, Send, PlayCircleFilled, Download, UploadFile
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 
@@ -67,10 +67,37 @@ const LinkedInEngagement = () => {
       });
       const data = await response.json();
       setPosts(data.posts);
+
+      // If session is scoring, start polling for completion
+      if (session.status === 'scoring') {
+        setTimeout(() => pollSessionStatus(session.id), 5000);
+      }
     } catch (error) {
       console.error('Error fetching session details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pollSessionStatus = async (sessionId) => {
+    try {
+      const response = await fetch('/api/engagement/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'getSessions' })
+      });
+      const sessionsData = await response.json();
+      setSessions(sessionsData);
+
+      const currentSession = sessionsData.find(s => s.id === sessionId);
+      if (currentSession && currentSession.status === 'scoring') {
+        setTimeout(() => pollSessionStatus(sessionId), 5000);
+      } else if (currentSession && selectedSession?.id === sessionId) {
+        // Status changed, refresh details
+        handleSessionClick(currentSession);
+      }
+    } catch (err) {
+      console.error('Polling error:', err);
     }
   };
 
@@ -215,6 +242,54 @@ const LinkedInEngagement = () => {
     }
   };
 
+  const handleImportJSON = async (e, sessionId) => {
+    if (e) e.stopPropagation();
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = JSON.parse(e.target.result);
+          toast.loading('Importando resultados e iniciando análise...', { id: 'import' });
+
+          const response = await fetch('/api/engagement/discovery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'importExternalResults',
+              sessionId,
+              resultados: content.resultados
+            })
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            toast.success(data.message || 'Importação concluída.', { id: 'import' });
+            await fetchSessions();
+            if (selectedSession?.id === sessionId) {
+              handleSessionClick({ ...selectedSession });
+            }
+          } else {
+            toast.error(data.error || 'Falha ao importar resultados.', { id: 'import' });
+          }
+        } catch (error) {
+          console.error('Error importing JSON:', error);
+          toast.error('Arquivo JSON inválido.', { id: 'import' });
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    input.click();
+  };
+
   const handleExportJSON = async (e, sessionId) => {
     if (e) e.stopPropagation();
     try {
@@ -322,15 +397,26 @@ const LinkedInEngagement = () => {
                             </Tooltip>
                           )}
                           {session.status === 'awaiting_external_search' && (
-                            <Tooltip title="Exportar JSON para busca">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => handleExportJSON(e, session.id)}
-                                color="secondary"
-                              >
-                                <Download />
-                              </IconButton>
-                            </Tooltip>
+                            <>
+                              <Tooltip title="Exportar JSON para busca">
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => handleExportJSON(e, session.id)}
+                                  color="secondary"
+                                >
+                                  <Download />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Importar resultados da busca">
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => handleImportJSON(e, session.id)}
+                                  color="success"
+                                >
+                                  <UploadFile />
+                                </IconButton>
+                              </Tooltip>
+                            </>
                           )}
                           <Chip size="small" label={getStatusLabel(session.status)} color="info" variant="outlined" />
                         </Box>
