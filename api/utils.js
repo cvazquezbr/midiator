@@ -60,15 +60,21 @@ export function extractLinkedinUrn(url) {
   }
 
   // 2. Check for explicit URN in URL (feed/update/urn:li:...)
+  // NOTE: Convert 'activity' URNs to 'ugcPost' for compatibility with /posts/ API
   const urnMatch = url.match(/urn:li:(activity|ugcPost):([0-9]+)/);
   if (urnMatch) {
+    if (urnMatch[1] === 'activity') {
+        return { urn: `urn:li:ugcPost:${urnMatch[2]}`, commentable: true };
+    }
     return { urn: urnMatch[0], commentable: true };
   }
 
   // 3. Check for activity ID in /posts/ format (e.g. activity-7234567890)
+  // NOTE: Modern LinkedIn API (v202601) requires 'ugcPost' for the /posts/ endpoint,
+  // but 'activity' is common in URLs. We convert to ugcPost for API compatibility.
   const activityMatch = url.match(/activity-([0-9]+)/);
   if (activityMatch) {
-    return { urn: `urn:li:activity:${activityMatch[1]}`, commentable: true };
+    return { urn: `urn:li:ugcPost:${activityMatch[1]}`, commentable: true };
   }
 
   return null;
