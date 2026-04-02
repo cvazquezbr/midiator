@@ -610,7 +610,7 @@ export async function handleSearchPostsByHashtag(request, response) {
         return response.status(400).json({ error: 'Missing accessToken or hashtag.' });
     }
 
-    const searchUrl = `https://api.linkedin.com/rest/posts?q=hashtag&hashtag=${encodeURIComponent(hashtag)}&count=${count}&fields=id,author,commentary,publishedAt,socialDetail`;
+    const searchUrl = `https://api.linkedin.com/rest/posts?q=hashtag&hashtag=${encodeURIComponent(hashtag)}&count=${count}&fields=id,author,commentary,publishedAt`;
 
     try {
         const linkedinResponse = await fetch(searchUrl, {
@@ -633,7 +633,7 @@ export async function handleSearchPostsByHashtag(request, response) {
 }
 
 export async function getPostDetails(accessToken, postUrn) {
-    const postUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(postUrn)}?fields=id,author,commentary,publishedAt,socialDetail`;
+    const postUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(postUrn)}?fields=id,author,commentary,publishedAt`;
     const linkedinResponse = await fetch(postUrl, {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
