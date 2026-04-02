@@ -201,8 +201,9 @@ async function handleExportSessionJSON(req, res, userId) {
     return res.status(400).json({ error: 'Nenhum termo de busca gerado ainda para esta sessão.' });
   }
 
-  // Collect all terms from different fields
+  // Collect all terms from different fields (including backward compatibility)
   const allTerms = [
+    ...(hashtagsData.termos_de_busca || []),
     ...(hashtagsData.onda_1_especifica || []),
     ...(hashtagsData.onda_2_ampla || []),
     ...(hashtagsData.hashtags_en || [])
