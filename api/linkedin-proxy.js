@@ -610,20 +610,40 @@ export async function handleSearchPostsByHashtag(request, response) {
 }
 
 export async function getPostDetails(accessToken, postUrn) {
-    const postUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(postUrn)}?fields=id,author,commentary,publishedAt`;
-    const linkedinResponse = await fetchWithRetry(postUrl, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'X-Restli-Protocol-Version': '2.0.0',
-            'LinkedIn-Version': LINKEDIN_API_VERSION
-        },
-    });
+    const tryFetch = async (urn) => {
+        const postUrl = `https://api.linkedin.com/rest/posts/${encodeURIComponent(urn)}?fields=id,author,commentary,publishedAt`;
+        const linkedinResponse = await fetchWithRetry(postUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+        });
+        const data = await linkedinResponse.json();
+        return { ok: linkedinResponse.ok, status: linkedinResponse.status, data };
+    };
 
-    const data = await linkedinResponse.json();
-    if (!linkedinResponse.ok) {
-        throw new Error(`LinkedIn Get Post Error: ${linkedinResponse.status} - ${JSON.stringify(data)}`);
+    // Attempt 1: Provided URN (usually normalized to ugcPost)
+    let result = await tryFetch(postUrn);
+    if (result.ok) return result.data;
+
+    // If 404, try fallbacks for different URN types
+    if (result.status === 404 && postUrn.includes(':')) {
+        const parts = postUrn.split(':');
+        const id = parts.pop();
+        const prefixes = ['share', 'post', 'ugcPost'];
+
+        for (const prefix of prefixes) {
+            const fallbackUrn = `urn:li:${prefix}:${id}`;
+            if (fallbackUrn === postUrn) continue;
+
+            console.log(`[LinkedIn Proxy] Attempting fallback URN: ${fallbackUrn}`);
+            result = await tryFetch(fallbackUrn);
+            if (result.ok) return result.data;
+        }
     }
-    return data;
+
+    throw new Error(`LinkedIn Get Post Error: ${result.status} - ${JSON.stringify(result.data)}`);
 }
 
 export async function getAuthorDetails(accessToken, authorUrn) {
