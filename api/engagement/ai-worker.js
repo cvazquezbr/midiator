@@ -52,17 +52,15 @@ export async function processDiscoverySession(sessionId) {
     // 2. Expand search strategy using Gemini
     console.log(`[Worker] Expanding search strategy for session ${sessionId}...`);
     const extractionPrompt = `
-      Você é um especialista em Growth e Social Selling no LinkedIn.
-      Seu objetivo é expandir o alcance da descoberta de posts relevantes baseando-se no conteúdo abaixo.
+      Você é um especialista em Growth e Social Selling no LinkedIn focado em alta relevância (Quality over Quantity).
+      Seu objetivo é identificar os termos de busca mais precisos para encontrar posts onde seu cliente ideal expressa uma DOR ou NECESSIDADE relacionada ao seu conteúdo.
 
       Post publicado pelo usuário:
       "${session.source_post_content}"
 
-      Gere uma estratégia de busca em JSON organizada em duas ondas (específica e ampla) para garantir volume:
+      Gere uma estratégia de busca em JSON focada em "Long Tail" e "Customer Pain Points":
       {
-        "onda_1_especifica": [],        // hashtags e termos MUITO específicos (ex: "IAparaFinanças", "GestãoContábilDigital")
-        "onda_2_ampla": [],             // hashtags e termos ÂNCORA de alto volume (ex: "IA", "ERP", "Finanças", "Tecnologia")
-        "hashtags_en": [],              // termos em inglês para ampliar o alcance global
+        "termos_de_busca": [],          // Exatamente 3 termos/frases de alta precisão (ex: "dificuldade em escalar vendas B2B", "problemas com retenção de talentos em tech")
         "audiencia": {
           "cargos": [],
           "setores": [],
@@ -70,10 +68,12 @@ export async function processDiscoverySession(sessionId) {
         }
       }
 
-      Instruções importantes:
-      1. A onda 2 deve conter termos curtos e genéricos que garantam que SEMPRE encontraremos algo.
-      2. Inclua variações em inglês na lista "hashtags_en".
-      3. Forneça pelo menos 15-20 termos no total.
+      Instruções cruciais:
+      1. Priorize QUALIDADE e PRECISÃO absoluta em vez de volume.
+      2. Gere EXATAMENTE 3 (três) termos de busca. Nem mais, nem menos.
+      3. Os termos devem ser de "cauda longa" (frases mais específicas) que capturem a dor do cliente.
+      4. Use APENAS o idioma original do post acima. Não traduza para inglês.
+      5. Evite termos genéricos ou hashtags de uma única palavra.
     `;
 
     const extractedData = await callGemini(geminiConfig, extractionPrompt);
