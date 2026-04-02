@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import {
   ThumbUp, ThumbDown, Comment, OpenInNew, CheckCircle,
-  Refresh, AutoAwesome, Send, PlayCircleFilled, Download, UploadFile
+  Refresh, AutoAwesome, Send, PlayCircleFilled, Download, UploadFile, Delete
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 
@@ -111,6 +111,27 @@ const LinkedInEngagement = () => {
       case 'completed': return 'Concluído (Sem posts)';
       case 'error': return 'Erro';
       default: return status;
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm('Tem certeza que deseja excluir este post sugerido?')) return;
+
+    try {
+      const response = await fetch('/api/engagement/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deletePost', postId })
+      });
+      if (response.ok) {
+        toast.success('Post excluído.');
+        handleSessionClick(selectedSession);
+      } else {
+        toast.error('Erro ao excluir post.');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Erro ao conectar com o servidor.');
     }
   };
 
@@ -477,7 +498,17 @@ const LinkedInEngagement = () => {
                                   <strong>IA:</strong> {post.score_justification}
                                 </Typography>
                               )}
-                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <Tooltip title="Excluir post">
+                                    <IconButton
+                                        size="small"
+                                        color="error"
+                                        onClick={() => handleDeletePost(post.id)}
+                                        sx={{ mr: 'auto' }}
+                                    >
+                                        <Delete fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
                                 <Button 
                                   size="small" 
                                   startIcon={<ThumbDown />} 

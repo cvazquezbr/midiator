@@ -25,6 +25,8 @@ const handler = async (req, res) => {
         return await handleExportSessionJSON(req, res, userId);
       case 'importExternalResults':
         return await handleImportExternalResults(req, res, userId);
+      case 'deletePost':
+        return await handleDeletePost(req, res, userId);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -243,6 +245,26 @@ async function handleImportExternalResults(req, res, userId) {
       count: 0
     });
   }
+}
+
+async function handleDeletePost(req, res, userId) {
+  const { postId } = req.body;
+
+  // Verify ownership through session
+  const postCheck = await query(
+    `SELECT p.id FROM linkedin_discovered_posts p
+     JOIN linkedin_discovery_sessions s ON p.session_id = s.id
+     WHERE p.id = $1 AND s.user_id = $2`,
+    [postId, userId]
+  );
+
+  if (postCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Post not found or unauthorized' });
+  }
+
+  await query('DELETE FROM linkedin_discovered_posts WHERE id = $1', [postId]);
+
+  res.status(200).json({ message: 'Post excluído com sucesso.' });
 }
 
 async function handleExportSessionJSON(req, res, userId) {
