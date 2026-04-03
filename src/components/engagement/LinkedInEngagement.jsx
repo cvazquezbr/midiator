@@ -34,9 +34,18 @@ const LinkedInEngagement = () => {
         body: JSON.stringify({ action: 'getSessions' })
       });
       const data = await response.json();
-      setSessions(data);
+      if (Array.isArray(data)) {
+        setSessions(data);
+        return data;
+      } else {
+        console.error('Error fetching sessions: Data is not an array', data);
+        setSessions([]);
+        return [];
+      }
     } catch (error) {
       console.error('Error fetching sessions:', error);
+      setSessions([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -50,9 +59,18 @@ const LinkedInEngagement = () => {
         body: JSON.stringify({ action: 'getComments' })
       });
       const data = await response.json();
-      setComments(data);
+      if (Array.isArray(data)) {
+        setComments(data);
+        return data;
+      } else {
+        console.error('Error fetching comments: Data is not an array', data);
+        setComments([]);
+        return [];
+      }
     } catch (error) {
       console.error('Error fetching comments:', error);
+      setComments([]);
+      return [];
     }
   };
 
@@ -246,10 +264,10 @@ const LinkedInEngagement = () => {
         const updatedSession = await response.json();
         toast.success('Sessão processada com sucesso!');
         // Refresh sessions to see updated status
-        await fetchSessions();
+        const freshSessions = await fetchSessions();
         // If it's the currently selected session, refresh its details too
         if (selectedSession?.id === sessionId) {
-          handleSessionClick(updatedSession);
+          handleSessionClick(updatedSession || freshSessions?.find(s => s.id === sessionId));
         }
       } else {
         const data = await response.json();
@@ -298,12 +316,12 @@ const LinkedInEngagement = () => {
           const data = await response.json();
           if (response.ok) {
             toast.success(data.message || 'Importação concluída.', { id: 'import' });
-            await fetchSessions();
+            const freshSessions = await fetchSessions();
 
             const targetId = isGlobal ? fileSessionId : sessionId;
             if (selectedSession?.id === targetId || isGlobal) {
                // Se global ou se for a selecionada, atualiza detalhes
-               const updatedSession = sessions.find(s => s.id === targetId);
+               const updatedSession = freshSessions?.find(s => s.id === targetId);
                if (updatedSession) handleSessionClick(updatedSession);
             }
           } else {

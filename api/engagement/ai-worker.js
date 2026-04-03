@@ -124,15 +124,12 @@ export async function enrichAndScoreSession(sessionId) {
 
     for (const post of pendingEnrichment.rows) {
       try {
-        // Normalize URN if it's in the old activity format (v202601 API requires ugcPost)
-        let normalizedUrn = post.linkedin_post_id;
-        if (normalizedUrn && normalizedUrn.startsWith('urn:li:activity:')) {
-          normalizedUrn = normalizedUrn.replace('urn:li:activity:', 'urn:li:ugcPost:');
-        }
+        const initialUrn = post.linkedin_post_id;
+        console.log(`[Worker] Enriching post ${initialUrn}...`);
 
-        console.log(`[Worker] Enriching post ${normalizedUrn}...`);
-        const postData = await getPostDetails(accessToken, normalizedUrn);
+        const postData = await getPostDetails(accessToken, initialUrn);
         const authorUrn = postData.author;
+        const resolvedUrn = postData.resolvedUrn || initialUrn;
 
         let authorName = 'Unknown';
         let authorTitle = '';
@@ -155,14 +152,16 @@ export async function enrichAndScoreSession(sessionId) {
             post_author_name = $2,
             post_author_title = $3,
             post_author_urn = $4,
-            post_published_at = $5
-           WHERE id = $6`,
+            post_published_at = $5,
+            linkedin_post_id = $6
+           WHERE id = $7`,
           [
             postData.commentary || '',
             authorName,
             authorTitle,
             authorUrn,
             postData.publishedAt ? new Date(postData.publishedAt) : new Date(),
+            resolvedUrn,
             post.id
           ]
         );

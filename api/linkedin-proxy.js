@@ -619,28 +619,41 @@ export async function getPostDetails(accessToken, postUrn) {
                 'LinkedIn-Version': LINKEDIN_API_VERSION
             },
         });
-        const data = await linkedinResponse.json();
+
+        const responseText = await linkedinResponse.text();
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            data = { raw: responseText };
+        }
+
         return { ok: linkedinResponse.ok, status: linkedinResponse.status, data };
     };
 
     // Attempt 1: Provided URN (usually normalized to ugcPost)
     let result = await tryFetch(postUrn);
-    if (result.ok) return result.data;
+    if (result.ok) return { ...result.data, resolvedUrn: postUrn };
 
     // If 404 or 400 (invalid URN type), try fallbacks for different URN types
+    // The guide says to try ugcPost and share as recommended prefixes.
     if ((result.status === 404 || result.status === 400) && postUrn.includes(':')) {
         const parts = postUrn.split(':');
         const id = parts.pop();
-        // Modern API usually expects ugcPost, but legacy IDs might be share or post
+
+        // Prioritize ugcPost and share as per the technical guide.
         const prefixes = ['ugcPost', 'share', 'post', 'activity'];
 
         for (const prefix of prefixes) {
             const fallbackUrn = `urn:li:${prefix}:${id}`;
             if (fallbackUrn === postUrn) continue;
 
-            console.log(`[LinkedIn Proxy] Attempting fallback URN: ${fallbackUrn}`);
+            console.log(`[LinkedIn Proxy] Fallback Attempt: ${fallbackUrn} (Previous error: ${result.status})`);
             result = await tryFetch(fallbackUrn);
-            if (result.ok) return result.data;
+            if (result.ok) {
+                console.log(`[LinkedIn Proxy] Fallback SUCCESS: ${fallbackUrn}`);
+                return { ...result.data, resolvedUrn: fallbackUrn };
+            }
         }
     }
 
