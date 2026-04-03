@@ -1,6 +1,6 @@
 import { query } from '../db.js';
 import { getPostDetails, getAuthorDetails } from '../linkedin-proxy.js';
-import { fetchWithRetry } from '../utils.js';
+import { fetchWithRetry, extractLinkedinUrn } from '../utils.js';
 
 async function getGeminiConfig(userId) {
   const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
@@ -118,14 +118,25 @@ export async function enrichAndScoreSession(sessionId) {
 
     // 1. Fetch posts needing enrichment (missing content)
     const pendingEnrichment = await query(
-      'SELECT id, linkedin_post_id FROM linkedin_discovered_posts WHERE session_id = $1 AND post_content IS NULL',
+      'SELECT id, linkedin_post_id, post_url FROM linkedin_discovered_posts WHERE session_id = $1 AND post_content IS NULL',
       [sessionId]
     );
 
     for (const post of pendingEnrichment.rows) {
       try {
-        const initialUrn = post.linkedin_post_id;
-        console.log(`[Worker] Enriching post ${initialUrn}...`);
+        let initialUrn = post.linkedin_post_id;
+
+        // Se o URN vier de uma URL de busca do Google (com activity-), o ID numérico
+        // extraído da URL NÃO É o ID de um ugcPost, é um Activity ID.
+        // Precisamos normalizar para ugcPost ANTES de tentar buscar os detalhes.
+        if (post.post_url) {
+          const urnInfo = extractLinkedinUrn(post.post_url);
+          if (urnInfo && urnInfo.urn) {
+            initialUrn = urnInfo.urn;
+          }
+        }
+
+        console.log(`[Worker] Enriching post ${initialUrn} (original: ${post.linkedin_post_id})...`);
 
         const postData = await getPostDetails(accessToken, initialUrn);
         const authorUrn = postData.author;
