@@ -635,6 +635,8 @@ export async function getPostDetails(accessToken, postUrn) {
     let result = await tryFetch(postUrn);
     if (result.ok) return { ...result.data, resolvedUrn: postUrn };
 
+    console.warn(`[LinkedIn Proxy] Initial fetch failed for ${postUrn} (Status: ${result.status}). Checking for fallbacks...`);
+
     // If 404 or 400 (invalid URN type), try fallbacks for different URN types
     // The guide says to try ugcPost and share as recommended prefixes.
     if ((result.status === 404 || result.status === 400) && postUrn.includes(':')) {
