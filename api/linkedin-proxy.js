@@ -642,7 +642,7 @@ export async function getPostDetails(accessToken, postUrn) {
         const id = parts.pop();
 
         // Prioritize ugcPost and share as per the technical guide.
-        const prefixes = ['ugcPost', 'share', 'post', 'activity'];
+        const prefixes = ['ugcPost', 'share']; // activity e post não são válidos na /rest/posts API
 
         for (const prefix of prefixes) {
             const fallbackUrn = `urn:li:${prefix}:${id}`;

@@ -56,34 +56,43 @@ export function escapeLinkedinText(text) {
 export function extractLinkedinUrn(url) {
   if (!url) return null;
 
-  // Decodificar entidades HTML como &amp; que aparecem em resultados de busca do Google
-  const decodedUrl = url.replace(/&amp;/g, '&');
+  // 1. Decodificar entidades HTML (&amp; → &)
+  let cleanUrl = url.replace(/&amp;/g, '&');
 
-  // 1. Expressão regular unificada baseada no Guia Técnico
-  // Captura IDs de activity, ugcPost, share ou post
-  const unifiedRegex = /(?:activity|ugcPost|share|post)-(\d{15,})|urn:li:(?:activity|ugcPost|share|post):(\d{15,})/;
-  const match = decodedUrl.match(unifiedRegex);
+  // 2. Remover parâmetros de rastreamento do Google que ficam colados na URL
+  // Esses parâmetros aparecem como &sa=U&ved=...&usg=... sem um ? antes
+  // Ex: https://linkedin.com/posts/slug-activity-123456-XXXX&sa=U&ved=...
+  // Precisamos remover tudo a partir do primeiro & que não faz parte da URL base
+  const googleTrackingIndex = cleanUrl.search(/&(?:sa|ved|usg)=/);
+  if (googleTrackingIndex !== -1) {
+    cleanUrl = cleanUrl.substring(0, googleTrackingIndex);
+  }
+
+  // 3. Decodificar double-encoding (%25XX → %XX → char)
+  try {
+    // Primeiro decode: %25C3 → %C3
+    cleanUrl = decodeURIComponent(cleanUrl);
+  } catch (e) {
+    // Se falhar, continua com a URL original limpa
+  }
+
+  // 4. Regex unificada: captura IDs de activity, ugcPost, share ou post
+  // O ID vem antes do sufixo de 4 chars (ex: -dU5M) ou fim de string/parâmetro
+  const unifiedRegex = /(?:activity|ugcPost|share|post)-(\d{10,})(?:-[A-Za-z0-9]{4})?|urn:li:(?:activity|ugcPost|share|post):(\d{10,})/;
+  const match = cleanUrl.match(unifiedRegex);
 
   if (match) {
     const id = match[1] || match[2];
-    // Sempre normaliza para ugcPost pois é o que a Posts API espera
     return { urn: `urn:li:ugcPost:${id}`, commentable: true };
   }
 
-  // 2. Fallback para Pulse
-  if (decodedUrl.includes('/pulse/')) {
-    // Tenta extrair o ID numérico que às vezes aparece no final de URLs de Pulse
-    const pulseMatch = decodedUrl.match(/pulse\/.*-([0-9]+)/);
+  // 5. Fallback para Pulse
+  if (cleanUrl.includes('/pulse/')) {
+    const pulseMatch = cleanUrl.match(/pulse\/.*-([0-9]+)/);
     if (pulseMatch) {
       return { urn: `urn:li:ugcPost:${pulseMatch[1]}`, commentable: true };
     }
-    return { urn: decodedUrl, commentable: false };
-  }
-
-  // 3. Fallback para IDs numéricos longos que parecem URNs no final da URL antes de parâmetros
-  const genericIdMatch = decodedUrl.match(/-([0-9]{15,})/);
-  if (genericIdMatch) {
-     return { urn: `urn:li:ugcPost:${genericIdMatch[1]}`, commentable: true };
+    return { urn: cleanUrl, commentable: false };
   }
 
   return null;
