@@ -643,6 +643,33 @@ export async function getPostDetails(accessToken, postUrn) {
         const parts = postUrn.split(':');
         const id = parts.pop();
 
+        // New Resolution: socialActions for activity URNs
+        // This is necessary because some IDs are activity IDs, not ugcPost IDs.
+        const activityUrn = postUrn.includes(':activity:') ? postUrn : `urn:li:activity:${id}`;
+        const resolveUrl = `https://api.linkedin.com/rest/socialActions/${encodeURIComponent(activityUrn)}?fields=object`;
+
+        try {
+            console.log(`[LinkedIn Proxy] Attempting socialActions resolution for: ${activityUrn}`);
+            const resolveResponse = await fetchWithRetry(resolveUrl, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Restli-Protocol-Version': '2.0.0',
+                    'LinkedIn-Version': LINKEDIN_API_VERSION
+                }
+            });
+
+            const resolveData = await resolveResponse.json();
+            console.log(`[LinkedIn Proxy] socialActions response:`, JSON.stringify(resolveData));
+
+            if (resolveResponse.ok && resolveData.object) {
+                console.log(`[LinkedIn Proxy] Resolved via socialActions: ${resolveData.object}`);
+                result = await tryFetch(resolveData.object);
+                if (result.ok) return { ...result.data, resolvedUrn: resolveData.object };
+            }
+        } catch (resolveErr) {
+            console.warn(`[LinkedIn Proxy] socialActions resolution failed: ${resolveErr.message}`);
+        }
+
         // Prioritize ugcPost and share as per the technical guide.
         const prefixes = ['ugcPost', 'share']; // activity e post não são válidos na /rest/posts API
 
