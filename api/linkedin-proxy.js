@@ -2,7 +2,7 @@ import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { delay, fetchWithRetry } from './utils.js';
 
-const LINKEDIN_API_VERSION = '202601';
+const LINKEDIN_API_VERSION = '202505';
 
 // A general-purpose, action-based proxy for LinkedIn API calls.
 // This is more secure than an endpoint-based proxy as it doesn't allow calling arbitrary URLs.
