@@ -83,14 +83,28 @@ export function extractLinkedinUrn(url) {
 
   if (match) {
     const id = match[1] || match[2];
-    return { urn: `urn:li:ugcPost:${id}`, commentable: true };
+    let detectedType = 'ugcPost';
+
+    if (match[1]) {
+      const typeMatch = cleanUrl.match(/(activity|ugcPost|share|post)-\d{10,}/);
+      detectedType = typeMatch ? typeMatch[1] : 'ugcPost';
+    } else if (match[2]) {
+      const urnTypeMatch = cleanUrl.match(/urn:li:(activity|ugcPost|share|post):\d{10,}/);
+      detectedType = urnTypeMatch ? urnTypeMatch[1] : 'ugcPost';
+    }
+
+    return {
+      urn: `urn:li:${detectedType}:${id}`,
+      activityId: id,
+      commentable: true
+    };
   }
 
   // 5. Fallback para Pulse
   if (cleanUrl.includes('/pulse/')) {
     const pulseMatch = cleanUrl.match(/pulse\/.*-([0-9]+)/);
     if (pulseMatch) {
-      return { urn: `urn:li:ugcPost:${pulseMatch[1]}`, commentable: true };
+      return { urn: `urn:li:ugcPost:${pulseMatch[1]}`, activityId: pulseMatch[1], commentable: true };
     }
     return { urn: cleanUrl, commentable: false };
   }

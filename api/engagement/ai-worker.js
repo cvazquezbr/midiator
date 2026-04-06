@@ -177,7 +177,14 @@ export async function enrichAndScoreSession(sessionId) {
           ]
         );
       } catch (err) {
-        console.error(`Error enriching post ${post.linkedin_post_id}:`, err);
+        console.error(`[Worker] Enriching failed for ${post.linkedin_post_id}:`, err.message);
+        await query(
+          `UPDATE linkedin_discovered_posts
+           SET user_decision = 'error', post_content = $1
+           WHERE id = $2`,
+          [`Erro ao buscar post: ${err.message}`, post.id]
+        );
+        continue; // não interrompe os demais posts da sessão
       }
     }
 
