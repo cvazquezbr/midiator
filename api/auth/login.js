@@ -62,10 +62,11 @@ export default async function handler(req, res) {
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
 
     // Set JWT in a secure, HttpOnly cookie
+    // Using sameSite: 'lax' to ensure the cookie is sent when returning from OAuth redirects.
     const authTokenCookie = serialize('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development', // Use secure cookies in production
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
     });
