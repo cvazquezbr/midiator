@@ -4,13 +4,12 @@ import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   const body = await parseBody(req);
-  req.body = body;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { contents, model } = req.body;
+    const { contents, model } = body;
 
     if (!contents || !model) {
       return res.status(400).json({ error: 'Missing required parameters: contents and model' });

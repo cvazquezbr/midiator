@@ -22,11 +22,11 @@ export const parseBody = async (req) => {
     // Standard for modern fetch-based request objects (like Vercel Edge or newer Node)
     if (typeof req.json === 'function') {
         try {
-            // We need to clone it because the body might be read multiple times
-            const clonedReq = req.clone ? req.clone() : req;
-            return await clonedReq.json();
+            // Attempt to parse the body using the built-in .json() method.
+            // Note: If the body has already been consumed, this will throw.
+            return await req.json();
         } catch (e) {
-            // ignore and try stream
+            // If .json() fails (e.g., body already read or malformed), fall back to manual stream collection
         }
     }
 

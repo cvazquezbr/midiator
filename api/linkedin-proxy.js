@@ -944,9 +944,8 @@ const protectedHandler = async (request, response) => {
 const mainHandler = async (request, response) => {
     // Ensure body is parsed robustly
     const body = await parseBody(request);
-    request.body = body;
 
-    console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
+    console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${body?.action}`);
 
     if (request.method !== 'POST') {
         response.setHeader('Allow', ['POST']);
@@ -955,11 +954,18 @@ const mainHandler = async (request, response) => {
 
     // Check for the internal secret for cron jobs
     if (request.headers['x-internal-secret'] === process.env.INTERNAL_API_SECRET) {
+        // Pass body to sub-handlers
+        request.body = body;
         return internalRequestHandler(request, response);
     }
 
     // For all other requests, apply the standard authentication middleware.
-    return withAuth(protectedHandler)(request, response);
+    return withAuth((req, res) => {
+        // withAuth wraps the handler and passes the original req, res.
+        // We ensure the parsed body is available in req.body for sub-handlers.
+        req.body = body;
+        return protectedHandler(req, res);
+    })(request, response);
 };
 
 export default mainHandler;

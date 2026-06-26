@@ -4,7 +4,6 @@ import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   const body = await parseBody(req);
-  req.body = body;
   // withAdminAuth has already verified the user is an admin.
   // req.user is available.
   const { id } = req.query;
@@ -24,7 +23,7 @@ const handler = async (req, res) => {
 
   if (req.method === 'PUT') {
     try {
-      const { name, description, prompt_text } = req.body;
+      const { name, description, prompt_text } = body;
       if (!name || !prompt_text) {
         return res.status(400).json({ error: 'Name and prompt text are required' });
       }

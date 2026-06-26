@@ -5,30 +5,29 @@ import { extractLinkedinUrn, parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   const body = await parseBody(req);
-  req.body = body;
-  const { action } = req.body;
+  const { action } = body;
   const userId = req.user.sub;
 
   try {
     switch (action) {
       case 'createSession':
-        return await handleCreateSession(req, res, userId);
+        return await handleCreateSession(req, res, userId, body);
       case 'getSessions':
         return await handleGetSessions(req, res, userId);
       case 'getSessionDetails':
-        return await handleGetSessionDetails(req, res, userId);
+        return await handleGetSessionDetails(req, res, userId, body);
       case 'updatePostDecision':
-        return await handleUpdatePostDecision(req, res, userId);
+        return await handleUpdatePostDecision(req, res, userId, body);
       case 'processSession':
-        return await handleProcessSession(req, res, userId);
+        return await handleProcessSession(req, res, userId, body);
       case 'processMySessions':
         return await handleProcessMySessions(req, res, userId);
       case 'exportSessionJSON':
-        return await handleExportSessionJSON(req, res, userId);
+        return await handleExportSessionJSON(req, res, userId, body);
       case 'importExternalResults':
-        return await handleImportExternalResults(req, res, userId);
+        return await handleImportExternalResults(req, res, userId, body);
       case 'deletePost':
-        return await handleDeletePost(req, res, userId);
+        return await handleDeletePost(req, res, userId, body);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -38,8 +37,8 @@ const handler = async (req, res) => {
   }
 };
 
-async function handleCreateSession(req, res, userId) {
-  const { sourcePostId, sourcePostContent } = req.body;
+async function handleCreateSession(req, res, userId, body) {
+  const { sourcePostId, sourcePostContent } = body;
   
   const result = await query(
     `INSERT INTO linkedin_discovery_sessions (user_id, source_post_id, source_post_content, status)
@@ -76,8 +75,8 @@ async function handleGetSessions(req, res, userId) {
   })));
 }
 
-async function handleGetSessionDetails(req, res, userId) {
-  const { sessionId } = req.body;
+async function handleGetSessionDetails(req, res, userId, body) {
+  const { sessionId } = body;
   
   const session = await query(
     `SELECT * FROM linkedin_discovery_sessions WHERE id = $1 AND user_id = $2`,
@@ -99,8 +98,8 @@ async function handleGetSessionDetails(req, res, userId) {
   });
 }
 
-async function handleUpdatePostDecision(req, res, userId) {
-  const { postId, decision } = req.body;
+async function handleUpdatePostDecision(req, res, userId, body) {
+  const { postId, decision } = body;
   
   // Verify ownership through session
   const postCheck = await query(
@@ -161,8 +160,8 @@ async function handleProcessMySessions(req, res, userId) {
   });
 }
 
-async function handleProcessSession(req, res, userId) {
-  const { sessionId } = req.body;
+async function handleProcessSession(req, res, userId, body) {
+  const { sessionId } = body;
 
   // Verify ownership
   const sessionCheck = await query(
@@ -187,18 +186,18 @@ async function handleProcessSession(req, res, userId) {
   }
 }
 
-async function handleImportExternalResults(req, res, userId) {
-  const { sessionId, resultados, isGlobal } = req.body;
+async function handleImportExternalResults(req, res, userId, body) {
+  const { sessionId, resultados, isGlobal } = body;
 
   // Se for importação via botão na sessão, valida se o ID do arquivo bate com o da sessão
-  if (!isGlobal && req.body.fileSessionId && String(req.body.fileSessionId) !== String(sessionId)) {
+  if (!isGlobal && body.fileSessionId && String(body.fileSessionId) !== String(sessionId)) {
     return res.status(400).json({
-      error: `Incompatibilidade de Sessão: O arquivo é da sessão ${req.body.fileSessionId}, mas você está importando na sessão ${sessionId}.`
+      error: `Incompatibilidade de Sessão: O arquivo é da sessão ${body.fileSessionId}, mas você está importando na sessão ${sessionId}.`
     });
   }
 
   // Determina qual sessionId usar (o da rota/botão ou o do arquivo se for global)
-  const targetSessionId = isGlobal ? req.body.fileSessionId : sessionId;
+  const targetSessionId = isGlobal ? body.fileSessionId : sessionId;
 
   if (!targetSessionId) {
     return res.status(400).json({ error: 'ID da sessão não identificado no arquivo.' });
@@ -292,8 +291,8 @@ async function handleImportExternalResults(req, res, userId) {
   }
 }
 
-async function handleDeletePost(req, res, userId) {
-  const { postId } = req.body;
+async function handleDeletePost(req, res, userId, body) {
+  const { postId } = body;
 
   // Verify ownership through session
   const postCheck = await query(
@@ -312,8 +311,8 @@ async function handleDeletePost(req, res, userId) {
   res.status(200).json({ message: 'Post excluído com sucesso.' });
 }
 
-async function handleExportSessionJSON(req, res, userId) {
-  const { sessionId } = req.body;
+async function handleExportSessionJSON(req, res, userId, body) {
+  const { sessionId } = body;
 
   const result = await query(
     `SELECT id, extracted_hashtags FROM linkedin_discovery_sessions WHERE id = $1 AND user_id = $2`,
