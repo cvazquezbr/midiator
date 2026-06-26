@@ -106,7 +106,7 @@ const GeneralSettings = () => {
 const SetupModal = ({ open, onClose, initialTab = 0 }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(initialTab);
-  const { settings, saveSettings, isLoading } = useSettings();
+  const { settings, saveSettings, isLoading, isSaving } = useSettings();
   const [initialSettings, setInitialSettings] = useState(null);
 
   useEffect(() => {
@@ -211,10 +211,10 @@ const SetupModal = ({ open, onClose, initialTab = 0 }) => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={isLoading}
-          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+          disabled={isLoading || isSaving}
+          startIcon={(isLoading || isSaving) ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
         >
-          {isLoading ? 'Salvando...' : 'Salvar na Nuvem'}
+          {isSaving ? 'Salvando...' : isLoading ? 'Carregando...' : 'Salvar na Nuvem'}
         </Button>
       </DialogActions>
     </Dialog>
