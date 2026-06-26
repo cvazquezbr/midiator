@@ -1,7 +1,10 @@
 import { query } from '../db.js';
 import { withAuth } from '../middleware/auth.js';
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
+  req.body = body;
   // withAuth HOC has already run, so req.user is available.
   const { name } = req.query;
 

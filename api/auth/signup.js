@@ -1,22 +1,9 @@
 import { query } from '../db.js';
 import bcrypt from 'bcryptjs';
+import { parseBody } from '../utils.js';
 
 export default async function handler(req, res) {
-  // Vercel's Edge runtime doesn't support the `body` property directly.
-  // We need to parse the JSON from the request stream.
-  // Also, for some reason, the request object is not standard.
-  // Aparently, Vercel serializes the request and we need to deserialize it.
-  const body = await (async (req) => {
-    let body = '';
-    for await (const chunk of req) {
-      body += new TextDecoder().decode(chunk);
-    }
-    try {
-      return JSON.parse(body);
-    } catch {
-      return {};
-    }
-  })(req);
+  const body = await parseBody(req);
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);

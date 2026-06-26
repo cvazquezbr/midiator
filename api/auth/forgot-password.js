@@ -1,20 +1,7 @@
 import { query } from '../db.js';
 import { randomBytes, createHash } from 'crypto';
 import nodemailer from 'nodemailer';
-
-// Helper to parse the request body in Vercel's Edge environment
-const parseBody = async (req) => {
-  let body = '';
-  // Vercel Edge streams are not standard. We must iterate over them.
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
+import { parseBody } from '../utils.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

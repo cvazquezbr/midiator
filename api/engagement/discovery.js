@@ -1,9 +1,11 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 import { processDiscoverySession, generateCommentForPost, enrichAndScoreSession } from './ai-worker.js';
-import { extractLinkedinUrn } from '../utils.js';
+import { extractLinkedinUrn, parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
+  req.body = body;
   const { action } = req.body;
   const userId = req.user.sub;
 

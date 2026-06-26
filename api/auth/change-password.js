@@ -1,19 +1,7 @@
 import { query } from '../db.js';
 import bcrypt from 'bcryptjs';
 import { withAuth } from '../middleware/auth.js';
-
-// Helper to parse the request body in Vercel's Edge environment
-const parseBody = async (req) => {
-  let body = '';
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   if (req.method !== 'POST') {

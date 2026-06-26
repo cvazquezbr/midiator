@@ -2,9 +2,11 @@ import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 import { handleCreateComment, handleGetProfile } from '../linkedin-proxy.js';
 import { generateCommentForPost } from './ai-worker.js';
-import { escapeLinkedinText } from '../utils.js';
+import { escapeLinkedinText, parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
+  req.body = body;
   const { action } = req.body;
   const userId = req.user.sub;
 
@@ -104,8 +106,8 @@ async function handlePublishComment(req, res, userId) {
       let profileData;
       const mockReqProfile = { body: { accessToken: comment.linkedin_access_token } };
       const mockResProfile = {
-        status: () => ({ json: (data) => { profileData = data; } }),
-        json: (data) => { profileData = data; }
+        status: () => ({ json: (data) => { profileData = data; return mockResProfile; } }),
+        json: (data) => { profileData = data; return mockResProfile; }
       };
       await handleGetProfile(mockReqProfile, mockResProfile);
       if (profileData && profileData.id) {

@@ -2,6 +2,7 @@
 import { query } from '../db.js';
 import fetch from 'node-fetch';
 import { processDiscoverySession } from '../engagement/ai-worker.js';
+import { escapeLinkedinText, markdownToLinkedinText } from '../utils.js';
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const PROXY_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
@@ -147,17 +148,82 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
 
   // After upload, the video URN may be in initData.value.asset or returned separately.
   // Try to derive video URN:
+  let videoUrn = null;
   if (initData.value && initData.value.asset) {
-    return initData.value.asset;
-  } else if (uploadData && uploadData.eTag) {
-    // Not a URN, but sometimes proxy returns eTag. We return initData asset if present.
-    if (initData.asset) return initData.asset;
+    videoUrn = initData.value.asset;
+  } else if (initData.asset) {
+    videoUrn = initData.asset;
+  } else if (initData.value && initData.value.assetUrn) {
+    videoUrn = initData.value.assetUrn;
   }
-  // As a fallback, try common fields
-  if (initData.asset) return initData.asset;
-  if (initData.value && initData.value.assetUrn) return initData.value.assetUrn;
 
-  throw new Error('[Cron LinkedIn UploadVideo] could not determine video URN from responses');
+  if (!videoUrn) {
+    throw new Error('[Cron LinkedIn UploadVideo] could not determine video URN from responses');
+  }
+
+  // Step 3: Finalize video upload
+  console.log('[Cron LinkedIn UploadVideo] finalizing upload for URN:', videoUrn);
+  const finalizeBody = {
+    action: 'finalizeVideoUpload',
+    accessToken,
+    payload: {
+      finalizeUploadRequest: {
+        video: videoUrn,
+        uploadToken: "",
+        uploadedPartIds: [uploadData.eTag]
+      }
+    }
+  };
+
+  const finalizeRes = await fetchWithRetry(`${PROXY_BASE}/api/linkedin-proxy`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': INTERNAL_API_SECRET
+    },
+    body: JSON.stringify(finalizeBody)
+  }, 3, 2000);
+
+  if (!finalizeRes.ok) {
+    const finalizeText = await finalizeRes.text();
+    throw new Error('[Cron LinkedIn UploadVideo] finalize failed: ' + finalizeText);
+  }
+
+  // Step 4: Wait for processing
+  console.log('[Cron LinkedIn UploadVideo] waiting for video processing...');
+  let videoStatus = '';
+  let attempts = 0;
+  const maxAttempts = 15;
+  while (videoStatus !== 'AVAILABLE' && attempts < maxAttempts) {
+    await delay(10000); // 10s delay between checks
+    const statusBody = {
+      action: 'checkVideoStatus',
+      accessToken,
+      videoUrn
+    };
+    const statusRes = await fetchWithRetry(`${PROXY_BASE}/api/linkedin-proxy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': INTERNAL_API_SECRET
+      },
+      body: JSON.stringify(statusBody)
+    }, 3, 1000);
+
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      videoStatus = statusData.status;
+      console.log(`[Cron LinkedIn UploadVideo] Status attempt ${attempts + 1}: ${videoStatus}`);
+    }
+    attempts++;
+  }
+
+  if (videoStatus !== 'AVAILABLE') {
+    console.warn(`[Cron LinkedIn UploadVideo] Video ${videoUrn} not AVAILABLE after ${maxAttempts} attempts. Status: ${videoStatus}`);
+    // We proceed anyway, LinkedIn might finish processing later
+  }
+
+  return videoUrn;
 }
 
 // Build author URN from target_type/target_id or author field
@@ -171,14 +237,6 @@ function buildAuthorUrn(data) {
   // fallback to user_id-based person urn if available from the db row
   if (data.user_id) return `urn:li:person:${data.user_id}`;
   return null;
-}
-
-function escapeLinkedinText(text) {
-  if (text === null || text === undefined) return '';
-  if (typeof text !== 'string') {
-    try { text = String(text); } catch (e) { return ''; }
-  }
-  return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
 }
 
 export async function handleRunScheduler(response) {
@@ -282,7 +340,7 @@ export async function handleRunScheduler(response) {
             const hashtags = (parentData.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ');
             const parentUrl = parentData.url;
 
-            const finalMainContent = escapeLinkedinText(mainContent);
+            const finalMainContent = escapeLinkedinText(markdownToLinkedinText(mainContent));
             const finalCta = escapeLinkedinText(cta);
 
             commentary = [
@@ -297,7 +355,7 @@ export async function handleRunScheduler(response) {
              console.error(`[Cron LinkedIn] Could not find parent post data for follow-up ${postId}. Skipping formatting.`);
              // Fallback to original content if parent is not found
              const commentaryRaw = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || payload.content || payload.commentary || '';
-             commentary = escapeLinkedinText(commentaryRaw);
+             commentary = escapeLinkedinText(markdownToLinkedinText(commentaryRaw));
         }
       } else {
         // This is a main post. The payload's fullText contains everything.
@@ -305,7 +363,7 @@ export async function handleRunScheduler(response) {
         const fullTextRaw = (payload.content && payload.content.fullText) || payload.fullText || '';
         const parts = fullTextRaw.split('----');
 
-        const contentPart = parts[0] ? escapeLinkedinText(parts[0].trim()) : '';
+        const contentPart = parts[0] ? escapeLinkedinText(markdownToLinkedinText(parts[0].trim())) : '';
         const ctaPart = parts[1] ? escapeLinkedinText(parts[1].trim()) : '';
         const hashtagsPart = parts[2] ? parts[2].trim() : ''; // Do not escape hashtags
 

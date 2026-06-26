@@ -1,7 +1,10 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
+  req.body = body;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }

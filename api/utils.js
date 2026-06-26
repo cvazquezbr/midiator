@@ -1,5 +1,52 @@
 export const delay = ms => new Promise(res => setTimeout(res, ms));
 
+/**
+ * Robustly parses the request body, handling both pre-parsed req.body
+ * and streams, which is essential for different Vercel runtimes.
+ */
+export const parseBody = async (req) => {
+    // If body is already parsed by a middleware or the runtime
+    if (req.body && (typeof req.body === 'object' || Array.isArray(req.body))) {
+        return req.body;
+    }
+
+    // If it's a string, maybe it was parsed as text but not JSON
+    if (typeof req.body === 'string' && req.body.trim().startsWith('{')) {
+        try {
+            return JSON.parse(req.body);
+        } catch (e) {
+            // Not JSON, continue to other methods
+        }
+    }
+
+    // Standard for modern fetch-based request objects (like Vercel Edge or newer Node)
+    if (typeof req.json === 'function') {
+        try {
+            // We need to clone it because the body might be read multiple times
+            const clonedReq = req.clone ? req.clone() : req;
+            return await clonedReq.json();
+        } catch (e) {
+            // ignore and try stream
+        }
+    }
+
+    // Fallback: manually collect the stream
+    let body = '';
+    try {
+        const decoder = new TextDecoder();
+        // Check if req is an async iterable (Node.js Request stream)
+        if (Symbol.asyncIterator in req) {
+            for await (const chunk of req) {
+                body += decoder.decode(chunk);
+            }
+        }
+        return body ? JSON.parse(body) : {};
+    } catch (e) {
+        console.error("[parseBody] Error parsing body:", e.message);
+        return {};
+    }
+};
+
 export async function fetchWithRetry(url, options, retries = 5, initialBackoff = 3000) {
     let backoff = initialBackoff;
     for (let i = 0; i < retries; i++) {
