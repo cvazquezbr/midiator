@@ -30,21 +30,69 @@ export const parseBody = async (req) => {
         }
     }
 
-    // Fallback: manually collect the stream
-    let body = '';
-    try {
-        const decoder = new TextDecoder();
-        // Check if req is an async iterable (Node.js Request stream)
-        if (Symbol.asyncIterator in req) {
-            for await (const chunk of req) {
-                body += decoder.decode(chunk);
+    // Fallback: manually collect the stream for Node.js
+    return new Promise((resolve) => {
+        let body = '';
+        const onData = (chunk) => {
+            body += chunk.toString();
+        };
+        const onEnd = () => {
+            req.removeListener('data', onData);
+            req.removeListener('end', onEnd);
+            req.removeListener('error', onError);
+            try {
+                resolve(body ? JSON.parse(body) : {});
+            } catch (e) {
+                console.error("[parseBody] JSON Parse Error:", e.message, "Body starts with:", body.substring(0, 50));
+                resolve({});
+            }
+        };
+        const onError = (err) => {
+            console.error("[parseBody] Stream Error:", err.message);
+            req.removeListener('data', onData);
+            req.removeListener('end', onEnd);
+            req.removeListener('error', onError);
+            resolve({});
+        };
+
+        if (req.on) {
+            if (req.readableEnded) {
+                return resolve({});
+            }
+            req.on('data', onData);
+            req.on('end', onEnd);
+            req.on('error', onError);
+
+            // Safety timeout to prevent indefinite hangs
+            setTimeout(() => {
+                req.removeListener('data', onData);
+                req.removeListener('end', onEnd);
+                req.removeListener('error', onError);
+                try {
+                    resolve(body ? JSON.parse(body) : {});
+                } catch (e) {
+                    resolve({});
+                }
+            }, 15000);
+        } else {
+            // If it doesn't have .on, and it reached here, it's not a standard stream we know how to handle.
+            // Try the async iterator as a last resort if it exists.
+            if (Symbol.asyncIterator in req) {
+                (async () => {
+                    try {
+                        for await (const chunk of req) {
+                            body += new TextDecoder().decode(chunk);
+                        }
+                        resolve(body ? JSON.parse(body) : {});
+                    } catch (e) {
+                        resolve({});
+                    }
+                })();
+            } else {
+                resolve({});
             }
         }
-        return body ? JSON.parse(body) : {};
-    } catch (e) {
-        console.error("[parseBody] Error parsing body:", e.message);
-        return {};
-    }
+    });
 };
 
 export async function fetchWithRetry(url, options, retries = 5, initialBackoff = 3000) {

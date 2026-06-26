@@ -112,9 +112,9 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         if (!response.ok) throw new Error('Falha ao buscar detalhes do usuário.');
         const data = await response.json();
 
-        // Map new field names from /rest/me (givenName, familyName)
-        const firstName = data.givenName || '';
-        const lastName = data.familyName || '';
+        // Map field names with fallbacks for different LinkedIn API versions/schemas
+        const firstName = data.givenName || data.firstName || data.localizedFirstName || '';
+        const lastName = data.familyName || data.lastName || data.localizedLastName || '';
 
         setConnectedUser({ localizedFirstName: firstName, localizedLastName: lastName });
       } catch (err) {

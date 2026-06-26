@@ -214,10 +214,10 @@ export async function handleGetProfile(request, response) {
     }
 
     // Version 202601 uses /rest/me with explicit fields
-    const profileUrl = 'https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture';
+    let profileUrl = 'https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture';
 
     try {
-        const linkedinResponse = await fetch(profileUrl, {
+        let linkedinResponse = await fetch(profileUrl, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
@@ -225,6 +225,19 @@ export async function handleGetProfile(request, response) {
                 'LinkedIn-Version': LINKEDIN_API_VERSION
             },
         });
+
+        // Fallback: If projection fails (e.g. field not present in specific schema), try without projection
+        if (!linkedinResponse.ok && linkedinResponse.status === 400) {
+            console.warn('[LinkedIn Proxy] handleGetProfile: Projection failed, retrying without fields.');
+            linkedinResponse = await fetch('https://api.linkedin.com/rest/me', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'X-Restli-Protocol-Version': '2.0.0',
+                    'LinkedIn-Version': LINKEDIN_API_VERSION
+                },
+            });
+        }
 
         const responseText = await linkedinResponse.text();
         let data;
@@ -409,7 +422,12 @@ async function handleGetProfiles(request, response) {
 
     try {
         // Step 1: Fetch personal profile
-        const personalResponse = await fetch('https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture', { headers });
+        let personalResponse = await fetch('https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture', { headers });
+
+        if (!personalResponse.ok && personalResponse.status === 400) {
+            console.warn('[LinkedIn Proxy] getProfiles: Projection failed, retrying without fields.');
+            personalResponse = await fetch('https://api.linkedin.com/rest/me', { headers });
+        }
 
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
@@ -422,14 +440,14 @@ async function handleGetProfiles(request, response) {
         const personalData = await personalResponse.json();
         const memberUrn = `urn:li:person:${personalData.id}`;
 
-        // Map new field names from /rest/me
-        const firstName = personalData.givenName || '';
-        const lastName = personalData.familyName || '';
-        const profilePicture = personalData.picture || '';
+        // Map field names with fallbacks for different LinkedIn API versions/schemas
+        const firstName = personalData.givenName || personalData.firstName || personalData.localizedFirstName || '';
+        const lastName = personalData.familyName || personalData.lastName || personalData.localizedLastName || '';
+        const profilePicture = personalData.picture || personalData.profilePicture || '';
 
         const personal = {
             id: personalData.id,
-            name: `${firstName} ${lastName}`.trim(),
+            name: `${firstName} ${lastName}`.trim() || 'Usuário do LinkedIn',
             type: 'person',
             profilePicture: profilePicture
         };
@@ -456,7 +474,8 @@ async function handleGetProfiles(request, response) {
                     organizations = orgAclsData.elements.map(acl => {
                         const orgUrn = acl.organization;
                         const orgId = orgUrn.split(':').pop();
-                        const orgDetails = batchOrgData.results[orgId];
+                        // LinkedIn batch API might return keys as IDs or full URNs. Try both.
+                        const orgDetails = batchOrgData.results[orgId] || batchOrgData.results[orgUrn];
                         const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
 
                         return {

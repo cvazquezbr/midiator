@@ -46,6 +46,11 @@ const settingsHandler = async (req, res) => {
       console.log(`[api/settings] Entering PUT block for user ${userId}.`);
       const settingsData = await parseBody(req);
 
+      if (!settingsData || (typeof settingsData === 'object' && Object.keys(settingsData).length === 0)) {
+        console.warn(`[api/settings] Received empty settings data for user ${userId}. Skipping save to prevent data loss.`);
+        return res.status(400).json({ error: 'Falha ao processar os dados das configurações. Tente novamente.' });
+      }
+
       const upsertQuery = `
         INSERT INTO settings (user_id, settings_data)
         VALUES ($1, $2)
