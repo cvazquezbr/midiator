@@ -12,7 +12,6 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
 async function handler(req, res) {
   const body = await parseBody(req);
-  req.body = body;
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);

@@ -2,13 +2,12 @@ import { parseBody } from '../utils.js';
 
 export default async function handler(req, res) {
   const body = await parseBody(req);
-  req.body = body;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Only POST requests are allowed' });
   }
 
-  const { wordpressUrl, username, password } = req.body;
+  const { wordpressUrl, username, password } = body;
 
   if (!wordpressUrl || !username || !password) {
     return res.status(400).json({ message: 'Missing required fields: wordpressUrl, username, password' });

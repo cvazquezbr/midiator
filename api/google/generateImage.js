@@ -5,13 +5,12 @@ import { parseBody } from '../utils.js';
 
 async function handler(req, res) {
   const body = await parseBody(req);
-  req.body = body;
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  const { prompt, model } = req.body;
+  const { prompt, model } = body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing required parameter: prompt' });

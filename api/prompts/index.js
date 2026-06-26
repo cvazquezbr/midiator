@@ -4,7 +4,6 @@ import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   const body = await parseBody(req);
-  req.body = body;
   // withAuth HOC has already run, so req.user is available.
   const { name } = req.query;
 
@@ -34,7 +33,7 @@ const handler = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Only admins can create prompts.' });
     }
     try {
-      const { name: newName, description, prompt_text } = req.body;
+      const { name: newName, description, prompt_text } = body;
       if (!newName || !prompt_text) {
         return res.status(400).json({ error: 'Name and prompt text are required' });
       }

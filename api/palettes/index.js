@@ -1,7 +1,9 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
   // withAuth middleware has already run, so req.user is available (it's the JWT payload).
   // We need to robustly get the user identifier. It could be in `id`, `sub`, or `userId`.
   const userId = req.user.id || req.user.sub || req.user.userId;
@@ -37,7 +39,7 @@ const handler = async (req, res) => {
 
   // POST: Create a new palette for the authenticated user
   if (req.method === 'POST') {
-    const { name, colors, harmony, harmony_justification } = req.body;
+    const { name, colors, harmony, harmony_justification } = body;
 
     if (!name || !Array.isArray(colors)) {
       return res.status(400).json({ error: 'Palette name and a colors array are required.' });

@@ -6,8 +6,7 @@ import { escapeLinkedinText, parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   const body = await parseBody(req);
-  req.body = body;
-  const { action } = req.body;
+  const { action } = body;
   const userId = req.user.sub;
 
   try {
@@ -15,13 +14,13 @@ const handler = async (req, res) => {
       case 'getComments':
         return await handleGetComments(req, res, userId);
       case 'approveComment':
-        return await handleApproveComment(req, res, userId);
+        return await handleApproveComment(req, res, userId, body);
       case 'updateComment':
-        return await handleUpdateComment(req, res, userId);
+        return await handleUpdateComment(req, res, userId, body);
       case 'publishComment':
-        return await handlePublishComment(req, res, userId);
+        return await handlePublishComment(req, res, userId, body);
       case 'regenerateComment':
-        return await handleRegenerateComment(req, res, userId);
+        return await handleRegenerateComment(req, res, userId, body);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -43,8 +42,8 @@ async function handleGetComments(req, res, userId) {
   res.status(200).json(result.rows);
 }
 
-async function handleApproveComment(req, res, userId) {
-  const { commentId, finalText } = req.body;
+async function handleApproveComment(req, res, userId, body) {
+  const { commentId, finalText } = body;
   
   const result = await query(
     `UPDATE linkedin_generated_comments 
@@ -61,8 +60,8 @@ async function handleApproveComment(req, res, userId) {
   res.status(200).json(result.rows[0]);
 }
 
-async function handlePublishComment(req, res, userId) {
-  const { commentId } = req.body;
+async function handlePublishComment(req, res, userId, body) {
+  const { commentId } = body;
 
   // 1. Get comment and post details
   const result = await query(
@@ -157,8 +156,8 @@ async function handlePublishComment(req, res, userId) {
   }
 }
 
-async function handleRegenerateComment(req, res, userId) {
-  const { commentId } = req.body;
+async function handleRegenerateComment(req, res, userId, body) {
+  const { commentId } = body;
 
   const result = await query(
     `SELECT discovered_post_id, generation_version FROM linkedin_generated_comments WHERE id = $1 AND user_id = $2`,
@@ -185,8 +184,8 @@ async function handleRegenerateComment(req, res, userId) {
   }
 }
 
-async function handleUpdateComment(req, res, userId) {
-  const { commentId, finalText, status } = req.body;
+async function handleUpdateComment(req, res, userId, body) {
+  const { commentId, finalText, status } = body;
   
   const result = await query(
     `UPDATE linkedin_generated_comments 
