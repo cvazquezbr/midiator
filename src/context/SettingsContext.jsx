@@ -20,6 +20,7 @@ export const useSettings = () => {
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [models, setModels] = useState([]);
   const [imageModels, setImageModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -104,7 +105,7 @@ export const SettingsProvider = ({ children }) => {
   }, [fetchModels]);
 
   const saveSettings = useCallback(async () => {
-    setIsLoading(true);
+    setIsSaving(true);
     try {
       await saveSettingsToDb(settings);
       toast.success('Settings saved successfully!');
@@ -115,13 +116,14 @@ export const SettingsProvider = ({ children }) => {
       toast.error(`Failed to save settings: ${error.message}`);
       throw error;
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   }, [settings, fetchModels]);
 
   const value = {
     settings,
     isLoading,
+    isSaving,
     loadSettings,
     updateSetting,
     saveSettings,

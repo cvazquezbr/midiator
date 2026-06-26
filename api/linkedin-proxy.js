@@ -408,14 +408,11 @@ async function handleGetProfiles(request, response) {
     };
 
     try {
-        const [personalResponse, orgAclsResponse] = await Promise.all([
-            fetch('https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture', { headers }),
-            fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED', { headers })
-        ]);
+        // Step 1: Fetch personal profile
+        const personalResponse = await fetch('https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture', { headers });
 
         if (!personalResponse.ok) {
             const errorText = await personalResponse.text();
-            // If the token is invalid, return a 401 Unauthorized
             if (personalResponse.status === 401) {
                 return response.status(401).json({ error: 'Invalid or expired LinkedIn access token.' });
             }
@@ -423,8 +420,9 @@ async function handleGetProfiles(request, response) {
         }
 
         const personalData = await personalResponse.json();
+        const memberUrn = `urn:li:person:${personalData.id}`;
 
-        // Map new field names from /rest/me (givenName, familyName, picture)
+        // Map new field names from /rest/me
         const firstName = personalData.givenName || '';
         const lastName = personalData.familyName || '';
         const profilePicture = personalData.picture || '';
@@ -436,6 +434,10 @@ async function handleGetProfiles(request, response) {
             profilePicture: profilePicture
         };
 
+        // Step 2: Fetch organization ACLs using the member URN
+        const orgAclsUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED&roleAssignee=${encodeURIComponent(memberUrn)}`;
+        const orgAclsResponse = await fetch(orgAclsUrl, { headers });
+
         let organizations = [];
         if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
@@ -443,11 +445,14 @@ async function handleGetProfiles(request, response) {
             const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
             if (orgIds.length > 0) {
+                // Step 3: Fetch organization details in batch
                 const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
                 const batchOrgResponse = await fetch(batchOrgUrl, { headers });
 
                 if (batchOrgResponse.ok) {
                     const batchOrgData = await batchOrgResponse.json();
+                    console.log(`[LinkedIn Proxy] Batch Org Data keys: ${Object.keys(batchOrgData.results || {}).join(',')}`);
+
                     organizations = orgAclsData.elements.map(acl => {
                         const orgUrn = acl.organization;
                         const orgId = orgUrn.split(':').pop();
@@ -463,14 +468,14 @@ async function handleGetProfiles(request, response) {
                         };
                     });
                 } else {
-                    console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
+                    const errorBody = await batchOrgResponse.text();
+                    console.warn(`Could not fetch batch organization details: ${batchOrgResponse.status} - ${errorBody}`);
                 }
             }
         } else {
             const errorText = await orgAclsResponse.text();
             console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
         }
-
 
         return response.status(200).json({
             personal,
