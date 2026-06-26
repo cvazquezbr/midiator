@@ -1,18 +1,7 @@
 import { del } from '@vercel/blob';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-
-const parseBody = async (req) => {
-  let body = '';
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
   const userId = req.user.sub; // The user ID is in the 'sub' (subject) claim

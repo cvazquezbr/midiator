@@ -111,8 +111,11 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         });
         if (!response.ok) throw new Error('Falha ao buscar detalhes do usuário.');
         const data = await response.json();
-        const firstName = data.firstName?.localized?.pt_BR || data.firstName?.localized?.en_US;
-        const lastName = data.lastName?.localized?.pt_BR || data.lastName?.localized?.en_US;
+
+        // Map new field names from /rest/me (givenName, familyName)
+        const firstName = data.givenName || '';
+        const lastName = data.familyName || '';
+
         setConnectedUser({ localizedFirstName: firstName, localizedLastName: lastName });
       } catch (err) {
         console.error("Erro ao buscar detalhes do usuário do LinkedIn:", err);
@@ -198,7 +201,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const handleRemove = () => {
     const { folderId } = settings.linkedin || {};
     updateSetting('linkedin', { accessToken: null, expiry: null, folderId: folderId || '' });
-    sessionStorage.removeItem('linkedin_profiles_cache');
+    sessionStorage.removeItem('linkedin_profiles_cache_v2');
     setConnectedUser(null);
     toast.info('Conexão com o LinkedIn removida.');
   };

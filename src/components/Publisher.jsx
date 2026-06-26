@@ -84,7 +84,7 @@ function TabPanel(props) {
   );
 }
 
-const Publisher = ({
+const Publisher = React.memo(({
   settings,
   campaignContent,
   generatedPagesData = [],
@@ -126,7 +126,7 @@ const Publisher = ({
     setOpenItems(prev => ({ ...prev, [id]: !prev[id] }));
   };
   const [linkedinProfiles, setLinkedinProfiles] = useState({ personal: null, organizations: [] });
-  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [publishResults, setPublishResults] = useState([]);
@@ -380,6 +380,10 @@ const Publisher = ({
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
+
+  useEffect(() => {
+    handleRefreshProfiles();
+  }, []);
 
   useEffect(() => {
     if (tabValue === 2) {
@@ -806,7 +810,7 @@ const Publisher = ({
         // We split by '----' to avoid escaping hashtags, similar to the cron logic.
         let finalContent = content.trim();
         const parts = finalContent.split('----');
-        const contentPart = parts[0] ? escapeLinkedinText(parts[0].trim()) : '';
+        const contentPart = parts[0] ? escapeLinkedinText(markdownToLinkedinText(parts[0].trim())) : '';
         const ctaPart = parts[1] ? escapeLinkedinText(parts[1].trim()) : '';
         const hashtagsPart = parts[2] ? parts[2].trim() : '';
 
@@ -1425,7 +1429,7 @@ const PostListItem = ({ post, level, openItems, handleItemClick, handleViewDetai
             )}
         </React.Fragment>
     );
-};
+});
 
 
 export default Publisher;

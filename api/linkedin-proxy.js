@@ -1,8 +1,8 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
-import { delay, fetchWithRetry } from './utils.js';
+import { delay, fetchWithRetry, parseBody } from './utils.js';
 
-const LINKEDIN_API_VERSION = '202505';
+const LINKEDIN_API_VERSION = '202601';
 
 // A general-purpose, action-based proxy for LinkedIn API calls.
 // This is more secure than an endpoint-based proxy as it doesn't allow calling arbitrary URLs.
@@ -38,7 +38,14 @@ async function handleTokenExchange(request, response) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: params.toString(),
         });
-        const data = await linkedinResponse.json();
+
+        const responseText = await linkedinResponse.text();
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            data = { raw: responseText };
+        }
 
         if (linkedinResponse.ok) {
             const { access_token, expires_in, refresh_token } = data;
@@ -89,6 +96,7 @@ async function handleInitializeVideoUpload(request, response) {
 
         const data = await linkedinResponse.json();
         if (!linkedinResponse.ok) {
+            console.error(`[LinkedIn Proxy] initializeVideoUpload Error ${linkedinResponse.status}:`, JSON.stringify(data));
             return response.status(linkedinResponse.status).json(data);
         }
         // The client needs the 'value' object from the response
@@ -205,7 +213,8 @@ export async function handleGetProfile(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfile.' });
     }
 
-    const profileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
+    // Version 202601 uses /rest/me with explicit fields
+    const profileUrl = 'https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture';
 
     try {
         const linkedinResponse = await fetch(profileUrl, {
@@ -216,7 +225,19 @@ export async function handleGetProfile(request, response) {
                 'LinkedIn-Version': LINKEDIN_API_VERSION
             },
         });
-        const data = await linkedinResponse.json();
+
+        const responseText = await linkedinResponse.text();
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            data = { raw: responseText };
+        }
+
+        if (!linkedinResponse.ok) {
+            console.error(`[LinkedIn Proxy] getProfile Error ${linkedinResponse.status}:`, JSON.stringify(data));
+        }
+
         return response.status(linkedinResponse.status).json(data);
     } catch (error) {
         console.error('Error during proxied getProfile:', error);
@@ -356,7 +377,7 @@ async function handleCreatePost(request, response) {
         }
 
         if (!linkedinResponse.ok) {
-            console.error('LinkedIn Post Creation Error:', responseData);
+            console.error(`[LinkedIn Proxy] createPost Error ${linkedinResponse.status}:`, JSON.stringify(responseData));
             return response.status(linkedinResponse.status).json(responseData);
         }
 
@@ -388,7 +409,7 @@ async function handleGetProfiles(request, response) {
 
     try {
         const [personalResponse, orgAclsResponse] = await Promise.all([
-            fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
+            fetch('https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture', { headers }),
             fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED', { headers })
         ]);
 
@@ -402,11 +423,17 @@ async function handleGetProfiles(request, response) {
         }
 
         const personalData = await personalResponse.json();
+
+        // Map new field names from /rest/me (givenName, familyName, picture)
+        const firstName = personalData.givenName || '';
+        const lastName = personalData.familyName || '';
+        const profilePicture = personalData.picture || '';
+
         const personal = {
             id: personalData.id,
-            name: `${personalData.firstName?.localized?.pt_BR || personalData.firstName?.localized?.en_US || ''} ${personalData.lastName?.localized?.pt_BR || personalData.lastName?.localized?.en_US || ''}`.trim(),
+            name: `${firstName} ${lastName}`.trim(),
             type: 'person',
-            profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
+            profilePicture: profilePicture
         };
 
         let organizations = [];
@@ -494,7 +521,13 @@ async function handleRefreshToken(request, response) {
             body: params.toString(),
         });
 
-        const data = await linkedinResponse.json();
+        const responseText = await linkedinResponse.text();
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            data = { raw: responseText };
+        }
 
         if (linkedinResponse.ok) {
             const { access_token, expires_in } = data;
@@ -693,7 +726,7 @@ export async function getAuthorDetails(accessToken, authorUrn) {
     let profileUrl;
     if (authorUrn.includes(':person:')) {
         const personId = authorUrn.split(':').pop();
-        profileUrl = `https://api.linkedin.com/v2/people/(id:${personId})?projection=(id,firstName,lastName,headline,profilePicture(displayImage~:playableStreams))`;
+        profileUrl = `https://api.linkedin.com/rest/people/${personId}?fields=id,givenName,familyName,headline,picture`;
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
         profileUrl = `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`;
@@ -909,6 +942,10 @@ const protectedHandler = async (request, response) => {
 };
 
 const mainHandler = async (request, response) => {
+    // Ensure body is parsed robustly
+    const body = await parseBody(request);
+    request.body = body;
+
     console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
 
     if (request.method !== 'POST') {

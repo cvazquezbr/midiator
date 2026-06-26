@@ -1,17 +1,6 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-
-const parseBody = async (req) => {
-  let body = '';
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
+import { parseBody } from '../utils.js';
 
 /**
  * Normalizes a page set object to ensure page_set_data is a parsed JSON object.

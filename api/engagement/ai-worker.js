@@ -148,8 +148,11 @@ export async function enrichAndScoreSession(sessionId) {
         try {
           const authorData = await getAuthorDetails(accessToken, authorUrn);
           if (authorUrn.includes(':person:')) {
-            authorName = `${authorData.firstName?.localized?.pt_BR || authorData.firstName?.localized?.en_US || ''} ${authorData.lastName?.localized?.pt_BR || authorData.lastName?.localized?.en_US || ''}`.trim();
-            authorTitle = authorData.headline?.localized?.pt_BR || authorData.headline?.localized?.en_US || '';
+            // Updated to handle 202601 /rest/people response
+            const firstName = authorData.givenName || '';
+            const lastName = authorData.familyName || '';
+            authorName = `${firstName} ${lastName}`.trim();
+            authorTitle = authorData.headline || '';
           } else if (authorUrn.includes(':organization:')) {
             authorName = authorData.localizedName || 'Organization';
           }

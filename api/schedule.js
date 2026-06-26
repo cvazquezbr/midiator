@@ -1,5 +1,6 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
+import { parseBody } from './utils.js';
 
 // Helper function to create a schedule
 async function handleCreateSchedule(request, response) {
@@ -180,6 +181,9 @@ const userActionsHandler = async (request, response) => {
 
 // This endpoint only handles user-facing actions now, which are all POST requests.
 const mainHandler = async (request, response) => {
+    const body = await parseBody(request);
+    request.body = body;
+
     if (request.method === 'POST') {
         // We wrap the user actions handler with withAuth to protect it
         return withAuth(userActionsHandler)(request, response);

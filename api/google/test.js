@@ -2,17 +2,7 @@
 import { GoogleAuth } from 'google-auth-library';
 import { withAuth } from '../middleware/auth.js';
 
-const parseBody = async (req) => {
-    let body = '';
-    for await (const chunk of req) {
-        body += new TextDecoder().decode(chunk);
-    }
-    try {
-        return JSON.parse(body);
-    } catch {
-        return {};
-    }
-};
+import { parseBody } from '../utils.js';
 
 async function handler(req, res) {
   if (req.method !== 'POST') {

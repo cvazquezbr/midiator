@@ -1,7 +1,10 @@
 import { withAdminAuth } from '../middleware/auth.js';
 import { del } from '@vercel/blob';
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
+  req.body = body;
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

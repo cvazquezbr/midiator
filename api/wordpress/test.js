@@ -1,4 +1,9 @@
+import { parseBody } from '../utils.js';
+
 export default async function handler(req, res) {
+  const body = await parseBody(req);
+  req.body = body;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Only POST requests are allowed' });
   }

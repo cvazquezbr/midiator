@@ -2,6 +2,7 @@ import { query } from '../db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
+import { parseBody } from '../utils.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -9,20 +10,6 @@ if (!JWT_SECRET) {
   // This should not happen in production if the environment variable is set.
   console.error('CRITICAL: JWT_SECRET environment variable is not set.');
 }
-
-// Helper to parse body as Vercel's environment can be tricky
-const parseBody = async (req) => {
-  let body = '';
-  // Vercel's request object is a stream
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

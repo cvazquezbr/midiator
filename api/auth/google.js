@@ -2,24 +2,13 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import { query } from '../db.js';
+import { parseBody } from '../utils.js';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, 'postmessage');
-
-const parseBody = async (req) => {
-  let body = '';
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
 
 const issueJwtAndSetCookie = (res, user) => {
   const tokenPayload = {

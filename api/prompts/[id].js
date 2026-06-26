@@ -1,7 +1,10 @@
 import { query } from '../db.js';
 import { withAdminAuth } from '../middleware/auth.js';
+import { parseBody } from '../utils.js';
 
 const handler = async (req, res) => {
+  const body = await parseBody(req);
+  req.body = body;
   // withAdminAuth has already verified the user is an admin.
   // req.user is available.
   const { id } = req.query;

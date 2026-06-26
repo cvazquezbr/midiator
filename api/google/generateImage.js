@@ -1,8 +1,11 @@
 import { GoogleAuth } from 'google-auth-library';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
+import { parseBody } from '../utils.js';
 
 async function handler(req, res) {
+  const body = await parseBody(req);
+  req.body = body;
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
