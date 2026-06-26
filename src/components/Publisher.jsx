@@ -1348,7 +1348,7 @@ const Publisher = React.memo(({
   );
 });
 
-const PostListItem = ({ post, level, openItems, handleItemClick, handleViewDetails, handleOpenEditModal, handleDeleteSchedule }) => {
+const PostListItem = React.memo(({ post, level, openItems, handleItemClick, handleViewDetails, handleOpenEditModal, handleDeleteSchedule }) => {
     const postImage = post.post_content?.images?.[0] || post.campaign_data?.pageTemplate?.images?.[0]?.url;
 
     return (
