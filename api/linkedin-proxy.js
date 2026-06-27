@@ -440,9 +440,24 @@ async function handleGetProfiles(request, response) {
         const personalData = await personalResponse.json();
         const memberUrn = `urn:li:person:${personalData.id}`;
 
+        // Helper to extract localized strings from LinkedIn objects
+        const getLocalized = (obj) => {
+            if (!obj) return '';
+            if (typeof obj === 'string') return obj;
+            if (obj.localized) {
+                const locale = Object.keys(obj.localized)[0];
+                return obj.localized[locale] || '';
+            }
+            if (obj.preferredLocale && obj.localized) {
+               const localeKey = `${obj.preferredLocale.language}_${obj.preferredLocale.country}`;
+               return obj.localized[localeKey] || obj.localized[Object.keys(obj.localized)[0]] || '';
+            }
+            return '';
+        };
+
         // Map field names with fallbacks for different LinkedIn API versions/schemas
-        const firstName = personalData.givenName || personalData.firstName || personalData.localizedFirstName || '';
-        const lastName = personalData.familyName || personalData.lastName || personalData.localizedLastName || '';
+        const firstName = getLocalized(personalData.givenName || personalData.firstName || personalData.localizedFirstName);
+        const lastName = getLocalized(personalData.familyName || personalData.lastName || personalData.localizedLastName);
         const profilePicture = personalData.picture || personalData.profilePicture || '';
 
         const personal = {
@@ -476,7 +491,7 @@ async function handleGetProfiles(request, response) {
                         const orgId = orgUrn.split(':').pop();
                         // LinkedIn batch API might return keys as IDs or full URNs. Try both.
                         const orgDetails = batchOrgData.results[orgId] || batchOrgData.results[orgUrn];
-                        const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+                        const orgName = getLocalized(orgDetails?.localizedName || orgDetails?.name);
 
                         return {
                             id: orgId,
