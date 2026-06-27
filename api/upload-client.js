@@ -1,26 +1,6 @@
 import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
-
-// Helper to parse body in a Vercel Node.js environment
-const getBody = async (req) => {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      try {
-        // If the body is empty, resolve with null, otherwise parse it.
-        resolve(body ? JSON.parse(body) : null);
-      } catch (e) {
-        reject(e);
-      }
-    });
-    req.on('error', (err) => {
-      reject(err);
-    });
-  });
-};
+import { parseBody } from './utils.js';
 
 const handler = async (req, res) => {
   if (req.method !== 'POST') {
@@ -33,7 +13,7 @@ const handler = async (req, res) => {
 
   try {
     // Manually parse the JSON body from the request stream
-    const body = await getBody(req);
+    const body = await parseBody(req);
 
     if (!body) {
       return res.status(400).json({ error: 'Request body is empty or invalid.' });

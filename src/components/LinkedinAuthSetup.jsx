@@ -112,9 +112,19 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         if (!response.ok) throw new Error('Falha ao buscar detalhes do usuário.');
         const data = await response.json();
 
+        const getLocalized = (obj) => {
+            if (!obj) return '';
+            if (typeof obj === 'string') return obj;
+            if (obj.localized) {
+                const locale = Object.keys(obj.localized)[0];
+                return obj.localized[locale] || '';
+            }
+            return '';
+        };
+
         // Map field names with fallbacks for different LinkedIn API versions/schemas
-        const firstName = data.givenName || data.firstName || data.localizedFirstName || '';
-        const lastName = data.familyName || data.lastName || data.localizedLastName || '';
+        const firstName = getLocalized(data.givenName || data.firstName || data.localizedFirstName);
+        const lastName = getLocalized(data.familyName || data.lastName || data.localizedLastName);
 
         setConnectedUser({ localizedFirstName: firstName, localizedLastName: lastName });
       } catch (err) {
