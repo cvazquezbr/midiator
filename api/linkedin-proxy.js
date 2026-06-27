@@ -470,19 +470,29 @@ async function handleGetProfiles(request, response) {
         // Step 2: Fetch organization ACLs using the member URN
         // We'll try multiple endpoints and URN types as fallbacks.
         const tryFetchAcls = async (endpoint, assigneeUrn) => {
-            const url = `https://api.linkedin.com/rest/${assigneeUrn.includes(':person:') && endpoint === 'brandAcls' ? 'brandAcls' : endpoint}?q=roleAssignee&roleAssignee=${encodeURIComponent(assigneeUrn)}`;
+            const baseUrl = 'https://api.linkedin.com/rest';
+            let url = `${baseUrl}/${endpoint}?q=roleAssignee&roleAssignee=${encodeURIComponent(assigneeUrn)}`;
+
+            // Special case for brandAcls in 202601
+            if (endpoint === 'brandAcls' && assigneeUrn.includes(':person:')) {
+                url = `${baseUrl}/brandAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(assigneeUrn)}`;
+            }
+
             console.log(`[LinkedIn Proxy] Fetching ACLs from: ${url}`);
             try {
                 const res = await fetch(url, { headers });
+                const resText = await res.text();
+                let data = null;
+                try { data = JSON.parse(resText); } catch(e) {}
+
                 if (!res.ok) {
-                    const err = await res.text();
-                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint} with ${assigneeUrn}: ${res.status} - ${err}`);
-                    return null;
+                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint} with ${assigneeUrn}: ${res.status} - ${resText}`);
+                    return { error: true, status: res.status, message: resText, endpoint, assigneeUrn, url };
                 }
-                return await res.json();
+                return { error: false, status: res.status, data, endpoint, assigneeUrn, url };
             } catch (e) {
                 console.error(`[LinkedIn Proxy] Error fetching from ${endpoint}:`, e);
-                return null;
+                return { error: true, status: 'error', message: e.message, endpoint, assigneeUrn, url };
             }
         };
 
@@ -490,21 +500,26 @@ async function handleGetProfiles(request, response) {
             `urn:li:person:${personalData.id}`,
             `urn:li:member:${personalData.id}`
         ];
-        const endpoints = ['organizationAcls', 'organizationalEntityAcls', 'brandAcls'];
+        const endpoints = ['organizationAcls', 'organizationalEntityAcls', 'brandAcls', 'memberAssignments'];
 
         let allAclElements = [];
         let debugInfo = [];
 
         for (const assigneeUrn of assigneeUrns) {
             for (const endpoint of endpoints) {
-                const data = await tryFetchAcls(endpoint, assigneeUrn);
-                if (data && data.elements && data.elements.length > 0) {
-                    allAclElements = allAclElements.concat(data.elements);
-                    debugInfo.push({ endpoint, assigneeUrn, count: data.elements.length });
+                const result = await tryFetchAcls(endpoint, assigneeUrn);
+                debugInfo.push({
+                    endpoint: result.endpoint,
+                    assigneeUrn: result.assigneeUrn,
+                    status: result.status,
+                    count: result.data?.elements?.length || 0,
+                    error: result.error ? result.message : null
+                });
+
+                if (!result.error && result.data && result.data.elements && result.data.elements.length > 0) {
+                    allAclElements = allAclElements.concat(result.data.elements);
                 }
             }
-            // If we found something with the first URN type, we might not need to try others,
-            // but for safety and debugging we'll try everything for now unless it gets too slow.
         }
 
         // Deduplicate elements by organization/entity URN
