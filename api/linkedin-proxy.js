@@ -357,8 +357,9 @@ async function handleCreatePost(request, response) {
         const text = await res.text();
         let data = {};
         try { data = JSON.parse(text); } catch(e) {}
-        if (res.headers.get('x-restli-id')) data.id = res.headers.get('x-restli-id');
-        return response.status(res.status).json(data);
+
+        const restliId = res.headers.get('x-restli-id');
+        return response.status(res.status).json(restliId ? { ...data, id: restliId } : data);
     } catch (error) {
         return response.status(500).json({ error: error.message });
     }
@@ -469,8 +470,7 @@ async function handleGetMemberPostStatistics(request, response) {
             }
         });
         const data = await res.json();
-        data.urn = ugcPostUrn;
-        return response.status(res.status).json(data);
+        return response.status(res.status).json({ ...data, urn: ugcPostUrn });
     } catch (error) {
         return response.status(500).json({ error: error.message });
     }
