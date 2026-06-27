@@ -468,12 +468,15 @@ async function handleGetProfiles(request, response) {
         };
 
         // Step 2: Fetch organization ACLs using the member URN
-        const orgAclsUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED&roleAssignee=${encodeURIComponent(memberUrn)}`;
+        // The 202601 version might be stricter with roles. We'll try to find all roles.
+        const orgAclsUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED&roleAssignee=${encodeURIComponent(memberUrn)}`;
+        console.log(`[LinkedIn Proxy] Fetching ACLs from: ${orgAclsUrl}`);
         const orgAclsResponse = await fetch(orgAclsUrl, { headers });
 
         let organizations = [];
         if (orgAclsResponse.ok) {
             const orgAclsData = await orgAclsResponse.json();
+            console.log(`[LinkedIn Proxy] ACLs Data elements count: ${orgAclsData.elements?.length || 0}`);
             const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
             const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
@@ -490,7 +493,8 @@ async function handleGetProfiles(request, response) {
                         const orgUrn = acl.organization;
                         const orgId = orgUrn.split(':').pop();
                         // LinkedIn batch API might return keys as IDs or full URNs. Try both.
-                        const orgDetails = batchOrgData.results[orgId] || batchOrgData.results[orgUrn];
+                        // In some versions, the results are indexed by the URN, not the ID.
+                        const orgDetails = batchOrgData.results[orgId] || batchOrgData.results[orgUrn] || batchOrgData.results[`urn:li:organization:${orgId}`];
                         const orgName = getLocalized(orgDetails?.localizedName || orgDetails?.name);
 
                         return {
