@@ -468,17 +468,38 @@ async function handleGetProfiles(request, response) {
         };
 
         // Step 2: Fetch organization ACLs using the member URN
-        // The 202601 version might be stricter with roles. We'll try to find all roles.
-        const orgAclsUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED&roleAssignee=${encodeURIComponent(memberUrn)}`;
-        console.log(`[LinkedIn Proxy] Fetching ACLs from: ${orgAclsUrl}`);
-        const orgAclsResponse = await fetch(orgAclsUrl, { headers });
+        // We'll try both organizationAcls and organizationalEntityAcls as fallbacks.
+        // We also removed state=APPROVED to be more inclusive.
+        const tryFetchAcls = async (endpoint) => {
+            const url = `https://api.linkedin.com/rest/${endpoint}?q=roleAssignee&roleAssignee=${encodeURIComponent(memberUrn)}`;
+            console.log(`[LinkedIn Proxy] Fetching ACLs from: ${url}`);
+            try {
+                const res = await fetch(url, { headers });
+                if (!res.ok) {
+                    const err = await res.text();
+                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint}: ${res.status} - ${err}`);
+                    return null;
+                }
+                return await res.json();
+            } catch (e) {
+                console.error(`[LinkedIn Proxy] Error fetching from ${endpoint}:`, e);
+                return null;
+            }
+        };
+
+        let orgAclsData = await tryFetchAcls('organizationAcls');
+
+        // Fallback to organizationalEntityAcls if first one failed or returned nothing
+        if (!orgAclsData || !orgAclsData.elements || orgAclsData.elements.length === 0) {
+            console.log(`[LinkedIn Proxy] No results from organizationAcls, trying organizationalEntityAcls...`);
+            orgAclsData = await tryFetchAcls('organizationalEntityAcls');
+        }
 
         let organizations = [];
-        if (orgAclsResponse.ok) {
-            const orgAclsData = await orgAclsResponse.json();
-            console.log(`[LinkedIn Proxy] ACLs Data elements count: ${orgAclsData.elements?.length || 0}`);
-            const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-            const orgIds = orgUrns.map(urn => urn.split(':').pop());
+        if (orgAclsData && orgAclsData.elements && orgAclsData.elements.length > 0) {
+            console.log(`[LinkedIn Proxy] ACLs Data elements count: ${orgAclsData.elements.length}`);
+            const orgUrns = orgAclsData.elements.map(el => el.organization || el.organizationalEntity).filter(Boolean);
+            const orgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))]; // Deduplicate IDs
 
             if (orgIds.length > 0) {
                 // Step 3: Fetch organization details in batch
@@ -490,29 +511,42 @@ async function handleGetProfiles(request, response) {
                     console.log(`[LinkedIn Proxy] Batch Org Data keys: ${Object.keys(batchOrgData.results || {}).join(',')}`);
 
                     organizations = orgAclsData.elements.map(acl => {
-                        const orgUrn = acl.organization;
+                        const orgUrn = acl.organization || acl.organizationalEntity;
+                        if (!orgUrn) return null;
                         const orgId = orgUrn.split(':').pop();
+
                         // LinkedIn batch API might return keys as IDs or full URNs. Try both.
-                        // In some versions, the results are indexed by the URN, not the ID.
                         const orgDetails = batchOrgData.results[orgId] || batchOrgData.results[orgUrn] || batchOrgData.results[`urn:li:organization:${orgId}`];
                         const orgName = getLocalized(orgDetails?.localizedName || orgDetails?.name);
 
                         return {
                             id: orgId,
-                            name: orgName,
+                            name: orgName || `Organization ${orgId}`,
                             role: acl.role,
                             logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
                             type: 'organization'
                         };
-                    });
+                    }).filter(Boolean);
                 } else {
                     const errorBody = await batchOrgResponse.text();
                     console.warn(`Could not fetch batch organization details: ${batchOrgResponse.status} - ${errorBody}`);
+
+                    // Fallback: create stub entries if details fetch fails
+                    organizations = orgAclsData.elements.map(acl => {
+                        const orgUrn = acl.organization || acl.organizationalEntity;
+                        if (!orgUrn) return null;
+                        const orgId = orgUrn.split(':').pop();
+                        return {
+                            id: orgId,
+                            name: `Página (ID: ${orgId})`,
+                            role: acl.role,
+                            type: 'organization'
+                        };
+                    }).filter(Boolean);
                 }
             }
         } else {
-            const errorText = await orgAclsResponse.text();
-            console.warn(`Could not fetch organization ACLs: ${orgAclsResponse.status} - ${errorText}`);
+            console.log(`[LinkedIn Proxy] No organizations found for user ${memberUrn} in any ACL endpoint.`);
         }
 
         return response.status(200).json({
@@ -996,7 +1030,7 @@ const mainHandler = async (request, response) => {
     }
 
     // Check for the internal secret for cron jobs
-    if (request.headers['x-internal-secret'] === process.env.INTERNAL_API_SECRET) {
+    if (body && request.headers['x-internal-secret'] && request.headers['x-internal-secret'] === process.env.INTERNAL_API_SECRET) {
         // Pass body to sub-handlers
         request.body = body;
         return internalRequestHandler(request, response);
