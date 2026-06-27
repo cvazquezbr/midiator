@@ -4,7 +4,6 @@ import { delay, fetchWithRetry, parseBody } from './utils.js';
 
 const LINKEDIN_API_VERSION = '202601';
 
-// A general-purpose, action-based proxy for LinkedIn API calls.
 async function handleTokenExchange(request, response) {
     const { code, redirectUri } = request.body;
     const userId = request.user.sub;
@@ -23,7 +22,7 @@ async function handleTokenExchange(request, response) {
     const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
     const params = new URLSearchParams({
         grant_type: 'authorization_code',
-        code: code,
+        code,
         redirect_uri: redirectUri,
         client_id: clientId,
         client_secret: clientSecret,
@@ -57,16 +56,46 @@ async function handleTokenExchange(request, response) {
                 [access_token, expiryDate, refresh_token, userId]
             );
 
-            return response.status(200).json({
-                access_token: access_token,
-                expires_in: expires_in
-            });
+            return response.status(200).json({ access_token, expires_in });
         }
 
         return response.status(linkedinResponse.status).json(data);
     } catch (error) {
         console.error('Error during token exchange:', error);
         return response.status(500).json({ error: 'Internal Server Error during token exchange' });
+    }
+}
+
+async function handleGetProfile(request, response) {
+    const { accessToken } = request.body;
+
+    if (!accessToken) {
+        return response.status(400).json({ error: 'Missing accessToken.' });
+    }
+
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': LINKEDIN_API_VERSION
+    };
+
+    try {
+        const meRes = await fetch('https://api.linkedin.com/rest/me', { headers });
+
+        if (!meRes.ok) {
+            const errorText = await meRes.text();
+            if (meRes.status === 401) {
+                return response.status(401).json({ error: 'Invalid or expired LinkedIn access token.' });
+            }
+            throw new Error(`Failed to fetch profile: ${meRes.status} - ${errorText}`);
+        }
+
+        const data = await meRes.json();
+        return response.status(200).json(data);
+    } catch (error) {
+        console.error('Error in handleGetProfile:', error);
+        return response.status(500).json({ error: 'Internal Server Error while fetching profile.' });
     }
 }
 
@@ -96,6 +125,17 @@ async function handleGetProfiles(request, response) {
         return '';
     };
 
+    const extractLogoUrl = (orgDetails) => {
+        try {
+            const elements = orgDetails?.logoV2?.['original~']?.elements;
+            if (Array.isArray(elements) && elements.length > 0) {
+                const identifier = elements[0]?.identifiers?.[0]?.identifier;
+                if (typeof identifier === 'string') return identifier;
+            }
+        } catch (_) {}
+        return null;
+    };
+
     try {
         // Step 1: Fetch personal profile
         const meRes = await fetch('https://api.linkedin.com/rest/me', { headers });
@@ -111,33 +151,43 @@ async function handleGetProfiles(request, response) {
         const personalData = await meRes.json();
         const personId = personalData.id;
 
-        const firstName = getLocalized(personalData.givenName || personalData.firstName);
-        const lastName = getLocalized(personalData.familyName || personalData.lastName);
-
         const personal = {
             id: personId,
-            name: `${firstName} ${lastName}`.trim() || 'Usuário do LinkedIn',
+            name: `${getLocalized(personalData.givenName || personalData.firstName)} ${getLocalized(personalData.familyName || personalData.lastName)}`.trim() || 'Usuário do LinkedIn',
             type: 'person',
             profilePicture: personalData.picture || personalData.profilePicture || ''
         };
 
         // Step 2: Fetch organization ACLs
-        // Only urn:li:person: works with REST/202601; roleAssignee is the correct q param
         const personUrn = `urn:li:person:${personId}`;
-        const aclUrl = `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED`;
+        const aclUrl = `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`;
 
         console.log(`[LinkedIn Proxy] Fetching ACLs: ${aclUrl}`);
 
         const aclRes = await fetch(aclUrl, { headers });
         const aclText = await aclRes.text();
         let aclData = {};
-        try { aclData = JSON.parse(aclText); } catch (e) {
+        try {
+            aclData = JSON.parse(aclText);
+        } catch (e) {
             console.error('[LinkedIn Proxy] Failed to parse ACL response:', aclText);
         }
 
-        console.log(`[LinkedIn Proxy] ACL response status: ${aclRes.status}, elements: ${aclData?.elements?.length ?? 0}`);
+        console.log(`[LinkedIn Proxy] ACL status: ${aclRes.status}, elements: ${aclData?.elements?.length ?? 0}`);
 
-        const elements = aclData?.elements || [];
+        if (!aclRes.ok) {
+            console.error('[LinkedIn Proxy] ACL error body:', aclText.slice(0, 500));
+            return response.status(200).json({
+                personal,
+                organizations: [],
+                hasOrganizations: false,
+                _debug: { aclStatus: aclRes.status, aclRaw: aclText.slice(0, 500) }
+            });
+        }
+
+        const elements = (aclData?.elements || []).filter(el =>
+            !el.state || el.state === 'APPROVED'
+        );
 
         if (elements.length === 0) {
             return response.status(200).json({
@@ -149,39 +199,34 @@ async function handleGetProfiles(request, response) {
         }
 
         // Step 3: Extract unique org URNs
-        const orgUrnMap = new Map(); // orgUrn -> acl element
+        const orgUrnMap = new Map();
         for (const el of elements) {
-            const orgUrn = el.organizationalTarget
-                || el.organizationalEntity
-                || el.organization;
+            const orgUrn = el.organizationalTarget || el.organizationalEntity || el.organization;
             if (orgUrn && !orgUrnMap.has(orgUrn)) {
                 orgUrnMap.set(orgUrn, el);
             }
         }
 
         const orgUrns = [...orgUrnMap.keys()];
-        // Extract numeric IDs for batch fetch
         const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
         // Step 4: Batch fetch org details
-        // LinkedIn REST batch uses ids=List(id1,id2) and keys results by numeric id OR full URN
         const batchUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
         const batchRes = await fetch(batchUrl, { headers });
 
         let orgResults = {};
         if (batchRes.ok) {
             const batchData = await batchRes.json();
-            // Results can be keyed by numeric id or full URN depending on API version
             orgResults = batchData.results || {};
         } else {
-            console.warn(`[LinkedIn Proxy] Batch org fetch failed: ${batchRes.status}`);
+            const batchErrText = await batchRes.text();
+            console.warn(`[LinkedIn Proxy] Batch org fetch failed: ${batchRes.status} - ${batchErrText.slice(0, 300)}`);
         }
 
         const organizations = orgUrns.map(orgUrn => {
             const acl = orgUrnMap.get(orgUrn);
             const orgId = orgUrn.split(':').pop();
 
-            // Try all possible key formats LinkedIn might use
             const orgDetails = orgResults[orgId]
                 || orgResults[`urn:li:organization:${orgId}`]
                 || orgResults[orgUrn]
@@ -191,16 +236,12 @@ async function handleGetProfiles(request, response) {
                 ? getLocalized(orgDetails.localizedName || orgDetails.name)
                 : null;
 
-            const logo = orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier
-                || orgDetails?.logoV2?.cropped?.['com.linkedin.digitalmedia.mediaartifact.StillImage']?.storageSize
-                || null;
-
             return {
                 id: orgId,
                 urn: orgUrn,
                 name: orgName || `Página (ID: ${orgId})`,
                 role: acl.role,
-                logo: logo || null,
+                logo: extractLogoUrl(orgDetails),
                 type: 'organization'
             };
         });
@@ -353,7 +394,9 @@ async function handleRefreshToken(request, response) {
 
     try {
         const { rows } = await query('SELECT linkedin_refresh_token FROM users WHERE id = $1', [userId]);
-        if (rows.length === 0 || !rows[0].linkedin_refresh_token) return response.status(400).json({ error: 'Refresh token not found.' });
+        if (rows.length === 0 || !rows[0].linkedin_refresh_token) {
+            return response.status(400).json({ error: 'Refresh token not found.' });
+        }
 
         const params = new URLSearchParams({
             grant_type: 'refresh_token',
@@ -370,7 +413,10 @@ async function handleRefreshToken(request, response) {
         const data = await res.json();
         if (res.ok) {
             const expiryDate = new Date(Date.now() + data.expires_in * 1000);
-            await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2 WHERE id = $3', [data.access_token, expiryDate, userId]);
+            await query(
+                'UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2 WHERE id = $3',
+                [data.access_token, expiryDate, userId]
+            );
             return response.status(200).json({ accessToken: data.access_token });
         }
         return response.status(res.status).json(data);
@@ -384,12 +430,19 @@ async function handleGetShareStatistics(request, response) {
     const { authorUrn, shareUrns } = payload;
     const shares = shareUrns.filter(u => u.includes(':share:'));
     const ugcPosts = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
+
     let url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
     if (shares.length > 0) url += `&shares=List(${shares.map(u => encodeURIComponent(u)).join(',')})`;
     if (ugcPosts.length > 0) url += `&ugcPosts=List(${ugcPosts.map(u => encodeURIComponent(u)).join(',')})`;
 
     try {
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION } });
+        const res = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            }
+        });
         const data = await res.json();
         return response.status(res.status).json(data);
     } catch (error) {
@@ -402,7 +455,13 @@ async function handleGetMemberPostStatistics(request, response) {
     const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
     const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=ugcPost&ugcPost=${encodeURIComponent(ugcPostUrn)}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
     try {
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION } });
+        const res = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            }
+        });
         const data = await res.json();
         data.urn = ugcPostUrn;
         return response.status(res.status).json(data);
@@ -414,22 +473,22 @@ async function handleGetMemberPostStatistics(request, response) {
 const protectedHandler = async (request, response) => {
     const { action } = request.body;
     switch (action) {
-        case 'tokenExchange': return handleTokenExchange(request, response);
-        case 'refreshToken': return handleRefreshToken(request, response);
+        case 'tokenExchange':          return handleTokenExchange(request, response);
+        case 'refreshToken':           return handleRefreshToken(request, response);
         case 'testConnection':
-        case 'getProfile': return handleGetProfile(request, response);
-        case 'createPost': return handleCreatePost(request, response);
-        case 'getProfiles': return handleGetProfiles(request, response);
-        case 'initializeVideoUpload': return handleInitializeVideoUpload(request, response);
-        case 'uploadVideo': return handleUploadVideo(request, response);
-        case 'finalizeVideoUpload': return handleFinalizeVideoUpload(request, response);
-        case 'checkVideoStatus': return handleCheckVideoStatus(request, response);
-        case 'getClientId': return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
-        case 'getShareStatistics': return handleGetShareStatistics(request, response);
-        case 'getMemberPostStatistics': return handleGetMemberPostStatistics(request, response);
+        case 'getProfile':             return handleGetProfile(request, response);
+        case 'getProfiles':            return handleGetProfiles(request, response);
+        case 'createPost':             return handleCreatePost(request, response);
+        case 'initializeVideoUpload':  return handleInitializeVideoUpload(request, response);
+        case 'uploadVideo':            return handleUploadVideo(request, response);
+        case 'finalizeVideoUpload':    return handleFinalizeVideoUpload(request, response);
+        case 'checkVideoStatus':       return handleCheckVideoStatus(request, response);
+        case 'getClientId':            return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
+        case 'getShareStatistics':     return handleGetShareStatistics(request, response);
+        case 'getMemberPostStatistics':return handleGetMemberPostStatistics(request, response);
         case 'uploadImage':
-        case 'uploadAndCheckImage': return handleUploadAndCheckImage(request, response);
-        default: return response.status(400).json({ error: `Invalid action: ${action}` });
+        case 'uploadAndCheckImage':    return handleUploadAndCheckImage(request, response);
+        default:                       return response.status(400).json({ error: `Invalid action: ${action}` });
     }
 };
 
@@ -445,7 +504,7 @@ const mainHandler = async (request, response) => {
     if (process.env.INTERNAL_API_SECRET && request.headers['x-internal-secret'] === process.env.INTERNAL_API_SECRET) {
         const { action } = body;
         if (['uploadImage', 'uploadAndCheckImage', 'createPost', 'getShareStatistics', 'getMemberPostStatistics'].includes(action)) {
-            return protectedHandler(request, response); // Reuse logic
+            return protectedHandler(request, response);
         }
         if (action === 'refreshTokenInternal') return handleRefreshToken(request, response);
         return response.status(400).json({ error: `Invalid internal action: ${action}` });
