@@ -61,20 +61,12 @@ export const gatherCredentials = () => {
  * @param {object} settings - The settings object to apply.
  */
 export const applySettings = (settings) => {
-  if (!settings || typeof settings !== 'object') return;
+  if (!settings || typeof settings !== 'object' || Object.keys(settings).length === 0) return;
 
-  // Clear existing credentials before applying new ones to avoid stale data
-  // This is a simple approach. A more granular approach might be needed if some
-  // local-only settings should be preserved. For now, this is fine.
-  Object.values(CREDENTIAL_KEYS).forEach(key => {
-      // Be careful with complex keys that are objects
-      if (typeof key === 'string') {
-          localStorage.removeItem(key);
-      }
-  });
-
-
+  // Only clear keys that are actually present in the incoming settings
+  // to avoid wiping out other local data that might not be in the DB yet.
   if (settings[CREDENTIAL_KEYS.GEMINI]) {
+    localStorage.removeItem(CREDENTIAL_KEYS.GEMINI);
     saveGeminiApiKey(settings[CREDENTIAL_KEYS.GEMINI]);
   }
   if (settings[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY]) {
@@ -84,10 +76,12 @@ export const applySettings = (settings) => {
     localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID, settings[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID]);
   }
   if (settings[CREDENTIAL_KEYS.GOOGLE_TTS]) {
-    saveGoogleCloudTTSCredentials(settings[CREDENTIAL_KEYS.GOOGLE_TTS]);
+    const tts = settings[CREDENTIAL_KEYS.GOOGLE_TTS];
+    saveGoogleCloudTTSCredentials(typeof tts === 'string' ? JSON.parse(tts) : tts);
   }
   if (settings[CREDENTIAL_KEYS.WORDPRESS]) {
-    saveWordpressConfig(settings[CREDENTIAL_KEYS.WORDPRESS]);
+    const wp = settings[CREDENTIAL_KEYS.WORDPRESS];
+    saveWordpressConfig(typeof wp === 'string' ? JSON.parse(wp) : wp);
   }
   if (settings[CREDENTIAL_KEYS.TIMEZONE]) {
     saveTimezone(settings[CREDENTIAL_KEYS.TIMEZONE]);
@@ -98,6 +92,7 @@ export const applySettings = (settings) => {
   if (settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]) {
     saveGeminiImageModel(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]);
   }
+  // LinkedIn handled separately via direct settings object in Context
 };
 
 /**

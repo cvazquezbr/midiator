@@ -25,7 +25,7 @@ const issueJwtAndSetCookie = (res, user) => {
   const cookie = serialize('auth_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV !== 'development',
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: '/',
   });

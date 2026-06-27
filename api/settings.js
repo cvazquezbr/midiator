@@ -10,6 +10,7 @@ import { parseBody } from './utils.js';
 const settingsHandler = async (req, res) => {
   console.log(`[api/settings] Received ${req.method} request.`);
   try {
+    // sub is the serial user ID, uuid is the string UUID
     const userId = req.user.sub;
     const cacheKey = `settings:${userId}`;
     console.log(`[api/settings] Authenticated user ID: ${userId}`);
@@ -28,9 +29,10 @@ const settingsHandler = async (req, res) => {
 
       console.log(`[api/settings] Cache MISS for user ${userId}. Querying database.`);
       const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
-      console.log(`[api/settings] DB query successful. Found ${rows.length} rows.`);
+      console.log(`[api/settings] DB query successful. Found ${rows.length} rows for user ${userId}.`);
 
-      const settingsData = rows.length > 0 ? rows[0].settings_data : {};
+      const settingsData = rows.length > 0 ? (rows[0].settings_data || {}) : {};
+      console.log(`[api/settings] Settings keys for user ${userId}:`, Object.keys(settingsData));
 
       try {
         // Cache the result for 1 hour (3600 seconds)
