@@ -288,8 +288,14 @@ async function handleUploadVideo(request, response) {
             body: Buffer.from(videoBase64, 'base64'),
         });
         if (!res.ok) return response.status(res.status).json({ error: 'Upload failed' });
-        const eTag = res.headers.get('ETag');
-        return response.status(200).json({ eTag: eTag.replace(/"/g, '') });
+
+        const rawETag = res.headers.get('ETag');
+        if (!rawETag) {
+            console.warn('[LinkedIn Proxy] Upload video: ETag header missing in response.');
+            return response.status(502).json({ error: 'ETag not returned by LinkedIn after video upload.' });
+        }
+
+        return response.status(200).json({ eTag: rawETag.replace(/"/g, '') });
     } catch (error) {
         return response.status(500).json({ error: error.message });
     }
