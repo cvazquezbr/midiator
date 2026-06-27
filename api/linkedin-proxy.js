@@ -469,30 +469,36 @@ async function handleGetProfiles(request, response) {
 
         // Step 2: Fetch organization ACLs using the member URN
         // We'll try multiple endpoints and URN types as fallbacks.
-        const tryFetchAcls = async (endpoint, assigneeUrn) => {
-            const baseUrl = 'https://api.linkedin.com/rest';
-            let url = `${baseUrl}/${endpoint}?q=roleAssignee&roleAssignee=${encodeURIComponent(assigneeUrn)}`;
+        const tryFetchAcls = async (endpoint, assigneeUrn, useVersion = true) => {
+            const baseUrl = useVersion ? 'https://api.linkedin.com/rest' : 'https://api.linkedin.com/v2';
+            let queryParam = 'roleAssignee';
+            let q = 'roleAssignee';
 
-            // Special case for brandAcls in 202601
-            if (endpoint === 'brandAcls' && assigneeUrn.includes(':person:')) {
-                url = `${baseUrl}/brandAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(assigneeUrn)}`;
+            if (endpoint === 'memberAssignments') q = 'member';
+            if (endpoint === 'organizationAccessControl') q = 'roleAssignee';
+
+            let url = `${baseUrl}/${endpoint}?q=${q}&${q === 'roleAssignee' ? 'roleAssignee' : q}=${encodeURIComponent(assigneeUrn)}`;
+
+            const requestHeaders = { ...headers };
+            if (!useVersion) {
+                delete requestHeaders['LinkedIn-Version'];
             }
 
-            console.log(`[LinkedIn Proxy] Fetching ACLs from: ${url}`);
+            console.log(`[LinkedIn Proxy] Fetching ACLs from: ${url} (Versioned: ${useVersion})`);
             try {
-                const res = await fetch(url, { headers });
+                const res = await fetch(url, { headers: requestHeaders });
                 const resText = await res.text();
                 let data = null;
                 try { data = JSON.parse(resText); } catch(e) {}
 
                 if (!res.ok) {
-                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint} with ${assigneeUrn}: ${res.status} - ${resText}`);
-                    return { error: true, status: res.status, message: resText, endpoint, assigneeUrn, url };
+                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint} with ${assigneeUrn} (v:${useVersion}): ${res.status} - ${resText}`);
+                    return { error: true, status: res.status, message: resText, endpoint, assigneeUrn, url, useVersion };
                 }
-                return { error: false, status: res.status, data, endpoint, assigneeUrn, url };
+                return { error: false, status: res.status, data, endpoint, assigneeUrn, url, useVersion };
             } catch (e) {
                 console.error(`[LinkedIn Proxy] Error fetching from ${endpoint}:`, e);
-                return { error: true, status: 'error', message: e.message, endpoint, assigneeUrn, url };
+                return { error: true, status: 'error', message: e.message, endpoint, assigneeUrn, url, useVersion };
             }
         };
 
@@ -500,16 +506,34 @@ async function handleGetProfiles(request, response) {
             `urn:li:person:${personalData.id}`,
             `urn:li:member:${personalData.id}`
         ];
-        const endpoints = ['organizationAcls', 'organizationalEntityAcls', 'brandAcls', 'memberAssignments'];
+        const endpoints = ['organizationAcls', 'organizationalEntityAcls', 'brandAcls', 'memberAssignments', 'organizationAccessControl'];
 
         let allAclElements = [];
         let debugInfo = [];
 
         for (const assigneeUrn of assigneeUrns) {
             for (const endpoint of endpoints) {
-                const result = await tryFetchAcls(endpoint, assigneeUrn);
+                // Try versioned first
+                let result = await tryFetchAcls(endpoint, assigneeUrn, true);
+
+                // If versioned fails with 426 or 404 or 400, try unversioned
+                if (result.error && (result.status === 426 || result.status === 404 || result.status === 400)) {
+                    const v2Result = await tryFetchAcls(endpoint, assigneeUrn, false);
+                    if (!v2Result.error) {
+                        result = v2Result;
+                    } else {
+                        // Record the v2 error if it's not a simple 404
+                        debugInfo.push({
+                            endpoint: `${endpoint} (v2)`,
+                            assigneeUrn,
+                            status: v2Result.status,
+                            error: v2Result.message
+                        });
+                    }
+                }
+
                 debugInfo.push({
-                    endpoint: result.endpoint,
+                    endpoint: result.endpoint + (result.useVersion ? '' : ' (v2)'),
                     assigneeUrn: result.assigneeUrn,
                     status: result.status,
                     count: result.data?.elements?.length || 0,
@@ -526,7 +550,7 @@ async function handleGetProfiles(request, response) {
         const uniqueAclElements = [];
         const seenOrgUrns = new Set();
         for (const el of allAclElements) {
-            const urn = el.organization || el.organizationalEntity || el.brand;
+            const urn = el.organization || el.organizationalEntity || el.brand || el.organizationalTarget;
             if (urn && !seenOrgUrns.has(urn)) {
                 uniqueAclElements.push(el);
                 seenOrgUrns.add(urn);
@@ -549,7 +573,7 @@ async function handleGetProfiles(request, response) {
                     console.log(`[LinkedIn Proxy] Batch Org Data keys: ${Object.keys(batchOrgData.results || {}).join(',')}`);
 
                     organizations = uniqueAclElements.map(acl => {
-                        const orgUrn = acl.organization || acl.organizationalEntity || acl.brand;
+                        const orgUrn = acl.organization || acl.organizationalEntity || acl.brand || acl.organizationalTarget;
                         if (!orgUrn) return null;
                         const orgId = orgUrn.split(':').pop();
 
