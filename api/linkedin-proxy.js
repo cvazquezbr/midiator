@@ -315,6 +315,15 @@ async function handleFinalizeVideoUpload(request, response) {
             },
             body: JSON.stringify(payload)
         });
+
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error(`[LinkedIn Proxy] Finalize video upload failed: ${res.status} - ${errText.slice(0, 300)}`);
+            let errData = {};
+            try { errData = JSON.parse(errText); } catch (_) { errData = { raw: errText }; }
+            return response.status(res.status).json(errData);
+        }
+
         return response.status(res.status).send();
     } catch (error) {
         return response.status(500).json({ error: error.message });
