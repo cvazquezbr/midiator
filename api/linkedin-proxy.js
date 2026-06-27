@@ -4,6 +4,67 @@ import { delay, fetchWithRetry, parseBody } from './utils.js';
 
 const LINKEDIN_API_VERSION = '202507';
 
+export async function getPostDetails(accessToken, postUrn) {
+    const prefixes = ['ugcPost', 'share'];
+    const id = postUrn.split(':').pop();
+
+    let result = { status: 404, data: {} };
+
+    for (const prefix of prefixes) {
+        const currentUrn = `urn:li:${prefix}:${id}`;
+        const url = `https://api.linkedin.com/rest/posts/${encodeURIComponent(currentUrn)}`;
+
+        console.log(`[LinkedIn Proxy] Trying fetch with prefix ${prefix}: ${url}`);
+
+        const res = await fetchWithRetry(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'Linkedin-Version': LINKEDIN_API_VERSION
+            },
+        });
+
+        const text = await res.text();
+        let data = {};
+        try { data = JSON.parse(text); } catch(e) {}
+
+        if (res.ok) {
+            return { ...data, resolvedUrn: currentUrn };
+        }
+        result = { status: res.status, data };
+    }
+
+    throw new Error(`LinkedIn Get Post Error: ${result.status} - ${JSON.stringify(result.data)}`);
+}
+
+export async function getAuthorDetails(accessToken, authorUrn) {
+    let profileUrl;
+    if (authorUrn.includes(':person:')) {
+        const personId = authorUrn.split(':').pop();
+        // Updated to handle 202601 /rest/people response (Works for 202507 too)
+        profileUrl = `https://api.linkedin.com/rest/people/${personId}?fields=id,givenName,familyName,headline,picture`;
+    } else if (authorUrn.includes(':organization:')) {
+        const orgId = authorUrn.split(':').pop();
+        profileUrl = `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`;
+    } else {
+        throw new Error('Unsupported author URN type.');
+    }
+
+    const linkedinResponse = await fetchWithRetry(profileUrl, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'X-Restli-Protocol-Version': '2.0.0',
+            'Linkedin-Version': LINKEDIN_API_VERSION
+        },
+    });
+
+    const data = await linkedinResponse.json();
+    if (!linkedinResponse.ok) {
+        throw new Error(`LinkedIn Get Author Profile Error: ${linkedinResponse.status} - ${JSON.stringify(data)}`);
+    }
+    return data;
+}
+
 async function handleTokenExchange(request, response) {
     const { code, redirectUri } = request.body;
     const userId = request.user.sub;
@@ -81,17 +142,16 @@ async function handleGetProfile(request, response) {
     };
 
     try {
-        const meRes = await fetch('https://api.linkedin.com/rest/me', { headers });
+        const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', { headers });
 
+        const data = await meRes.json();
         if (!meRes.ok) {
-            const errorText = await meRes.text();
             if (meRes.status === 401) {
                 return response.status(401).json({ error: 'Invalid or expired LinkedIn access token.' });
             }
-            throw new Error(`Failed to fetch profile: ${meRes.status} - ${errorText}`);
+            return response.status(meRes.status).json(data);
         }
 
-        const data = await meRes.json();
         return response.status(200).json(data);
     } catch (error) {
         console.error('Error in handleGetProfile:', error);
@@ -138,17 +198,15 @@ async function handleGetProfiles(request, response) {
 
     try {
         // Step 1: Fetch personal profile
-        const meRes = await fetch('https://api.linkedin.com/rest/me', { headers });
+        const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', { headers });
 
+        const personalData = await meRes.json();
         if (!meRes.ok) {
-            const errorText = await meRes.text();
             if (meRes.status === 401) {
                 return response.status(401).json({ error: 'Invalid or expired LinkedIn access token.' });
             }
-            throw new Error(`Failed to fetch personal profile: ${meRes.status} - ${errorText}`);
+            throw new Error(`Failed to fetch personal profile: ${meRes.status} - ${JSON.stringify(personalData)}`);
         }
-
-        const personalData = await meRes.json();
         const personId = personalData.id;
 
         const personal = {
@@ -164,7 +222,7 @@ async function handleGetProfiles(request, response) {
 
         console.log(`[LinkedIn Proxy] Fetching ACLs: ${aclUrl}`);
 
-        const aclRes = await fetch(aclUrl, { headers });
+        const aclRes = await fetchWithRetry(aclUrl, { headers });
         const aclText = await aclRes.text();
         let aclData = {};
         try {
@@ -212,7 +270,7 @@ async function handleGetProfiles(request, response) {
 
         // Step 4: Batch fetch org details
         const batchUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-        const batchRes = await fetch(batchUrl, { headers });
+        const batchRes = await fetchWithRetry(batchUrl, { headers });
 
         let orgResults = {};
         if (batchRes.ok) {
@@ -262,7 +320,7 @@ async function handleInitializeVideoUpload(request, response) {
     const { accessToken, payload } = request.body;
     const initializeUrl = 'https://api.linkedin.com/rest/videos?action=initializeUpload';
     try {
-        const res = await fetch(initializeUrl, {
+        const res = await fetchWithRetry(initializeUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -282,6 +340,8 @@ async function handleInitializeVideoUpload(request, response) {
 async function handleUploadVideo(request, response) {
     const { uploadUrl, videoBase64, videoContentType } = request.body;
     try {
+        // We use standard fetch here as it's a direct upload to a signed URL,
+        // and fetchWithRetry might not be suitable for large binary bodies without careful handling.
         const res = await fetch(uploadUrl, {
             method: 'PUT',
             headers: { 'Content-Type': videoContentType },
@@ -305,7 +365,7 @@ async function handleFinalizeVideoUpload(request, response) {
     const { accessToken, payload } = request.body;
     const finalizeUrl = 'https://api.linkedin.com/rest/videos?action=finalizeUpload';
     try {
-        const res = await fetch(finalizeUrl, {
+        const res = await fetchWithRetry(finalizeUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -334,7 +394,7 @@ async function handleCheckVideoStatus(request, response) {
     const { accessToken, videoUrn } = request.body;
     const statusUrl = `https://api.linkedin.com/rest/videos/${encodeURIComponent(videoUrn)}`;
     try {
-        const res = await fetch(statusUrl, {
+        const res = await fetchWithRetry(statusUrl, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
@@ -353,7 +413,7 @@ async function handleCreatePost(request, response) {
     const { accessToken, payload } = request.body;
     const createPostUrl = 'https://api.linkedin.com/rest/posts';
     try {
-        const res = await fetch(createPostUrl, {
+        const res = await fetchWithRetry(createPostUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -383,7 +443,7 @@ async function handleUploadAndCheckImage(request, response) {
         'Linkedin-Version': LINKEDIN_API_VERSION
     };
     try {
-        const initRes = await fetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
+        const initRes = await fetchWithRetry('https://api.linkedin.com/rest/images?action=initializeUpload', {
             method: 'POST',
             headers,
             body: JSON.stringify({ initializeUploadRequest: { owner: authorUrn } }),
@@ -391,6 +451,7 @@ async function handleUploadAndCheckImage(request, response) {
         const initData = await initRes.json();
         if (!initRes.ok) return response.status(initRes.status).json(initData);
 
+        // Standard fetch for binary upload to signed URL
         const uploadRes = await fetch(initData.value.uploadUrl, {
             method: 'PUT',
             headers: { 'Content-Type': imageType },
@@ -452,7 +513,89 @@ async function handleGetShareStatistics(request, response) {
     if (ugcPosts.length > 0) url += `&ugcPosts=List(${ugcPosts.map(u => encodeURIComponent(u)).join(',')})`;
 
     try {
-        const res = await fetch(url, {
+        const res = await fetchWithRetry(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'Linkedin-Version': LINKEDIN_API_VERSION
+            }
+        });
+        const data = await res.json();
+        return response.status(res.status).json(data);
+    } catch (error) {
+        return response.status(500).json({ error: error.message });
+    }
+}
+
+async function handleGetPost(request, response) {
+    const { accessToken, postUrn } = request.body;
+    if (!accessToken || !postUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or postUrn.' });
+    }
+    try {
+        const data = await getPostDetails(accessToken, postUrn);
+        return response.status(200).json(data);
+    } catch (error) {
+        console.error('Error during get post:', error);
+        return response.status(500).json({ error: error.message });
+    }
+}
+
+async function handleGetAuthorProfile(request, response) {
+    const { accessToken, authorUrn } = request.body;
+    if (!accessToken || !authorUrn) {
+        return response.status(400).json({ error: 'Missing accessToken or authorUrn.' });
+    }
+    try {
+        const data = await getAuthorDetails(accessToken, authorUrn);
+        return response.status(200).json(data);
+    } catch (error) {
+        console.error('Error during get author profile:', error);
+        return response.status(500).json({ error: error.message });
+    }
+}
+
+async function handleCreateComment(request, response) {
+    const { accessToken, postUrn, actorUrn, text } = request.body;
+    if (!accessToken || !postUrn || !actorUrn || !text) {
+        return response.status(400).json({ error: 'Missing parameters for comment creation.' });
+    }
+    const encodedPostUrn = encodeURIComponent(postUrn);
+    const commentUrl = `https://api.linkedin.com/rest/socialActions/${encodedPostUrn}/comments`;
+    try {
+        const res = await fetchWithRetry(commentUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'Linkedin-Version': LINKEDIN_API_VERSION
+            },
+            body: JSON.stringify({
+                actor: actorUrn,
+                message: { text: text }
+            }),
+        });
+        const respText = await res.text();
+        let data = {};
+        try { data = JSON.parse(respText); } catch (e) { data = { raw: respText }; }
+        if (!res.ok) return response.status(res.status).json(data);
+        const commentId = res.headers.get('x-restli-id');
+        if (commentId) data.id = commentId;
+        return response.status(res.status).json(data);
+    } catch (error) {
+        return response.status(500).json({ error: error.message });
+    }
+}
+
+async function handleSearchPostsByHashtag(request, response) {
+    const { accessToken, hashtag, count = 10 } = request.body;
+    if (!accessToken || !hashtag) {
+        return response.status(400).json({ error: 'Missing accessToken or hashtag.' });
+    }
+    const url = `https://api.linkedin.com/rest/posts?q=hashtag&hashtag=${encodeURIComponent(hashtag)}&count=${count}`;
+    try {
+        const res = await fetchWithRetry(url, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
@@ -471,7 +614,7 @@ async function handleGetMemberPostStatistics(request, response) {
     const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
     const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=ugcPost&ugcPost=${encodeURIComponent(ugcPostUrn)}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
     try {
-        const res = await fetch(url, {
+        const res = await fetchWithRetry(url, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'X-Restli-Protocol-Version': '2.0.0',
@@ -501,6 +644,10 @@ const protectedHandler = async (request, response) => {
         case 'getClientId':            return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
         case 'getShareStatistics':     return handleGetShareStatistics(request, response);
         case 'getMemberPostStatistics':return handleGetMemberPostStatistics(request, response);
+        case 'getPost':                return handleGetPost(request, response);
+        case 'getAuthorProfile':       return handleGetAuthorProfile(request, response);
+        case 'createComment':          return handleCreateComment(request, response);
+        case 'searchPostsByHashtag':   return handleSearchPostsByHashtag(request, response);
         case 'uploadImage':
         case 'uploadAndCheckImage':    return handleUploadAndCheckImage(request, response);
         default:                       return response.status(400).json({ error: `Invalid action: ${action}` });
