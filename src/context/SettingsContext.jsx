@@ -73,9 +73,17 @@ export const SettingsProvider = ({ children }) => {
     }
     setIsLoading(true);
     try {
+      console.log('[SettingsContext] Loading settings from DB...');
       const dbSettings = await loadSettingsFromDb();
+      console.log('[SettingsContext] DB Settings received:', dbSettings ? Object.keys(dbSettings) : 'null');
+
       const allSettings = gatherCredentials();
-      setSettings({ ...allSettings, ...dbSettings });
+      console.log('[SettingsContext] Local Credentials gathered:', Object.keys(allSettings));
+
+      const mergedSettings = { ...allSettings, ...dbSettings };
+      console.log('[SettingsContext] Merged Settings keys:', Object.keys(mergedSettings));
+
+      setSettings(mergedSettings);
       if (dbSettings.gemini_api_key) {
         fetchModels();
       }
@@ -94,6 +102,7 @@ export const SettingsProvider = ({ children }) => {
 
   const updateSetting = useCallback((key, value) => {
     setSettings(prev => {
+      console.log(`[SettingsContext] Updating setting: ${key} =`, value);
       const newSettings = { ...prev, [key]: value };
       // Se a chave da API Gemini for atualizada e tiver um valor,
       // busca os modelos imediatamente.
