@@ -84,160 +84,131 @@ async function handleGetProfiles(request, response) {
         'LinkedIn-Version': LINKEDIN_API_VERSION
     };
 
-    try {
-        // Step 1: Fetch personal profile (me?fields=...) - This usually works with 202601
-        let personalResponse = await fetch('https://api.linkedin.com/rest/me?fields=id,givenName,familyName,picture', { headers });
-
-        if (!personalResponse.ok && personalResponse.status === 400) {
-            console.warn('[LinkedIn Proxy] getProfiles: Projection failed, retrying me without fields.');
-            personalResponse = await fetch('https://api.linkedin.com/rest/me', { headers });
+    const getLocalized = (obj) => {
+        if (!obj) return '';
+        if (typeof obj === 'string') return obj;
+        if (obj.localized) {
+            const locale = obj.preferredLocale
+                ? `${obj.preferredLocale.language}_${obj.preferredLocale.country}`
+                : Object.keys(obj.localized)[0];
+            return obj.localized[locale] || obj.localized[Object.keys(obj.localized)[0]] || '';
         }
+        return '';
+    };
 
-        if (!personalResponse.ok) {
-            const errorText = await personalResponse.text();
-            if (personalResponse.status === 401) {
+    try {
+        // Step 1: Fetch personal profile
+        const meRes = await fetch('https://api.linkedin.com/rest/me', { headers });
+
+        if (!meRes.ok) {
+            const errorText = await meRes.text();
+            if (meRes.status === 401) {
                 return response.status(401).json({ error: 'Invalid or expired LinkedIn access token.' });
             }
-            throw new Error(`Failed to fetch personal profile: ${personalResponse.status} - ${errorText}`);
+            throw new Error(`Failed to fetch personal profile: ${meRes.status} - ${errorText}`);
         }
 
-        const personalData = await personalResponse.json();
+        const personalData = await meRes.json();
+        const personId = personalData.id;
 
-        const getLocalized = (obj) => {
-            if (!obj) return '';
-            if (typeof obj === 'string') return obj;
-            if (obj.localized) {
-                const locale = Object.keys(obj.localized)[0];
-                return obj.localized[locale] || '';
-            }
-            if (obj.preferredLocale && obj.localized) {
-               const localeKey = `${obj.preferredLocale.language}_${obj.preferredLocale.country}`;
-               return obj.localized[localeKey] || obj.localized[Object.keys(obj.localized)[0]] || '';
-            }
-            return '';
-        };
-
-        const firstName = getLocalized(personalData.givenName || personalData.firstName || personalData.localizedFirstName);
-        const lastName = getLocalized(personalData.familyName || personalData.lastName || personalData.localizedLastName);
-        const profilePicture = personalData.picture || personalData.profilePicture || '';
+        const firstName = getLocalized(personalData.givenName || personalData.firstName);
+        const lastName = getLocalized(personalData.familyName || personalData.lastName);
 
         const personal = {
-            id: personalData.id,
+            id: personId,
             name: `${firstName} ${lastName}`.trim() || 'Usuário do LinkedIn',
             type: 'person',
-            profilePicture: profilePicture
+            profilePicture: personalData.picture || personalData.profilePicture || ''
         };
 
         // Step 2: Fetch organization ACLs
-        // We will try an exhaustive search across endpoints and URN types.
-        const tryFetchAcls = async (endpoint, assigneeUrn, useVersion = true) => {
-            const baseUrl = useVersion ? 'https://api.linkedin.com/rest' : 'https://api.linkedin.com/v2';
-            let q = 'roleAssignee';
-            if (endpoint === 'memberAssignments') q = 'member';
+        // Only urn:li:person: works with REST/202601; roleAssignee is the correct q param
+        const personUrn = `urn:li:person:${personId}`;
+        const aclUrl = `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED`;
 
-            const url = `${baseUrl}/${endpoint}?q=${q}&${q}=${encodeURIComponent(assigneeUrn)}`;
+        console.log(`[LinkedIn Proxy] Fetching ACLs: ${aclUrl}`);
 
-            const requestHeaders = { ...headers };
-            if (!useVersion) delete requestHeaders['LinkedIn-Version'];
+        const aclRes = await fetch(aclUrl, { headers });
+        const aclText = await aclRes.text();
+        let aclData = {};
+        try { aclData = JSON.parse(aclText); } catch (e) {
+            console.error('[LinkedIn Proxy] Failed to parse ACL response:', aclText);
+        }
 
-            console.log(`[LinkedIn Proxy] Fetching ACLs: ${url} (v:${useVersion})`);
-            try {
-                const res = await fetch(url, { headers: requestHeaders });
-                let data = null;
-                let text = '';
-                try {
-                    text = await res.text();
-                    data = JSON.parse(text);
-                } catch (e) {
-                    // If JSON parse fails, we still have the text or at least the status
-                }
-                return { ok: res.ok, status: res.status, data, endpoint, assigneeUrn, useVersion, text };
-            } catch (e) {
-                console.error(`[LinkedIn Proxy] Fetch Error for ${endpoint}:`, e.message);
-                return { ok: false, status: 'error', message: e.message, endpoint, assigneeUrn, useVersion };
-            }
-        };
+        console.log(`[LinkedIn Proxy] ACL response status: ${aclRes.status}, elements: ${aclData?.elements?.length ?? 0}`);
 
-        const assigneeUrns = [`urn:li:person:${personalData.id}`, `urn:li:member:${personalData.id}`];
-        const endpoints = ['organizationalEntityAcls', 'organizationAcls', 'brandAcls', 'memberAssignments'];
+        const elements = aclData?.elements || [];
 
-        let allAclElements = [];
-        let debugInfo = [];
+        if (elements.length === 0) {
+            return response.status(200).json({
+                personal,
+                organizations: [],
+                hasOrganizations: false,
+                _debug: { aclStatus: aclRes.status, aclRaw: aclText.slice(0, 500) }
+            });
+        }
 
-        for (const urn of assigneeUrns) {
-            for (const endpoint of endpoints) {
-                // Try versioned first (if requested version is supported)
-                let result = await tryFetchAcls(endpoint, urn, true);
-
-                // If versioned fails or returns nothing, try unversioned
-                if (!result.ok || !result.data?.elements || result.data.elements.length === 0) {
-                    const v2Result = await tryFetchAcls(endpoint, urn, false);
-                    if (v2Result.ok && v2Result.data?.elements?.length > 0) {
-                        result = v2Result;
-                    }
-                    debugInfo.push({ endpoint: `${endpoint}${result.useVersion ? '' : ' (v2)'}`, status: result.status, count: result.data?.elements?.length || 0, urn });
-                } else {
-                    debugInfo.push({ endpoint, status: result.status, count: result.data.elements.length, urn });
-                }
-
-                if (result.ok && result.data && result.data.elements) {
-                    allAclElements = allAclElements.concat(result.data.elements);
-                }
+        // Step 3: Extract unique org URNs
+        const orgUrnMap = new Map(); // orgUrn -> acl element
+        for (const el of elements) {
+            const orgUrn = el.organizationalTarget
+                || el.organizationalEntity
+                || el.organization;
+            if (orgUrn && !orgUrnMap.has(orgUrn)) {
+                orgUrnMap.set(orgUrn, el);
             }
         }
 
-        // Deduplicate elements by organization URN
-        const uniqueAclElements = [];
-        const seenOrgUrns = new Set();
-        for (const el of allAclElements) {
-            const urn = el.organizationalEntity || el.organization || el.brand || el.organizationalTarget;
-            if (urn && !seenOrgUrns.has(urn)) {
-                uniqueAclElements.push(el);
-                seenOrgUrns.add(urn);
-            }
+        const orgUrns = [...orgUrnMap.keys()];
+        // Extract numeric IDs for batch fetch
+        const orgIds = orgUrns.map(urn => urn.split(':').pop());
+
+        // Step 4: Batch fetch org details
+        // LinkedIn REST batch uses ids=List(id1,id2) and keys results by numeric id OR full URN
+        const batchUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
+        const batchRes = await fetch(batchUrl, { headers });
+
+        let orgResults = {};
+        if (batchRes.ok) {
+            const batchData = await batchRes.json();
+            // Results can be keyed by numeric id or full URN depending on API version
+            orgResults = batchData.results || {};
+        } else {
+            console.warn(`[LinkedIn Proxy] Batch org fetch failed: ${batchRes.status}`);
         }
 
-        let organizations = [];
-        if (uniqueAclElements.length > 0) {
-            const orgUrns = uniqueAclElements.map(el => el.organizationalEntity || el.organization || el.brand || el.organizationalTarget).filter(Boolean);
-            const orgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
+        const organizations = orgUrns.map(orgUrn => {
+            const acl = orgUrnMap.get(orgUrn);
+            const orgId = orgUrn.split(':').pop();
 
-            // Fetch organization details in batch (202601 usually works for this)
-            const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-            const batchOrgResponse = await fetch(batchOrgUrl, { headers });
+            // Try all possible key formats LinkedIn might use
+            const orgDetails = orgResults[orgId]
+                || orgResults[`urn:li:organization:${orgId}`]
+                || orgResults[orgUrn]
+                || null;
 
-            if (batchOrgResponse.ok) {
-                const batchOrgData = await batchOrgResponse.json();
-                organizations = uniqueAclElements.map(acl => {
-                    const orgUrn = acl.organizationalEntity || acl.organization || acl.brand || acl.organizationalTarget;
-                    const orgId = orgUrn.split(':').pop();
-                    const orgDetails = batchOrgData.results[orgId] || batchOrgData.results[orgUrn] || batchOrgData.results[`urn:li:organization:${orgId}`];
-                    const orgName = getLocalized(orgDetails?.localizedName || orgDetails?.name);
+            const orgName = orgDetails
+                ? getLocalized(orgDetails.localizedName || orgDetails.name)
+                : null;
 
-                    return {
-                        id: orgId,
-                        name: orgName || `Página ${orgId}`,
-                        role: acl.role,
-                        logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-                        type: 'organization'
-                    };
-                });
-            } else {
-                console.warn(`[LinkedIn Proxy] Failed to fetch organization details: ${batchOrgResponse.status}`);
-                // Fallback to stubs
-                organizations = uniqueAclElements.map(acl => {
-                    const orgUrn = acl.organizationalEntity || acl.organization || acl.brand || acl.organizationalTarget;
-                    const orgId = orgUrn.split(':').pop();
-                    return { id: orgId, name: `Página (ID: ${orgId})`, role: acl.role, type: 'organization' };
-                });
-            }
-        }
+            const logo = orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier
+                || orgDetails?.logoV2?.cropped?.['com.linkedin.digitalmedia.mediaartifact.StillImage']?.storageSize
+                || null;
+
+            return {
+                id: orgId,
+                urn: orgUrn,
+                name: orgName || `Página (ID: ${orgId})`,
+                role: acl.role,
+                logo: logo || null,
+                type: 'organization'
+            };
+        });
 
         return response.status(200).json({
             personal,
             organizations,
-            hasOrganizations: organizations.length > 0,
-            _debug: debugInfo
+            hasOrganizations: organizations.length > 0
         });
 
     } catch (error) {
