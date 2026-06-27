@@ -468,16 +468,15 @@ async function handleGetProfiles(request, response) {
         };
 
         // Step 2: Fetch organization ACLs using the member URN
-        // We'll try both organizationAcls and organizationalEntityAcls as fallbacks.
-        // We also removed state=APPROVED to be more inclusive.
-        const tryFetchAcls = async (endpoint) => {
-            const url = `https://api.linkedin.com/rest/${endpoint}?q=roleAssignee&roleAssignee=${encodeURIComponent(memberUrn)}`;
+        // We'll try multiple endpoints and URN types as fallbacks.
+        const tryFetchAcls = async (endpoint, assigneeUrn) => {
+            const url = `https://api.linkedin.com/rest/${assigneeUrn.includes(':person:') && endpoint === 'brandAcls' ? 'brandAcls' : endpoint}?q=roleAssignee&roleAssignee=${encodeURIComponent(assigneeUrn)}`;
             console.log(`[LinkedIn Proxy] Fetching ACLs from: ${url}`);
             try {
                 const res = await fetch(url, { headers });
                 if (!res.ok) {
                     const err = await res.text();
-                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint}: ${res.status} - ${err}`);
+                    console.warn(`[LinkedIn Proxy] Failed to fetch from ${endpoint} with ${assigneeUrn}: ${res.status} - ${err}`);
                     return null;
                 }
                 return await res.json();
@@ -487,18 +486,42 @@ async function handleGetProfiles(request, response) {
             }
         };
 
-        let orgAclsData = await tryFetchAcls('organizationAcls');
+        const assigneeUrns = [
+            `urn:li:person:${personalData.id}`,
+            `urn:li:member:${personalData.id}`
+        ];
+        const endpoints = ['organizationAcls', 'organizationalEntityAcls', 'brandAcls'];
 
-        // Fallback to organizationalEntityAcls if first one failed or returned nothing
-        if (!orgAclsData || !orgAclsData.elements || orgAclsData.elements.length === 0) {
-            console.log(`[LinkedIn Proxy] No results from organizationAcls, trying organizationalEntityAcls...`);
-            orgAclsData = await tryFetchAcls('organizationalEntityAcls');
+        let allAclElements = [];
+        let debugInfo = [];
+
+        for (const assigneeUrn of assigneeUrns) {
+            for (const endpoint of endpoints) {
+                const data = await tryFetchAcls(endpoint, assigneeUrn);
+                if (data && data.elements && data.elements.length > 0) {
+                    allAclElements = allAclElements.concat(data.elements);
+                    debugInfo.push({ endpoint, assigneeUrn, count: data.elements.length });
+                }
+            }
+            // If we found something with the first URN type, we might not need to try others,
+            // but for safety and debugging we'll try everything for now unless it gets too slow.
+        }
+
+        // Deduplicate elements by organization/entity URN
+        const uniqueAclElements = [];
+        const seenOrgUrns = new Set();
+        for (const el of allAclElements) {
+            const urn = el.organization || el.organizationalEntity || el.brand;
+            if (urn && !seenOrgUrns.has(urn)) {
+                uniqueAclElements.push(el);
+                seenOrgUrns.add(urn);
+            }
         }
 
         let organizations = [];
-        if (orgAclsData && orgAclsData.elements && orgAclsData.elements.length > 0) {
-            console.log(`[LinkedIn Proxy] ACLs Data elements count: ${orgAclsData.elements.length}`);
-            const orgUrns = orgAclsData.elements.map(el => el.organization || el.organizationalEntity).filter(Boolean);
+        if (uniqueAclElements.length > 0) {
+            console.log(`[LinkedIn Proxy] Unique ACL elements found: ${uniqueAclElements.length}`);
+            const orgUrns = uniqueAclElements.map(el => el.organization || el.organizationalEntity || el.brand).filter(Boolean);
             const orgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))]; // Deduplicate IDs
 
             if (orgIds.length > 0) {
@@ -510,8 +533,8 @@ async function handleGetProfiles(request, response) {
                     const batchOrgData = await batchOrgResponse.json();
                     console.log(`[LinkedIn Proxy] Batch Org Data keys: ${Object.keys(batchOrgData.results || {}).join(',')}`);
 
-                    organizations = orgAclsData.elements.map(acl => {
-                        const orgUrn = acl.organization || acl.organizationalEntity;
+                    organizations = uniqueAclElements.map(acl => {
+                        const orgUrn = acl.organization || acl.organizationalEntity || acl.brand;
                         if (!orgUrn) return null;
                         const orgId = orgUrn.split(':').pop();
 
@@ -552,7 +575,8 @@ async function handleGetProfiles(request, response) {
         return response.status(200).json({
             personal,
             organizations,
-            hasOrganizations: organizations.length > 0
+            hasOrganizations: organizations.length > 0,
+            _debug: debugInfo
         });
 
     } catch (error) {
