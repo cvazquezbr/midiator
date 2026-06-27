@@ -2,7 +2,7 @@ import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { delay, fetchWithRetry, parseBody } from './utils.js';
 
-const LINKEDIN_API_VERSION = '202601';
+const LINKEDIN_API_VERSION = '202507';
 
 async function handleTokenExchange(request, response) {
     const { code, redirectUri } = request.body;
