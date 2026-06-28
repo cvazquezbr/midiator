@@ -39,24 +39,25 @@ export async function getPostDetails(accessToken, postUrn) {
 
 export async function getAuthorDetails(accessToken, authorUrn) {
     let profileUrl;
+    let headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0'
+    };
+
     if (authorUrn.includes(':person:')) {
         const personId = authorUrn.split(':').pop();
-        // Updated to handle 202601 /rest/people response (Works for 202507 too)
+        // For personal profiles, /rest/people is stable with versioning
         profileUrl = `https://api.linkedin.com/rest/people/${personId}?fields=id,givenName,familyName,headline,picture`;
+        headers['LinkedIn-Version'] = LINKEDIN_API_VERSION;
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
-        profileUrl = `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`;
+        // Organizations via legacy /v2/ to avoid versioning issues reported by user
+        profileUrl = `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`;
     } else {
         throw new Error('Unsupported author URN type.');
     }
 
-    const linkedinResponse = await fetchWithRetry(profileUrl, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'X-Restli-Protocol-Version': '2.0.0',
-            'LinkedIn-Version': LINKEDIN_API_VERSION
-        },
-    });
+    const linkedinResponse = await fetchWithRetry(profileUrl, { headers });
 
     const data = await linkedinResponse.json();
     if (!linkedinResponse.ok) {
@@ -166,11 +167,19 @@ async function handleGetProfiles(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
     }
 
-    const headers = {
+    // Headers for versioned /rest endpoints
+    const restHeaders = {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
         'LinkedIn-Version': LINKEDIN_API_VERSION
+    };
+
+    // Headers for legacy /v2 endpoints (no LinkedIn-Version)
+    const v2Headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0'
     };
 
     const getLocalized = (obj) => {
@@ -197,8 +206,8 @@ async function handleGetProfiles(request, response) {
     };
 
     try {
-        // Step 1: Fetch personal profile
-        const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', { headers });
+        // Step 1: Fetch personal profile via /rest (usually works fine with versioning)
+        const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', { headers: restHeaders });
 
         const personalData = await meRes.json();
         if (!meRes.ok) {
@@ -216,13 +225,14 @@ async function handleGetProfiles(request, response) {
             profilePicture: personalData.picture || personalData.profilePicture || ''
         };
 
-        // Step 2: Fetch organization ACLs
+        // Step 2: Fetch organization ACLs via legacy /v2 (to avoid versioning errors)
         const personUrn = `urn:li:person:${personId}`;
-        const aclUrl = `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`;
+        // Adding &state=APPROVED&role=ADMINISTRATOR as suggested to filter early
+        const aclUrl = `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED&role=ADMINISTRATOR`;
 
-        console.log(`[LinkedIn Proxy] Fetching ACLs: ${aclUrl}`);
+        console.log(`[LinkedIn Proxy] Fetching ACLs (v2): ${aclUrl}`);
 
-        const aclRes = await fetchWithRetry(aclUrl, { headers });
+        const aclRes = await fetchWithRetry(aclUrl, { headers: v2Headers });
         const aclText = await aclRes.text();
         let aclData = {};
         try {
@@ -268,9 +278,9 @@ async function handleGetProfiles(request, response) {
         const orgUrns = [...orgUrnMap.keys()];
         const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
-        // Step 4: Batch fetch org details
-        const batchUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-        const batchRes = await fetchWithRetry(batchUrl, { headers });
+        // Step 4: Batch fetch org details via legacy /v2
+        const batchUrl = `https://api.linkedin.com/v2/organizations?ids=List(${orgIds.join(',')})`;
+        const batchRes = await fetchWithRetry(batchUrl, { headers: v2Headers });
 
         let orgResults = {};
         if (batchRes.ok) {
