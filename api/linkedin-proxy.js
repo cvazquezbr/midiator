@@ -4,33 +4,26 @@ import { delay, fetchWithRetry, parseBody } from './utils.js';
 import fetch from 'node-fetch';
 
 /**
- * Dynamically derives the current LinkedIn API version (YYYYMM).
- */
-function getCurrentLinkedInVersion() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${year}${month}`;
-}
-
-/**
- * Generates a list of fallback versions, including known active releases
- * and a sliding window of the last 6 months.
+ * Generates a list of fallback versions based on confirmed active releases
+ * for the LinkedIn Marketing Solutions (LMS) program.
  */
 function getLinkedInVersionFallbacks() {
-    const versions = ['202606', '202602', '202510', '202506'];
-    const now = new Date();
-    for (let i = 0; i < 6; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const v = `${year}${month}`;
-        if (!versions.includes(v)) versions.push(v);
-    }
-    return versions;
+    return [
+        '202606', // June 2026 (current latest)
+        '202605',
+        '202604',
+        '202603',
+        '202602',
+        '202601',
+        '202511',
+        '202510',
+        '202509',
+        '202508',
+        '202507'
+    ];
 }
 
-const LINKEDIN_API_VERSION = getCurrentLinkedInVersion();
+const LINKEDIN_API_VERSION = '202606';
 
 /**
  * Centralized utility to fetch from LinkedIn with systematic version and endpoint fallbacks.
@@ -49,35 +42,44 @@ async function fetchLinkedInWithFallback(baseUrl, accessToken, options = {}) {
     // For /rest/ endpoints, we try dynamic versions.
     const versions = isRest ? getLinkedInVersionFallbacks() : [null];
 
-    // If it's a critical organizational resource, we might want to try both /rest/ and /v2/
-    // but this utility focuses on the versions for the provided URL type.
+    // Try both header casings as LinkedIn is reported to be sensitive
+    const headerNames = ['Linkedin-Version', 'LinkedIn-Version'];
 
     let lastStatus = 404;
     let lastError = '';
 
     for (const version of versions) {
-        const headers = { ...baseHeaders };
-        if (version) headers['LinkedIn-Version'] = version;
+        for (const headerName of headerNames) {
+            if (!version && isRest) continue; // rest always needs a version
 
-        try {
+            const headers = { ...baseHeaders };
+            if (version) headers[headerName] = version;
+
+            console.log(`[LinkedIn Proxy] Trying ${baseUrl} [Header: ${headerName}, Version: ${version || 'None'}]`);
+
+            try {
             const res = await fetchWithRetry(baseUrl, { ...options, headers }, 1, 1000);
             const text = await res.text();
             lastStatus = res.status;
 
             if (res.ok) {
                 try {
-                    return { ok: true, status: res.status, data: JSON.parse(text), headers: res.headers, versionUsed: version };
+                    return { ok: true, status: res.status, data: JSON.parse(text), headers: res.headers, versionUsed: version, headerUsed: headerName };
                 } catch (e) {
-                    return { ok: true, status: res.status, data: text, headers: res.headers, versionUsed: version };
+                    return { ok: true, status: res.status, data: text, headers: res.headers, versionUsed: version, headerUsed: headerName };
                 }
             } else {
                 lastError = text;
                 console.warn(`[LinkedIn Proxy] Attempt failed (${res.status}) for ${baseUrl} [Version: ${version || 'None'}]: ${text.slice(0, 100)}`);
                 // Stop if it's an auth error - version switching won't help
                 if (res.status === 401) break;
+                }
+                // If it's not a 426, switching header case probably won't help, but we try anyway for robustness
+            } catch (err) {
+                console.error(`[LinkedIn Proxy] Request error for ${baseUrl}: ${err.message}`);
             }
-        } catch (err) {
-            console.error(`[LinkedIn Proxy] Request error for ${baseUrl}: ${err.message}`);
+
+            if (!version) break; // Don't try multiple header names if no version header is sent
         }
     }
 
