@@ -39,31 +39,47 @@ export async function getPostDetails(accessToken, postUrn) {
 }
 
 export async function getAuthorDetails(accessToken, authorUrn) {
-    let profileUrl;
-    let headers = {
+    const baseHeaders = {
         'Authorization': `Bearer ${accessToken}`,
         'X-Restli-Protocol-Version': '2.0.0'
     };
 
     if (authorUrn.includes(':person:')) {
         const personId = authorUrn.split(':').pop();
-        profileUrl = `https://api.linkedin.com/rest/people/${personId}?fields=id,givenName,familyName,headline,picture`;
-        headers['LinkedIn-Version'] = LINKEDIN_API_VERSION;
+        const profileUrl = `https://api.linkedin.com/rest/people/${personId}?fields=id,givenName,familyName,headline,picture`;
+        const res = await fetchWithRetry(profileUrl, {
+            headers: { ...baseHeaders, 'LinkedIn-Version': LINKEDIN_API_VERSION }
+        });
+        if (!res.ok) throw new Error(`Failed to fetch person: ${res.status}`);
+        return res.json();
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
-        // Use legacy /v2/ for organizations to bypass versioning issues
-        profileUrl = `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`;
+        // Priority to legacy v2 for organizations as reported by user
+        const urls = [
+            `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`,
+            `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`
+        ];
+        const versions = [null, LINKEDIN_API_VERSION, '202401', '202512', '202601'];
+
+        for (const url of urls) {
+            const isRest = url.includes('/rest/');
+            for (const version of versions) {
+                if (!isRest && version !== null) continue;
+                if (isRest && version === null) continue;
+
+                const headers = { ...baseHeaders };
+                if (version) headers['LinkedIn-Version'] = version;
+
+                try {
+                    const res = await fetchWithRetry(url, { headers }, 1, 1000);
+                    if (res.ok) return res.json();
+                } catch (_) {}
+            }
+        }
+        throw new Error(`Failed to fetch organization ${orgId} after all attempts.`);
     } else {
         throw new Error('Unsupported author URN type.');
     }
-
-    const linkedinResponse = await fetchWithRetry(profileUrl, { headers });
-
-    const data = await linkedinResponse.json();
-    if (!linkedinResponse.ok) {
-        throw new Error(`LinkedIn Get Author Profile Error: ${linkedinResponse.status} - ${JSON.stringify(data)}`);
-    }
-    return data;
 }
 
 async function handleTokenExchange(request, response) {
@@ -167,14 +183,7 @@ async function handleGetProfiles(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
     }
 
-    const restHeaders = {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': LINKEDIN_API_VERSION
-    };
-
-    const v2Headers = {
+    const baseHeaders = {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0'
@@ -205,7 +214,9 @@ async function handleGetProfiles(request, response) {
 
     try {
         // Step 1: Fetch personal profile via /rest
-        const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', { headers: restHeaders });
+        const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', {
+            headers: { ...baseHeaders, 'LinkedIn-Version': LINKEDIN_API_VERSION }
+        });
 
         const personalData = await meRes.json();
         if (!meRes.ok) {
@@ -223,30 +234,68 @@ async function handleGetProfiles(request, response) {
             profilePicture: personalData.picture || personalData.profilePicture || ''
         };
 
-        // Step 2: Fetch organization ACLs via legacy /v2
+        // Step 2: Fetch organization ACLs with fallback strategy
         const personUrn = `urn:li:person:${personId}`;
-        const aclUrl = `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED&role=ADMINISTRATOR`;
+        const aclUrls = [
+            `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED`,
+            `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED`,
+            `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`,
+            `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`
+        ];
 
-        console.log(`[LinkedIn Proxy] Fetching ACLs (v2): ${aclUrl}`);
+        const versionsToTry = [null, LINKEDIN_API_VERSION, '202401', '202512', '202601'];
 
-        const aclRes = await fetchWithRetry(aclUrl, { headers: v2Headers });
-        const aclText = await aclRes.text();
-        let aclData = {};
-        try {
-            aclData = JSON.parse(aclText);
-        } catch (e) {
-            console.error('[LinkedIn Proxy] Failed to parse ACL response:', aclText);
+        let aclData = null;
+        let lastAclStatus = null;
+        let lastAclError = null;
+        let successfulAclUrl = null;
+
+        for (const url of aclUrls) {
+            const isRest = url.includes('/rest/');
+            for (const version of versionsToTry) {
+                if (!isRest && version !== null) continue;
+                if (isRest && version === null) continue;
+
+                const currentHeaders = { ...baseHeaders };
+                if (version) currentHeaders['LinkedIn-Version'] = version;
+
+                console.log(`[LinkedIn Proxy] Fetching ACLs: ${url} (Version: ${version || 'v2/Legacy'})`);
+
+                try {
+                    const res = await fetchWithRetry(url, { headers: currentHeaders }, 1, 1000);
+                    const text = await res.text();
+                    lastAclStatus = res.status;
+
+                    if (res.ok) {
+                        const tempAclData = JSON.parse(text);
+                        // Only break if we actually found elements, or if we want to stick with this successful response
+                        if (tempAclData.elements && tempAclData.elements.length > 0) {
+                            aclData = tempAclData;
+                            successfulAclUrl = `${url} (${version || 'v2'})`;
+                            console.log(`[LinkedIn Proxy] ACL success with ${tempAclData.elements.length} elements via ${successfulAclUrl}`);
+                            break;
+                        } else {
+                            console.log(`[LinkedIn Proxy] ACL success but 0 elements via ${url} (${version || 'v2'}). Continuing search...`);
+                            // Keep the first successful empty response just in case nothing else works
+                            if (!aclData) aclData = tempAclData;
+                        }
+                    } else {
+                        lastAclError = text;
+                        console.warn(`[LinkedIn Proxy] ACL failed (${res.status}) for ${url} (${version})`);
+                    }
+                } catch (err) {
+                    console.error(`[LinkedIn Proxy] ACL error for ${url}: ${err.message}`);
+                }
+            }
+            if (aclData && aclData.elements && aclData.elements.length > 0) break;
         }
 
-        console.log(`[LinkedIn Proxy] ACL status: ${aclRes.status}, elements: ${aclData?.elements?.length ?? 0}`);
-
-        if (!aclRes.ok) {
-            console.error('[LinkedIn Proxy] ACL error body:', aclText.slice(0, 500));
+        if (!aclData) {
             return response.status(200).json({
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: { aclStatus: aclRes.status, aclRaw: aclText.slice(0, 500) }
+                _debug: { aclStatus: lastAclStatus, aclRaw: lastAclError?.slice(0, 500) }
             });
         }
 
@@ -259,7 +308,7 @@ async function handleGetProfiles(request, response) {
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: { aclStatus: aclRes.status, aclRaw: aclText.slice(0, 500) }
+                _debug: { aclStatus: 200, info: 'No elements in ACL', successfulUrl: successfulAclUrl }
             });
         }
 
@@ -275,17 +324,32 @@ async function handleGetProfiles(request, response) {
         const orgUrns = [...orgUrnMap.keys()];
         const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
-        // Step 4: Batch fetch org details via legacy /v2
-        const batchUrl = `https://api.linkedin.com/v2/organizations?ids=List(${orgIds.join(',')})`;
-        const batchRes = await fetchWithRetry(batchUrl, { headers: v2Headers });
+        // Step 4: Batch fetch org details with fallback
+        const batchUrls = [
+            `https://api.linkedin.com/v2/organizations?ids=List(${orgIds.join(',')})`,
+            `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`
+        ];
 
         let orgResults = {};
-        if (batchRes.ok) {
-            const batchData = await batchRes.json();
-            orgResults = batchData.results || {};
-        } else {
-            const batchErrText = await batchRes.text();
-            console.warn(`[LinkedIn Proxy] Batch org fetch failed: ${batchRes.status} - ${batchErrText.slice(0, 300)}`);
+        for (const url of batchUrls) {
+            const isRest = url.includes('/rest/');
+            const versions = isRest ? [LINKEDIN_API_VERSION, '202401', '202512', '202601'] : [null];
+
+            for (const version of versions) {
+                const currentHeaders = { ...baseHeaders };
+                if (version) currentHeaders['LinkedIn-Version'] = version;
+
+                console.log(`[LinkedIn Proxy] Batch org fetch: ${url} (Version: ${version || 'v2/Legacy'})`);
+                try {
+                    const res = await fetchWithRetry(url, { headers: currentHeaders }, 1, 1000);
+                    if (res.ok) {
+                        const batchData = await res.json();
+                        orgResults = batchData.results || {};
+                        if (Object.keys(orgResults).length > 0) break;
+                    }
+                } catch (_) {}
+            }
+            if (Object.keys(orgResults).length > 0) break;
         }
 
         const organizations = orgUrns.map(orgUrn => {
@@ -314,7 +378,8 @@ async function handleGetProfiles(request, response) {
         return response.status(200).json({
             personal,
             organizations,
-            hasOrganizations: organizations.length > 0
+            hasOrganizations: organizations.length > 0,
+            _debug: { successfulAclUrl }
         });
 
     } catch (error) {
