@@ -20,10 +20,10 @@ import { useSettings } from '../context/SettingsContext';
 import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
 import { useUserAuth } from '../context/UserAuthContext';
 import LinkedinInfobox from './LinkedinInfobox';
-import { saveSettingsToDb } from '../utils/credentialsManager';
+import { saveSettingsToDb, loadSettingsFromDb } from '../utils/credentialsManager';
 
 const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
-  const { settings, updateSetting } = useSettings();
+  const { settings, updateSetting, isLoading: isLoadingSettings, loadSettings } = useSettings();
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
 
   const [connectedUser, setConnectedUser] = useState(null);
@@ -88,8 +88,14 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
                 // 2. Persist to DB immediately to avoid loss on reload
                 try {
-                  await saveSettingsToDb({ ...settings, linkedin: updatedLinkedinConfig });
-                  console.log('LinkedIn token automatically persisted to database.');
+                  // Re-fetch latest settings from DB to ensure no data loss during merge
+                  const latestDbSettings = await loadSettingsFromDb();
+                  await saveSettingsToDb({ ...latestDbSettings, linkedin: updatedLinkedinConfig });
+
+                  // 3. Re-sync the context
+                  await loadSettings();
+
+                  console.log('LinkedIn token automatically persisted and context synchronized.');
                 } catch (saveErr) {
                   console.error('Failed to auto-persist LinkedIn token:', saveErr);
                   // Non-blocking error, memory state is still updated
@@ -110,10 +116,13 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    if (code) {
+
+    // Only proceed with exchange if we have a code AND settings have finished their initial load.
+    // This prevents wiping out other settings if exchangeCodeForToken saves before DB settings are loaded.
+    if (code && !isLoadingSettings) {
         exchangeCodeForToken(code);
     }
-  }, [updateSetting]);
+  }, [updateSetting, isLoadingSettings]);
 
   useEffect(() => {
     const fetchUserDetails = async (accessToken) => {
