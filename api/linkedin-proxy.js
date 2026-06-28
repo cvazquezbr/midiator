@@ -3,7 +3,27 @@ import { query } from './db.js';
 import { delay, fetchWithRetry, parseBody } from './utils.js';
 import fetch from 'node-fetch';
 
-const LINKEDIN_API_VERSION = '202501';
+function getCurrentLinkedInVersion() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}${month}`;
+}
+
+function getLinkedInVersionFallbacks() {
+    const now = new Date();
+    const versions = [];
+    // Generate the last 6 months as fallbacks
+    for (let i = 0; i < 6; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        versions.push(`${year}${month}`);
+    }
+    return versions;
+}
+
+const LINKEDIN_API_VERSION = getCurrentLinkedInVersion();
 
 export async function getPostDetails(accessToken, postUrn) {
     const prefixes = ['ugcPost', 'share'];
@@ -54,12 +74,11 @@ export async function getAuthorDetails(accessToken, authorUrn) {
         return res.json();
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
-        // Priority to legacy v2 for organizations as reported by user
         const urls = [
             `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`,
             `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`
         ];
-        const versions = [null, LINKEDIN_API_VERSION, '202410', '202407', '202404', '202401'];
+        const versions = [null, ...getLinkedInVersionFallbacks()];
 
         for (const url of urls) {
             const isRest = url.includes('/rest/');
@@ -243,7 +262,7 @@ async function handleGetProfiles(request, response) {
             `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`
         ];
 
-        const versionsToTry = [null, LINKEDIN_API_VERSION, '202410', '202407', '202404', '202401'];
+        const versionsToTry = [null, ...getLinkedInVersionFallbacks()];
 
         let aclData = null;
         let lastAclStatus = null;
@@ -338,7 +357,7 @@ async function handleGetProfiles(request, response) {
         let orgResults = {};
         for (const url of batchUrls) {
             const isRest = url.includes('/rest/');
-            const versions = isRest ? [LINKEDIN_API_VERSION, '202410', '202407', '202404', '202401'] : [null];
+            const versions = isRest ? getLinkedInVersionFallbacks() : [null];
 
             for (const version of versions) {
                 const currentHeaders = { ...baseHeaders };
