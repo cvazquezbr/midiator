@@ -3,7 +3,7 @@ import { query } from './db.js';
 import { delay, fetchWithRetry, parseBody } from './utils.js';
 import fetch from 'node-fetch';
 
-const LINKEDIN_API_VERSION = '20250101';
+const LINKEDIN_API_VERSION = '202501';
 
 export async function getPostDetails(accessToken, postUrn) {
     const prefixes = ['ugcPost', 'share'];
@@ -54,11 +54,12 @@ export async function getAuthorDetails(accessToken, authorUrn) {
         return res.json();
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
+        // Priority to legacy v2 for organizations as reported by user
         const urls = [
             `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`,
             `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`
         ];
-        const versions = [null, LINKEDIN_API_VERSION, '20241101', '20241001', '20240701'];
+        const versions = [null, LINKEDIN_API_VERSION, '202410', '202407', '202404', '202401'];
 
         for (const url of urls) {
             const isRest = url.includes('/rest/');
@@ -242,7 +243,7 @@ async function handleGetProfiles(request, response) {
             `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`
         ];
 
-        const versionsToTry = [null, LINKEDIN_API_VERSION, '20241101', '20241001', '20240701'];
+        const versionsToTry = [null, LINKEDIN_API_VERSION, '202410', '202407', '202404', '202401'];
 
         let aclData = null;
         let lastAclStatus = null;
@@ -337,7 +338,7 @@ async function handleGetProfiles(request, response) {
         let orgResults = {};
         for (const url of batchUrls) {
             const isRest = url.includes('/rest/');
-            const versions = isRest ? [LINKEDIN_API_VERSION, '20241101', '20241001', '20240701'] : [null];
+            const versions = isRest ? [LINKEDIN_API_VERSION, '202410', '202407', '202404', '202401'] : [null];
 
             for (const version of versions) {
                 const currentHeaders = { ...baseHeaders };
