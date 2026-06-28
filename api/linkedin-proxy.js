@@ -3,7 +3,7 @@ import { query } from './db.js';
 import { delay, fetchWithRetry, parseBody } from './utils.js';
 import fetch from 'node-fetch';
 
-const LINKEDIN_API_VERSION = '202507';
+const LINKEDIN_API_VERSION = '202504';
 
 export async function getPostDetails(accessToken, postUrn) {
     const prefixes = ['ugcPost', 'share'];
@@ -54,12 +54,11 @@ export async function getAuthorDetails(accessToken, authorUrn) {
         return res.json();
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
-        // Priority to legacy v2 for organizations as reported by user
         const urls = [
             `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`,
             `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`
         ];
-        const versions = [null, LINKEDIN_API_VERSION, '202401', '202512', '202601'];
+        const versions = [null, LINKEDIN_API_VERSION, '202501', '202410', '202407', '202404'];
 
         for (const url of urls) {
             const isRest = url.includes('/rest/');
@@ -243,7 +242,7 @@ async function handleGetProfiles(request, response) {
             `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`
         ];
 
-        const versionsToTry = [null, LINKEDIN_API_VERSION, '202401', '202512', '202601'];
+        const versionsToTry = [null, LINKEDIN_API_VERSION, '202501', '202410', '202407', '202404'];
 
         let aclData = null;
         let lastAclStatus = null;
@@ -291,11 +290,16 @@ async function handleGetProfiles(request, response) {
         }
 
         if (!aclData) {
+            console.error('[LinkedIn Proxy] All ACL attempts failed.', { lastAclStatus, lastAclError });
             return response.status(200).json({
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: { aclStatus: lastAclStatus, aclRaw: lastAclError?.slice(0, 500) }
+                _debug: {
+                    aclStatus: lastAclStatus,
+                    aclRaw: lastAclError?.slice(0, 500),
+                    message: 'All API version attempts failed for organizationalEntityAcls'
+                }
             });
         }
 
@@ -333,7 +337,7 @@ async function handleGetProfiles(request, response) {
         let orgResults = {};
         for (const url of batchUrls) {
             const isRest = url.includes('/rest/');
-            const versions = isRest ? [LINKEDIN_API_VERSION, '202401', '202512', '202601'] : [null];
+            const versions = isRest ? [LINKEDIN_API_VERSION, '202501', '202410', '202407', '202404'] : [null];
 
             for (const version of versions) {
                 const currentHeaders = { ...baseHeaders };
