@@ -1,6 +1,7 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { delay, fetchWithRetry, parseBody } from './utils.js';
+import fetch from 'node-fetch';
 
 const LINKEDIN_API_VERSION = '202507';
 
@@ -46,12 +47,11 @@ export async function getAuthorDetails(accessToken, authorUrn) {
 
     if (authorUrn.includes(':person:')) {
         const personId = authorUrn.split(':').pop();
-        // For personal profiles, /rest/people is stable with versioning
         profileUrl = `https://api.linkedin.com/rest/people/${personId}?fields=id,givenName,familyName,headline,picture`;
         headers['LinkedIn-Version'] = LINKEDIN_API_VERSION;
     } else if (authorUrn.includes(':organization:')) {
         const orgId = authorUrn.split(':').pop();
-        // Organizations via legacy /v2/ to avoid versioning issues reported by user
+        // Use legacy /v2/ for organizations to bypass versioning issues
         profileUrl = `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`;
     } else {
         throw new Error('Unsupported author URN type.');
@@ -167,7 +167,6 @@ async function handleGetProfiles(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
     }
 
-    // Headers for versioned /rest endpoints
     const restHeaders = {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -175,7 +174,6 @@ async function handleGetProfiles(request, response) {
         'LinkedIn-Version': LINKEDIN_API_VERSION
     };
 
-    // Headers for legacy /v2 endpoints (no LinkedIn-Version)
     const v2Headers = {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -206,7 +204,7 @@ async function handleGetProfiles(request, response) {
     };
 
     try {
-        // Step 1: Fetch personal profile via /rest (usually works fine with versioning)
+        // Step 1: Fetch personal profile via /rest
         const meRes = await fetchWithRetry('https://api.linkedin.com/rest/me', { headers: restHeaders });
 
         const personalData = await meRes.json();
@@ -225,9 +223,8 @@ async function handleGetProfiles(request, response) {
             profilePicture: personalData.picture || personalData.profilePicture || ''
         };
 
-        // Step 2: Fetch organization ACLs via legacy /v2 (to avoid versioning errors)
+        // Step 2: Fetch organization ACLs via legacy /v2
         const personUrn = `urn:li:person:${personId}`;
-        // Adding &state=APPROVED&role=ADMINISTRATOR as suggested to filter early
         const aclUrl = `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED&role=ADMINISTRATOR`;
 
         console.log(`[LinkedIn Proxy] Fetching ACLs (v2): ${aclUrl}`);
@@ -350,8 +347,6 @@ async function handleInitializeVideoUpload(request, response) {
 async function handleUploadVideo(request, response) {
     const { uploadUrl, videoBase64, videoContentType } = request.body;
     try {
-        // We use standard fetch here as it's a direct upload to a signed URL,
-        // and fetchWithRetry might not be suitable for large binary bodies without careful handling.
         const res = await fetch(uploadUrl, {
             method: 'PUT',
             headers: { 'Content-Type': videoContentType },
@@ -461,7 +456,6 @@ async function handleUploadAndCheckImage(request, response) {
         const initData = await initRes.json();
         if (!initRes.ok) return response.status(initRes.status).json(initData);
 
-        // Standard fetch for binary upload to signed URL
         const uploadRes = await fetch(initData.value.uploadUrl, {
             method: 'PUT',
             headers: { 'Content-Type': imageType },
