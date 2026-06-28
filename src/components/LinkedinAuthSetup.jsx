@@ -25,6 +25,7 @@ import { saveSettingsToDb, loadSettingsFromDb } from '../utils/credentialsManage
 const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const { settings, updateSetting, isLoading: isLoadingSettings, loadSettings } = useSettings();
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
+  const processingCodeRef = useRef(null);
 
   const [connectedUser, setConnectedUser] = useState(null);
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -63,6 +64,10 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
   useEffect(() => {
     const exchangeCodeForToken = async (code) => {
+        if (processingCodeRef.current === code) return;
+        processingCodeRef.current = code;
+
+        console.log('[LinkedinAuthSetup] Exchanging code for token...');
         try {
             const redirectUri = window.location.origin;
             const response = await fetch('/api/linkedin-proxy', {
@@ -117,9 +122,9 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
 
-    // Only proceed with exchange if we have a code AND settings have finished their initial load.
-    // This prevents wiping out other settings if exchangeCodeForToken saves before DB settings are loaded.
     if (code && !isLoadingSettings) {
+        // Clear the code from the URL immediately to prevent multiple triggers
+        window.history.replaceState({}, document.title, window.location.pathname);
         exchangeCodeForToken(code);
     }
   }, [updateSetting, isLoadingSettings]);
