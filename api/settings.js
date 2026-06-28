@@ -16,19 +16,32 @@ const settingsHandler = async (req, res) => {
     console.log(`[api/settings] Authenticated user ID: ${userId}`);
 
     if (req.method === 'GET') {
+      const startTime = Date.now();
       try {
-        const cachedSettings = await redis.get(cacheKey);
+        // Implement a timeout for Redis to prevent hanging
+        const redisPromise = redis.get(cacheKey);
+        let timeoutId;
+        const timeoutPromise = new Promise((_, reject) =>
+          timeoutId = setTimeout(() => reject(new Error('Redis timeout')), 2000)
+        );
+
+        const cachedSettings = await Promise.race([redisPromise, timeoutPromise]);
+        clearTimeout(timeoutId);
+        console.log(`[api/settings] Redis GET took ${Date.now() - startTime}ms`);
+
         if (cachedSettings) {
           console.log(`[api/settings] Cache HIT for user ${userId}.`);
           return res.status(200).json(JSON.parse(cachedSettings));
         }
       } catch (cacheError) {
-        console.error(`[api/settings] Redis GET error for user ${userId}:`, cacheError);
-        // Don't fail the request if cache is down, just log and proceed to DB.
+        console.error(`[api/settings] Redis GET error/timeout for user ${userId}:`, cacheError.message);
+        // Don't fail the request if cache is down or slow, just log and proceed to DB.
       }
 
       console.log(`[api/settings] Cache MISS for user ${userId}. Querying database.`);
+      const dbStartTime = Date.now();
       const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
+      console.log(`[api/settings] DB Query took ${Date.now() - dbStartTime}ms`);
       console.log(`[api/settings] DB query successful. Found ${rows.length} rows for user ${userId}.`);
 
       const settingsData = rows.length > 0 ? (rows[0].settings_data || {}) : {};
