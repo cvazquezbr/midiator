@@ -3,7 +3,7 @@ import { query } from './db.js';
 import { delay, fetchWithRetry, parseBody } from './utils.js';
 import fetch from 'node-fetch';
 
-const LINKEDIN_API_VERSION = '202504';
+const LINKEDIN_API_VERSION = '20250101';
 
 export async function getPostDetails(accessToken, postUrn) {
     const prefixes = ['ugcPost', 'share'];
@@ -58,7 +58,7 @@ export async function getAuthorDetails(accessToken, authorUrn) {
             `https://api.linkedin.com/v2/organizations/${orgId}?fields=id,localizedName,logoV2`,
             `https://api.linkedin.com/rest/organizations/${orgId}?fields=id,localizedName,logoV2`
         ];
-        const versions = [null, LINKEDIN_API_VERSION, '202501', '202410', '202407', '202404'];
+        const versions = [null, LINKEDIN_API_VERSION, '20241101', '20241001', '20240701'];
 
         for (const url of urls) {
             const isRest = url.includes('/rest/');
@@ -242,7 +242,7 @@ async function handleGetProfiles(request, response) {
             `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`
         ];
 
-        const versionsToTry = [null, LINKEDIN_API_VERSION, '202501', '202410', '202407', '202404'];
+        const versionsToTry = [null, LINKEDIN_API_VERSION, '20241101', '20241001', '20240701'];
 
         let aclData = null;
         let lastAclStatus = null;
@@ -337,7 +337,7 @@ async function handleGetProfiles(request, response) {
         let orgResults = {};
         for (const url of batchUrls) {
             const isRest = url.includes('/rest/');
-            const versions = isRest ? [LINKEDIN_API_VERSION, '202501', '202410', '202407', '202404'] : [null];
+            const versions = isRest ? [LINKEDIN_API_VERSION, '20241101', '20241001', '20240701'] : [null];
 
             for (const version of versions) {
                 const currentHeaders = { ...baseHeaders };
