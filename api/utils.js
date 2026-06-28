@@ -1,3 +1,5 @@
+import fetch from 'node-fetch';
+
 export const delay = ms => new Promise(res => setTimeout(res, ms));
 
 /**
