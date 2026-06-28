@@ -20,6 +20,7 @@ import { useSettings } from '../context/SettingsContext';
 import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
 import { useUserAuth } from '../context/UserAuthContext';
 import LinkedinInfobox from './LinkedinInfobox';
+import { saveSettingsToDb } from '../utils/credentialsManager';
 
 const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const { settings, updateSetting } = useSettings();
@@ -80,7 +81,20 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
             if (access_token) {
                 const expiry = Date.now() + expires_in * 1000;
-                updateSetting('linkedin', { ...linkedinConfig, accessToken: access_token, expiry });
+                const updatedLinkedinConfig = { ...linkedinConfig, accessToken: access_token, expiry };
+
+                // 1. Update in-memory state
+                updateSetting('linkedin', updatedLinkedinConfig);
+
+                // 2. Persist to DB immediately to avoid loss on reload
+                try {
+                  await saveSettingsToDb({ ...settings, linkedin: updatedLinkedinConfig });
+                  console.log('LinkedIn token automatically persisted to database.');
+                } catch (saveErr) {
+                  console.error('Failed to auto-persist LinkedIn token:', saveErr);
+                  // Non-blocking error, memory state is still updated
+                }
+
                 toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             } else {
                 throw new Error('Token de acesso não encontrado na resposta.');
