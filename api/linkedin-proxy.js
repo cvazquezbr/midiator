@@ -228,56 +228,37 @@ async function handleGetProfiles(request, response) {
             profilePicture: meRes.data.picture || meRes.data.profilePicture || ''
         };
 
-        // Step 2: Fetch organization ACLs with fallback
-        const personUrn = `urn:li:person:${personId}`;
-        const aclUrls = [
-            `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED`,
-            `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}&state=APPROVED`,
-            `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`,
-            `https://api.linkedin.com/rest/organizationalEntityAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(personUrn)}`
-        ];
+        // Step 2: Fetch organization ACLs via modern organizationAcls endpoint
+        // This endpoint is specific to Community Management API and does not use versioning
+        const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
+        console.log(`[LinkedIn Proxy] Fetching ACLs: ${aclUrl}`);
 
-        let aclData = null;
-        let lastAclStatus = 404;
-        let lastAclError = '';
-        let successfulAclUrl = '';
-        let lastFullRes = null;
-
-        for (const url of aclUrls) {
-            const res = await fetchLinkedInWithFallback(url, accessToken);
-            lastFullRes = res;
-
-            // Diagnostic logging
-            console.log(`[ACL DEBUG] URL: ${url} | Status: ${res.status} | Version: ${res.versionUsed || 'v2'}`);
-            if (!res.ok) console.warn(`[ACL DEBUG] Error: ${res.error?.slice(0, 100)}`);
-
-            if (res.ok && res.data.elements && res.data.elements.length > 0) {
-                aclData = res.data;
-                successfulAclUrl = `${url} [${res.versionUsed || 'v2'}]`;
-                break;
+        const aclRes = await fetchWithRetry(aclUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0'
             }
-            lastAclStatus = res.status;
-            lastAclError = res.error;
-        }
+        }, 1, 1000);
 
-        if (!aclData) {
+        const aclText = await aclRes.text();
+        let aclData = null;
+
+        if (aclRes.ok) {
+            aclData = JSON.parse(aclText);
+        } else {
+            console.error(`[LinkedIn Proxy] ACL fetch failed: ${aclRes.status} - ${aclText.slice(0, 200)}`);
             return response.status(200).json({
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: {
-                    aclStatus: lastAclStatus,
-                    aclRaw: lastAclError?.slice(0, 200),
-                    aclData: JSON.stringify(lastFullRes?.data)?.slice(0, 300),
-                    message: 'No active organizations found or all API attempts failed.'
-                }
+                _debug: { aclStatus: aclRes.status, aclRaw: aclText.slice(0, 300) }
             });
         }
 
-        const elements = aclData.elements.filter(el => !el.state || el.state === 'APPROVED');
+        const elements = (aclData.elements || []).filter(el => !el.state || el.state === 'APPROVED');
         const orgUrnMap = new Map();
         for (const el of elements) {
-            const orgUrn = el.organizationalTarget || el.organizationalEntity || el.organization;
+            const orgUrn = el.organization; // Campo correto para organizationAcls
             if (orgUrn && !orgUrnMap.has(orgUrn)) orgUrnMap.set(orgUrn, el);
         }
 
