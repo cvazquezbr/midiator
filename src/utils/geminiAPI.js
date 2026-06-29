@@ -51,7 +51,7 @@ class GeminiAPI {
       const responseData = await response.json();
 
       if (!response.ok) {
-        const errorMessage = responseData.error?.message || responseData.details?.error?.message || `Erro ${response.status}`;
+        const errorMessage = responseData.error || responseData.details?.error?.message || `Erro ${response.status}`;
         console.error('Erro do proxy Gemini:', responseData);
         throw new Error(`Erro da API Gemini: ${errorMessage}`);
       }

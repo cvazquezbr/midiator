@@ -34,7 +34,16 @@ const handler = async (req, res) => {
     if (!geminiResponse.ok) {
         const errorText = await geminiResponse.text();
         console.error('Gemini API Error:', errorText);
-        return res.status(geminiResponse.status).json({ error: 'Failed to fetch models from Gemini API', details: errorText });
+        let errorData;
+        try {
+            errorData = JSON.parse(errorText);
+        } catch (e) {
+            errorData = { error: { message: errorText } };
+        }
+        return res.status(geminiResponse.status).json({
+            error: errorData.error?.message || 'Failed to fetch models from Gemini API',
+            details: errorData
+        });
     }
 
     const geminiData = await geminiResponse.json();
