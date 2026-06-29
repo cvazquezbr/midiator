@@ -38,8 +38,6 @@ async function fetchLinkedInWithFallback(baseUrl, accessToken, options = {}) {
         ...(options.headers || {})
     };
 
-    // For /v2/ endpoints, we try without version header first.
-    // For /rest/ endpoints, we try dynamic versions.
     const versions = isRest ? getLinkedInVersionFallbacks() : [null];
 
     let lastStatus = 404;
@@ -48,8 +46,6 @@ async function fetchLinkedInWithFallback(baseUrl, accessToken, options = {}) {
     for (const version of versions) {
         const headers = { ...baseHeaders };
         if (version) headers['LinkedIn-Version'] = version;
-
-        console.log(`[LinkedIn Proxy] Trying ${baseUrl} [Version: ${version || 'None'}]`);
 
         try {
             const res = await fetchWithRetry(baseUrl, { ...options, headers }, 1, 1000);
@@ -65,7 +61,7 @@ async function fetchLinkedInWithFallback(baseUrl, accessToken, options = {}) {
             }
 
             lastError = text;
-            console.warn(`[LinkedIn Proxy] Attempt failed (${res.status}) for ${baseUrl} [Version: ${version || 'None'}]: ${text.slice(0, 150)}`);
+            console.warn(`[LinkedIn Proxy] Failed (${res.status}) ${baseUrl} [v: ${version || 'none'}]: ${text.slice(0, 150)}`);
 
             // Stop if it's an auth error - version switching won't help
             if (res.status === 401 || res.status === 403) break;
@@ -245,9 +241,16 @@ async function handleGetProfiles(request, response) {
         let lastAclStatus = 404;
         let lastAclError = '';
         let successfulAclUrl = '';
+        let lastFullRes = null;
 
         for (const url of aclUrls) {
             const res = await fetchLinkedInWithFallback(url, accessToken);
+            lastFullRes = res;
+
+            // Diagnostic logging
+            console.log(`[ACL DEBUG] URL: ${url} | Status: ${res.status} | Version: ${res.versionUsed || 'v2'}`);
+            if (!res.ok) console.warn(`[ACL DEBUG] Error: ${res.error?.slice(0, 100)}`);
+
             if (res.ok && res.data.elements && res.data.elements.length > 0) {
                 aclData = res.data;
                 successfulAclUrl = `${url} [${res.versionUsed || 'v2'}]`;
@@ -262,7 +265,12 @@ async function handleGetProfiles(request, response) {
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: { aclStatus: lastAclStatus, aclRaw: lastAclError?.slice(0, 200) }
+                _debug: {
+                    aclStatus: lastAclStatus,
+                    aclRaw: lastAclError?.slice(0, 200),
+                    aclData: JSON.stringify(lastFullRes?.data)?.slice(0, 300),
+                    message: 'No active organizations found or all API attempts failed.'
+                }
             });
         }
 
@@ -305,7 +313,12 @@ async function handleGetProfiles(request, response) {
             };
         });
 
-        return response.status(200).json({ personal, organizations, hasOrganizations: organizations.length > 0, _debug: { successfulAclUrl } });
+        return response.status(200).json({
+            personal,
+            organizations,
+            hasOrganizations: organizations.length > 0,
+            _debug: { successfulAclUrl, aclData: JSON.stringify(aclData)?.slice(0, 300) }
+        });
     } catch (error) {
         console.error('Error in handleGetProfiles:', error);
         return response.status(500).json({ error: 'Internal Server Error' });
