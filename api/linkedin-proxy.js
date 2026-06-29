@@ -18,8 +18,8 @@ function getLinkedInVersionFallbacks() {
         '202511',
         '202510',
         '202509',
-        '202508',
-        '202507'
+        '202508'
+        // '202507' has been sunset and removed
     ];
 }
 
@@ -42,44 +42,36 @@ async function fetchLinkedInWithFallback(baseUrl, accessToken, options = {}) {
     // For /rest/ endpoints, we try dynamic versions.
     const versions = isRest ? getLinkedInVersionFallbacks() : [null];
 
-    // Try both header casings as LinkedIn is reported to be sensitive
-    const headerNames = ['Linkedin-Version', 'LinkedIn-Version'];
-
     let lastStatus = 404;
     let lastError = '';
 
     for (const version of versions) {
-        for (const headerName of headerNames) {
-            if (!version && isRest) continue; // rest always needs a version
+        const headers = { ...baseHeaders };
+        if (version) headers['LinkedIn-Version'] = version;
 
-            const headers = { ...baseHeaders };
-            if (version) headers[headerName] = version;
+        console.log(`[LinkedIn Proxy] Trying ${baseUrl} [Version: ${version || 'None'}]`);
 
-            console.log(`[LinkedIn Proxy] Trying ${baseUrl} [Header: ${headerName}, Version: ${version || 'None'}]`);
-
-            try {
+        try {
             const res = await fetchWithRetry(baseUrl, { ...options, headers }, 1, 1000);
             const text = await res.text();
             lastStatus = res.status;
 
             if (res.ok) {
                 try {
-                    return { ok: true, status: res.status, data: JSON.parse(text), headers: res.headers, versionUsed: version, headerUsed: headerName };
+                    return { ok: true, status: res.status, data: JSON.parse(text), headers: res.headers, versionUsed: version };
                 } catch (e) {
-                    return { ok: true, status: res.status, data: text, headers: res.headers, versionUsed: version, headerUsed: headerName };
+                    return { ok: true, status: res.status, data: text, headers: res.headers, versionUsed: version };
                 }
-            } else {
-                lastError = text;
-                console.warn(`[LinkedIn Proxy] Attempt failed (${res.status}) for ${baseUrl} [Version: ${version || 'None'}]: ${text.slice(0, 100)}`);
-                // Stop if it's an auth error - version switching won't help
-                if (res.status === 401) break;
-                }
-                // If it's not a 426, switching header case probably won't help, but we try anyway for robustness
-            } catch (err) {
-                console.error(`[LinkedIn Proxy] Request error for ${baseUrl}: ${err.message}`);
             }
 
-            if (!version) break; // Don't try multiple header names if no version header is sent
+            lastError = text;
+            console.warn(`[LinkedIn Proxy] Attempt failed (${res.status}) for ${baseUrl} [Version: ${version || 'None'}]: ${text.slice(0, 150)}`);
+
+            // Stop if it's an auth error - version switching won't help
+            if (res.status === 401 || res.status === 403) break;
+
+        } catch (err) {
+            console.error(`[LinkedIn Proxy] Request error for ${baseUrl}: ${err.message}`);
         }
     }
 
