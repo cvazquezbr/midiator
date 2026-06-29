@@ -229,46 +229,24 @@ async function handleGetProfiles(request, response) {
         };
 
         // Step 2: Fetch organization ACLs via modern organizationAcls endpoint
-        // This endpoint requires a YYYYMMDD version format.
-        const aclVersionsToTry = [
-            '20250101', '20241201', '20241101', '20241001', '20240901',
-            '20240801', '20240701', '20240601', '20240501', '20240401',
-            '20240301', '20240201', '20240101'
-        ];
+        // Using centralized fetchLinkedInWithFallback to handle YYYYMM version fallback automatically.
+        const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
+        console.log(`[LinkedIn Proxy] Fetching ACLs via centralized fallback: ${aclUrl}`);
 
-        let aclData = null;
-        let successfulAclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
-        let aclVersionUsed = null;
+        const aclRes = await fetchLinkedInWithFallback(aclUrl, accessToken);
 
-        for (const ver of aclVersionsToTry) {
-            console.log(`[LinkedIn Proxy] Fetching ACLs with version ${ver}`);
-            const aclRes = await fetch(successfulAclUrl, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'X-Restli-Protocol-Version': '2.0.0',
-                    'LinkedIn-Version': ver,
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            const aclText = await aclRes.text();
-            if (aclRes.ok) {
-                aclData = JSON.parse(aclText);
-                aclVersionUsed = ver;
-                break;
-            } else {
-                console.warn(`[LinkedIn Proxy] ACL fetch failed for version ${ver}: ${aclRes.status} - ${aclText.slice(0, 100)}`);
-            }
-        }
-
-        if (!aclData) {
+        if (!aclRes.ok) {
+            console.error(`[LinkedIn Proxy] ACL fetch failed with all version fallbacks: ${aclRes.status} - ${aclRes.error?.slice(0, 200)}`);
             return response.status(200).json({
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: { error: 'Failed all ACL version attempts' }
+                _debug: { error: 'Failed all ACL version attempts', status: aclRes.status }
             });
         }
+
+        const aclData = aclRes.data;
+        const aclVersionUsed = aclRes.versionUsed;
 
         const elements = (aclData.elements || []).filter(el => !el.state || el.state === 'APPROVED');
         const orgUrnMap = new Map();
@@ -314,7 +292,7 @@ async function handleGetProfiles(request, response) {
             personal,
             organizations,
             hasOrganizations: organizations.length > 0,
-            _debug: { successfulAclUrl, aclVersionUsed, aclData: JSON.stringify(aclData)?.slice(0, 300) }
+            _debug: { aclUrl, aclVersionUsed, aclData: JSON.stringify(aclData)?.slice(0, 300) }
         });
     } catch (error) {
         console.error('Error in handleGetProfiles:', error);
