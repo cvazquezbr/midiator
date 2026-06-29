@@ -15,8 +15,8 @@ const handler = async (req, res) => {
 
     const supportedModels = [
       {
-        name: 'models/gemini-2.5-flash-image',
-        displayName: 'Gemini 2.5 Flash Image',
+        name: 'models/gemini-1.5-flash',
+        displayName: 'Gemini 1.5 Flash',
         description: 'Modelo de geração de imagem rápido e de baixo custo da família Gemini.',
         supportedGenerationMethods: ['generateContent'], // Usa a mesma API do texto
       },

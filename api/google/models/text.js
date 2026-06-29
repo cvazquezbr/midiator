@@ -13,7 +13,11 @@ const handler = async (req, res) => {
       return res.status(404).json({ error: 'Settings not found for user' });
     }
 
-    const geminiApiKey = dbResult.rows[0]?.settings_data?.gemini_api_key;
+    let geminiApiKey = req.headers['x-gemini-api-key'] || req.headers.get?.('x-gemini-api-key');
+    if (!geminiApiKey) {
+      geminiApiKey = dbResult.rows[0]?.settings_data?.gemini_api_key;
+    }
+
     if (!geminiApiKey) {
       return res.status(400).json({ error: 'Gemini API key not configured' });
     }

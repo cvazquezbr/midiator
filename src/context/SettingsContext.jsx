@@ -34,9 +34,14 @@ export const SettingsProvider = ({ children }) => {
     setImageModels([]);
 
     try {
+      const headers = {};
+      if (settings.gemini_api_key) {
+        headers['x-gemini-api-key'] = settings.gemini_api_key;
+      }
+
       const [textResponse, imageResponse] = await Promise.all([
-        fetch('/api/google/models/text'),
-        fetch('/api/google/models/image')
+        fetch('/api/google/models/text', { headers }),
+        fetch('/api/google/models/image', { headers })
       ]);
 
       if (!textResponse.ok) {

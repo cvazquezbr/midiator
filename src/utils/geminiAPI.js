@@ -28,11 +28,16 @@ class GeminiAPI {
     console.log(`[${purpose}] Prompt:`, promptString);
 
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (this.apiKey) {
+        headers['x-gemini-api-key'] = this.apiKey;
+      }
+
       const response = await fetchWithAuth('/api/google/generateContent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: headers,
         body: JSON.stringify({
           model: model,
           contents: [{
