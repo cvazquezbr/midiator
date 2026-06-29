@@ -45,10 +45,12 @@ export const SettingsProvider = ({ children }) => {
       ]);
 
       if (!textResponse.ok) {
-        throw new Error(`Failed to fetch text models: ${textResponse.status}`);
+        const errorData = await textResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch text models: ${textResponse.status}`);
       }
       if (!imageResponse.ok) {
-        throw new Error(`Failed to fetch image models: ${imageResponse.status}`);
+        const errorData = await imageResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch image models: ${imageResponse.status}`);
       }
 
       const textData = await textResponse.json();
