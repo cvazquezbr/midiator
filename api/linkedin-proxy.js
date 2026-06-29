@@ -229,36 +229,52 @@ async function handleGetProfiles(request, response) {
         };
 
         // Step 2: Fetch organization ACLs via modern organizationAcls endpoint
-        // This endpoint is specific to Community Management API and does not use versioning
-        const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
-        console.log(`[LinkedIn Proxy] Fetching ACLs: ${aclUrl}`);
+        // This endpoint requires a YYYYMMDD version format.
+        const aclVersionsToTry = [
+            '20250101', '20241201', '20241101', '20241001', '20240901',
+            '20240801', '20240701', '20240601', '20240501', '20240401',
+            '20240301', '20240201', '20240101'
+        ];
 
-        const aclRes = await fetchWithRetry(aclUrl, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'X-Restli-Protocol-Version': '2.0.0'
-            }
-        }, 1, 1000);
-
-        const aclText = await aclRes.text();
         let aclData = null;
+        let successfulAclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
+        let aclVersionUsed = null;
 
-        if (aclRes.ok) {
-            aclData = JSON.parse(aclText);
-        } else {
-            console.error(`[LinkedIn Proxy] ACL fetch failed: ${aclRes.status} - ${aclText.slice(0, 200)}`);
+        for (const ver of aclVersionsToTry) {
+            console.log(`[LinkedIn Proxy] Fetching ACLs with version ${ver}`);
+            const aclRes = await fetch(successfulAclUrl, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Restli-Protocol-Version': '2.0.0',
+                    'LinkedIn-Version': ver,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const aclText = await aclRes.text();
+            if (aclRes.ok) {
+                aclData = JSON.parse(aclText);
+                aclVersionUsed = ver;
+                break;
+            } else {
+                console.warn(`[LinkedIn Proxy] ACL fetch failed for version ${ver}: ${aclRes.status} - ${aclText.slice(0, 100)}`);
+            }
+        }
+
+        if (!aclData) {
             return response.status(200).json({
                 personal,
                 organizations: [],
                 hasOrganizations: false,
-                _debug: { aclStatus: aclRes.status, aclRaw: aclText.slice(0, 300) }
+                _debug: { error: 'Failed all ACL version attempts' }
             });
         }
 
         const elements = (aclData.elements || []).filter(el => !el.state || el.state === 'APPROVED');
         const orgUrnMap = new Map();
         for (const el of elements) {
-            const orgUrn = el.organization; // Campo correto para organizationAcls
+            // Support both potential field names: organization and organizationTarget
+            const orgUrn = el.organizationTarget || el.organization;
             if (orgUrn && !orgUrnMap.has(orgUrn)) orgUrnMap.set(orgUrn, el);
         }
 
@@ -298,7 +314,7 @@ async function handleGetProfiles(request, response) {
             personal,
             organizations,
             hasOrganizations: organizations.length > 0,
-            _debug: { successfulAclUrl, aclData: JSON.stringify(aclData)?.slice(0, 300) }
+            _debug: { successfulAclUrl, aclVersionUsed, aclData: JSON.stringify(aclData)?.slice(0, 300) }
         });
     } catch (error) {
         console.error('Error in handleGetProfiles:', error);
