@@ -658,6 +658,19 @@ const Campaign = ({
                                     {isGeneratingSummaryMedio ? 'Gerando...' : 'Gerar'}
                                 </Button>
                             </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Email de Notificação"
+                                    value={campaignContent.notification_email || ''}
+                                    onChange={(e) => setCampaignState(prev => ({
+                                        ...prev,
+                                        campaignContent: { ...campaignContent, notification_email: e.target.value }
+                                    }))}
+                                    variant="outlined"
+                                    fullWidth
+                                    placeholder="email@exemplo.com (para receber o link da publicação)"
+                                />
+                            </Grid>
                             <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <TextField
                                     label="Conteúdo Pequeno (máx. 130 caracteres)"
