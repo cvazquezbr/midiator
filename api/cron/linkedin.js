@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import fetch from 'node-fetch';
 import { processDiscoverySession } from '../engagement/ai-worker.js';
 import { escapeLinkedinText, markdownToLinkedinText } from '../utils.js';
+import { sendPublicationNotification } from '../email-utils.js';
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const PROXY_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
@@ -246,7 +247,7 @@ export async function handleRunScheduler(response) {
     // Query pending scheduled posts (schema public)
     const now = new Date();
     const { rows } = await query(
-      `SELECT ls.*, c.campaign_data, u.linkedin_access_token
+      `SELECT ls.*, c.campaign_data, c.name as campaign_name, u.linkedin_access_token
              FROM linkedin_schedules ls
              JOIN users u ON ls.user_id = u.id
              LEFT JOIN campaigns c ON ls.campaign_id = c.id
@@ -563,6 +564,24 @@ export async function handleRunScheduler(response) {
 
           if (updateResult.rowCount === 0) {
             throw new Error(`DB update failed for post ${postId}. Post was published but its status could not be updated in the database.`);
+          }
+
+          // Send notification email if specified
+          if (row.notification_email) {
+            try {
+              const campaignTitle = row.campaign_name || payload.titulo || (payload.content && payload.content.titulo) || 'Publicação no LinkedIn';
+              const postText = (payload.content && payload.content.fullText) || payload.conteudo || payload.fullText || '';
+
+              await sendPublicationNotification({
+                to: row.notification_email,
+                campaignTitle,
+                postUrl,
+                postContent: postText
+              });
+              console.log(`[Cron LinkedIn] Notification email sent for post ${postId} to ${row.notification_email}`);
+            } catch (emailErr) {
+              console.error(`[Cron LinkedIn] Failed to send notification email for post ${postId}:`, emailErr);
+            }
           }
 
         } else {

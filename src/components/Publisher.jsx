@@ -664,6 +664,7 @@ const Publisher = React.memo(({
         campaign_id: selectedCampaignId || null,
         scheduled_at: mainPostUtcDate.toISOString(),
         authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
+        notification_email: campaignContent?.notification_email || null,
         content: {
             // Salva o texto final, já formatado, para garantir consistência.
             fullText: content,
@@ -702,6 +703,7 @@ const Publisher = React.memo(({
             parent_id: mainPostSchedule.id,
             scheduled_at: followupUtcDate.toISOString(),
             authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
+            notification_email: campaignContent?.notification_email || null,
             content: {
               titulo: post.titulo || '',
               conteudo: post.conteudo || '',
@@ -842,6 +844,7 @@ const Publisher = React.memo(({
                 campaign_id: selectedCampaignId || null,
                 scheduled_at: new Date().toISOString(), // Immediate publication
                 authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
+                notification_email: campaignContent?.notification_email || null,
                 content: {
                     titulo: campaignContent?.titulo || 'Publicação Avulsa',
                     conteudo: content, // Use the final content from the text field

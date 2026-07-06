@@ -1,6 +1,7 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { parseBody } from './utils.js';
+import { sendPublicationNotification } from './email-utils.js';
 
 // Helper function to create a schedule
 async function handleCreateSchedule(request, response) {
@@ -12,7 +13,8 @@ async function handleCreateSchedule(request, response) {
             content,
             authorUrn,
             status = 'scheduled', // Default to 'scheduled'
-            linkedin_post_url = null
+            linkedin_post_url = null,
+            notification_email = null
         } = request.body.payload;
 
         if (!scheduled_at || !content || !authorUrn) {
@@ -30,8 +32,8 @@ async function handleCreateSchedule(request, response) {
         const contentObject = typeof content === 'string' ? JSON.parse(content) : content;
 
         const { rows } = await query(
-            `INSERT INTO linkedin_schedules (user_id, campaign_id, parent_id, scheduled_at, user_selected_time, post_content, status, linkedin_post_url, linkedin_post_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            `INSERT INTO linkedin_schedules (user_id, campaign_id, parent_id, scheduled_at, user_selected_time, post_content, status, linkedin_post_url, linkedin_post_id, notification_email)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
             [
                 userId,
                 campaign_id || null,
@@ -41,11 +43,41 @@ async function handleCreateSchedule(request, response) {
                 JSON.stringify({ ...contentObject, authorUrn }),
                 status,
                 linkedin_post_url,
-                linkedin_post_id
+                linkedin_post_id,
+                notification_email
             ]
         );
 
-        return response.status(201).json(rows[0]);
+        const newSchedule = rows[0];
+
+        // If immediately published, send notification if email is provided
+        if (status === 'published' && notification_email && linkedin_post_url) {
+            try {
+                let campaignTitle = contentObject.titulo || 'Publicação no LinkedIn';
+
+                // Try to get campaign name if campaign_id is provided
+                if (campaign_id) {
+                    const { rows: campRows } = await query('SELECT name FROM campaigns WHERE id = $1', [campaign_id]);
+                    if (campRows.length > 0) {
+                        campaignTitle = campRows[0].name;
+                    }
+                }
+
+                const postText = contentObject.fullText || contentObject.conteudo || '';
+
+                await sendPublicationNotification({
+                    to: notification_email,
+                    campaignTitle,
+                    postUrl: linkedin_post_url,
+                    postContent: postText
+                });
+            } catch (emailErr) {
+                console.error('[Schedule API] Failed to send immediate notification:', emailErr);
+                // We don't fail the request if only the email fails
+            }
+        }
+
+        return response.status(201).json(newSchedule);
     } catch (error) {
         console.error('Error creating schedule:', error);
         return response.status(500).json({ error: 'Internal Server Error' });
