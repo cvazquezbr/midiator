@@ -27,6 +27,7 @@ import ColorThief from 'colorthief';
 import PaletteEditor from './PaletteEditor';
 import PalettePreview from './PalettePreview';
 import * as generationHandlers from '../utils/generationHandlers';
+import { useSettings } from '../context/SettingsContext';
 
 const steps = [
   'Definir Briefing',
@@ -55,6 +56,7 @@ const PaletteWizard = ({
   onPaletteDataChange,
   initialStep = 0
 }) => {
+  const { settings } = useSettings();
   const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(initialStep);
   const [briefing, setBriefing] = useState({});
@@ -120,7 +122,10 @@ const PaletteWizard = ({
 - Detalhes adicionais: ${briefing.details || 'Nenhum.'}
     `;
     try {
-      const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
+      const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim(), {
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
 
       // The AI is returning a long descriptive text in the `harmony` field instead of a single word.
       // We need to handle this to prevent creating a palette name that is too long for the database.
