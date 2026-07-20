@@ -29,9 +29,9 @@ import {
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
-import { useCampaign as useCampaignContext } from '../context/CampaignContext';
 import PaletteWizard from './PaletteWizard';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
+import { toast } from 'sonner';
 import {
     Campaign as CampaignIcon,
     ExpandMore as ExpandMoreIcon,
@@ -46,8 +46,9 @@ import {
     Save as SaveIcon,
     Add as AddIcon,
     Spellcheck as SpellcheckIcon,
+    Delete as DeleteIcon,
+    Code as CodeIcon,
 } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
 import RevisaoTextoModal from './RevisaoTextoModal/RevisaoTextoModal';
 import AspectRatioSelector from './ui/AspectRatioSelector';
 
@@ -185,7 +186,6 @@ const Campaign = ({
     generatedPageUrl,
     isGeneratingImage,
     handleGenerateImage,
-    onEditFollowup,
     setCampaignState,
     autorList,
     selectedAutorForCampaign,
@@ -201,6 +201,23 @@ const Campaign = ({
     const problemaRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(0);
+
+    // Manual / Edit Follow-up Modal State
+    const [followupFormOpen, setFollowupFormOpen] = useState(false);
+    const [editingFollowupIndex, setEditingFollowupIndex] = useState(null); // null means adding a new one
+    const [followupForm, setFollowupForm] = useState({
+        titulo: '',
+        conteudo: '',
+        cta: '',
+        etapa_aida: 'Atenção',
+        tipo_gancho: '',
+        hashtags_sugeridas: '',
+    });
+
+    // JSON Import Modal State
+    const [jsonImportOpen, setJsonImportOpen] = useState(false);
+    const [jsonText, setJsonText] = useState('');
+    const [jsonError, setJsonError] = useState('');
     const [isRevisaoModalOpen, setRevisaoModalOpen] = useState(false);
     const [campoEmRevisao, setCampoEmRevisao] = useState({ nome: '', texto: '' });
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
@@ -419,6 +436,111 @@ const Campaign = ({
                 },
             }));
             setNewHashtag('');
+        }
+    };
+
+    // Helper to open manual form
+    const handleOpenAddFollowup = () => {
+        setEditingFollowupIndex(null);
+        setFollowupForm({
+            titulo: '',
+            conteudo: '',
+            cta: '',
+            etapa_aida: 'Atenção',
+            tipo_gancho: '',
+            hashtags_sugeridas: '',
+        });
+        setFollowupFormOpen(true);
+    };
+
+    const handleOpenEditFollowup = (index, post) => {
+        setEditingFollowupIndex(index);
+        setFollowupForm({
+            titulo: post.titulo || '',
+            conteudo: post.conteudo || '',
+            cta: post.cta || '',
+            etapa_aida: post.etapa_aida || 'Atenção',
+            tipo_gancho: post.tipo_gancho || '',
+            hashtags_sugeridas: Array.isArray(post.hashtags_sugeridas) ? post.hashtags_sugeridas.join(', ') : '',
+        });
+        setFollowupFormOpen(true);
+    };
+
+    const handleSaveFollowupForm = () => {
+        const processedHashtags = followupForm.hashtags_sugeridas
+            .split(/[\s,]+/)
+            .map(h => h.trim().replace(/^#/, ''))
+            .filter(Boolean);
+
+        const newPost = {
+            post_numero: editingFollowupIndex !== null ? (followupPosts[editingFollowupIndex]?.post_numero || (editingFollowupIndex + 1)) : (followupPosts.length + 1),
+            tipo_gancho: followupForm.tipo_gancho,
+            etapa_aida: followupForm.etapa_aida,
+            titulo: followupForm.titulo,
+            conteudo: followupForm.conteudo,
+            cta: followupForm.cta,
+            hashtags_sugeridas: processedHashtags,
+        };
+
+        let updatedFollowups;
+        if (editingFollowupIndex !== null) {
+            updatedFollowups = followupPosts.map((p, idx) => idx === editingFollowupIndex ? newPost : p);
+            toast.success("Post de follow-up atualizado com sucesso!");
+        } else {
+            updatedFollowups = [...followupPosts, newPost];
+            toast.success("Post de follow-up adicionado com sucesso!");
+        }
+
+        setCampaignState(prev => ({ ...prev, followupPosts: updatedFollowups }));
+        setFollowupFormOpen(false);
+    };
+
+    const handleDeleteFollowup = (index) => {
+        const updatedFollowups = followupPosts.filter((_, idx) => idx !== index).map((p, idx) => ({ ...p, post_numero: idx + 1 }));
+        setCampaignState(prev => ({ ...prev, followupPosts: updatedFollowups }));
+        toast.success("Post de follow-up excluído com sucesso!");
+    };
+
+    const handleImportJson = () => {
+        try {
+            const parsed = JSON.parse(jsonText);
+            if (!Array.isArray(parsed)) {
+                setJsonError("O JSON deve ser uma lista (array) de objetos de post.");
+                return;
+            }
+
+            const newPosts = parsed.map((item, index) => {
+                const title = item.titulo || item.titulo_sugerido || `Post ${item.post_numero || index + 1}`;
+                const content = item.conteudo || item.coracao_prompt || '';
+                const cta = item.cta || item.cta_sugerido || '';
+                const etapa_aida = item.etapa_aida || 'Atenção';
+                const tipo_gancho = item.tipo_gancho || '';
+
+                let hashtags_sugeridas = [];
+                if (Array.isArray(item.hashtags_sugeridas)) {
+                    hashtags_sugeridas = item.hashtags_sugeridas.map(h => h.trim().replace(/^#/, ''));
+                } else if (typeof item.hashtags_sugeridas === 'string') {
+                    hashtags_sugeridas = item.hashtags_sugeridas.split(/[\s,]+/).map(h => h.trim().replace(/^#/, '')).filter(Boolean);
+                }
+
+                return {
+                    post_numero: followupPosts.length + index + 1,
+                    tipo_gancho,
+                    etapa_aida,
+                    titulo: title,
+                    conteudo: content,
+                    cta,
+                    hashtags_sugeridas,
+                };
+            });
+
+            setCampaignState(prev => ({ ...prev, followupPosts: [...prev.followupPosts, ...newPosts] }));
+            toast.success(`${newPosts.length} post(s) importado(s) com sucesso!`);
+            setJsonImportOpen(false);
+            setJsonText('');
+            setJsonError('');
+        } catch (e) {
+            setJsonError(`Erro de parsing JSON: ${e.message}`);
         }
     };
 
@@ -943,9 +1065,15 @@ const Campaign = ({
                                     InputProps={{ inputProps: { min: 1, max: 10 } }}
                                 />
                             </Grid>
-                            <Grid item xs={12}>
-                                <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
-                                    {isGeneratingFollowup ? 'Gerando...' : 'Gerar Posts de Follow-up'}
+                            <Grid item xs={12} sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                                <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />} variant="contained">
+                                    {isGeneratingFollowup ? 'Gerando...' : 'Gerar Posts de Follow-up com IA'}
+                                </Button>
+                                <Button onClick={handleOpenAddFollowup} startIcon={<AddIcon />} variant="outlined">
+                                    Adicionar Post Manual
+                                </Button>
+                                <Button onClick={() => setJsonImportOpen(true)} startIcon={<CodeIcon />} variant="outlined">
+                                    Importar JSON
                                 </Button>
                             </Grid>
                         </Grid>
@@ -959,28 +1087,46 @@ const Campaign = ({
                     {followupPosts.length > 0 && !isGeneratingFollowup && (
                         <Box sx={{ mt: 4 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
-                                <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
-                                    {isGeneratingFollowup ? 'Gerando...' : 'Regerar Posts'}
-                                </Button>
+                                <Typography variant="h6" gutterBottom>Posts de Follow-up ({followupPosts.length})</Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />} size="small">
+                                        {isGeneratingFollowup ? 'Gerando...' : 'Regerar com IA'}
+                                    </Button>
+                                </Box>
                             </Box>
                             {(followupPosts || []).filter(Boolean).map((post, index) => (
                                 <Accordion key={index}>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                                            <Typography sx={{ flexGrow: 1, mr: 2 }}>{post.titulo || `Post ${post.post_numero}`}</Typography>
-                                            <Chip label={post.etapa_aida || 'AIDA'} size="small" color="primary" variant="outlined" />
+                                            <Typography sx={{ flexGrow: 1, mr: 2, fontWeight: 'bold' }}>{post.titulo || `Post ${post.post_numero}`}</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Chip label={post.etapa_aida || 'AIDA'} size="small" color="primary" variant="outlined" />
+                                                <IconButton size="small" color="primary" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleOpenEditFollowup(index, post);
+                                                }}>
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton size="small" color="error" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteFollowup(index);
+                                                }}>
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Box>
                                         </Box>
                                     </AccordionSummary>
-                                    <AccordionDetails sx={{ cursor: 'pointer' }} onClick={() => onEditFollowup(index, post.conteudo)}>
+                                    <AccordionDetails sx={{ cursor: 'pointer' }} onClick={() => handleOpenEditFollowup(index, post)}>
                                         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 2 }}>
                                             {post.conteudo}
                                         </Typography>
-                                        <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                                            <strong>CTA:</strong> {post.cta}
-                                        </Typography>
+                                        {post.cta && (
+                                            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                                                <strong>CTA:</strong> {post.cta}
+                                            </Typography>
+                                        )}
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                                            <Chip icon={<InfoIcon />} label={post.tipo_gancho || 'Gancho'} size="small" variant="outlined" />
+                                            {post.tipo_gancho && <Chip icon={<InfoIcon />} label={post.tipo_gancho} size="small" variant="outlined" />}
                                             {(post.hashtags_sugeridas || []).map((tag, i) => (
                                                 <Chip key={i} label={`#${tag}`} size="small" />
                                             ))}
@@ -1028,6 +1174,112 @@ const Campaign = ({
                     )}
                 </TabPanel>
 
+
+                {/* Manual Inclusion / Edit Dialog */}
+                <Dialog open={followupFormOpen} onClose={() => setFollowupFormOpen(false)} fullWidth maxWidth="md">
+                    <DialogTitle>
+                        {editingFollowupIndex !== null ? `Editar Post de Follow-up #${editingFollowupIndex + 1}` : 'Adicionar Novo Post de Follow-up'}
+                    </DialogTitle>
+                    <DialogContent>
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Título do Post"
+                                    fullWidth
+                                    value={followupForm.titulo}
+                                    onChange={(e) => setFollowupForm(prev => ({ ...prev, titulo: e.target.value }))}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Conteúdo"
+                                    fullWidth
+                                    multiline
+                                    rows={6}
+                                    value={followupForm.conteudo}
+                                    onChange={(e) => setFollowupForm(prev => ({ ...prev, conteudo: e.target.value }))}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="CTA (Chamada para Ação)"
+                                    fullWidth
+                                    value={followupForm.cta}
+                                    onChange={(e) => setFollowupForm(prev => ({ ...prev, cta: e.target.value }))}
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="etapa-aida-label">Etapa AIDA</InputLabel>
+                                    <Select
+                                        labelId="etapa-aida-label"
+                                        value={followupForm.etapa_aida}
+                                        onChange={(e) => setFollowupForm(prev => ({ ...prev, etapa_aida: e.target.value }))}
+                                        label="Etapa AIDA"
+                                    >
+                                        <MenuItem value="Atenção">Atenção</MenuItem>
+                                        <MenuItem value="Interesse">Interesse</MenuItem>
+                                        <MenuItem value="Desejo">Desejo</MenuItem>
+                                        <MenuItem value="Ação">Ação</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    label="Tipo de Gancho"
+                                    fullWidth
+                                    value={followupForm.tipo_gancho}
+                                    onChange={(e) => setFollowupForm(prev => ({ ...prev, tipo_gancho: e.target.value }))}
+                                    placeholder="Ex: Narrativa de Dor, Insight Contraintuitivo"
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Hashtags Sugeridas"
+                                    fullWidth
+                                    value={followupForm.hashtags_sugeridas}
+                                    onChange={(e) => setFollowupForm(prev => ({ ...prev, hashtags_sugeridas: e.target.value }))}
+                                    placeholder="Separadas por vírgula ou espaço. Ex: #inovacao, #marketing, tech"
+                                />
+                            </Grid>
+                        </Grid>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setFollowupFormOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveFollowupForm} variant="contained" color="primary">Salvar</Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* JSON Import Dialog */}
+                <Dialog open={jsonImportOpen} onClose={() => setJsonImportOpen(false)} fullWidth maxWidth="md">
+                    <DialogTitle>Importar Posts de Follow-up via JSON</DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 2, mt: 1 }}>
+                            Cole uma lista (array) de objetos JSON representando os posts de follow-up.
+                            O importador mapeará chaves como "titulo_sugerido", "coracao_prompt" (conteúdo), "cta_sugerido", etc.
+                        </Typography>
+                        <TextField
+                            label="JSON dos Posts"
+                            fullWidth
+                            multiline
+                            rows={12}
+                            value={jsonText}
+                            onChange={(e) => {
+                                setJsonText(e.target.value);
+                                setJsonError('');
+                            }}
+                            placeholder='[\n  {\n    "titulo_sugerido": "Sua comunidade...",\n    "coracao_prompt": "Abra questionando...",\n    "cta_sugerido": "Comente..."\n  }\n]'
+                            error={!!jsonError}
+                            helperText={jsonError}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setJsonImportOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleImportJson} variant="contained" color="primary" disabled={!jsonText.trim()}>
+                            Importar
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
                 <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} fullWidth maxWidth="lg">
                     <DialogTitle>
