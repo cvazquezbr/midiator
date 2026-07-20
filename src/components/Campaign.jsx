@@ -197,7 +197,7 @@ const Campaign = ({
     paletteId,
     customPalette,
 }) => {
-    useSettings();
+    const { settings } = useSettings();
     const problemaRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(0);
@@ -257,14 +257,19 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            const problems = await generateCommonProblems({
+                persona: finalPersona,
+                autor: finalAutor,
+                model: settings.gemini_model,
+                apiKey: settings.gemini_api_key
+            });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [commonProblems.length, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign, settings]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
@@ -276,14 +281,19 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            const problems = await generateCommonProblems({
+                persona: finalPersona,
+                autor: finalAutor,
+                model: settings.gemini_model,
+                apiKey: settings.gemini_api_key
+            });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign, settings]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -302,14 +312,20 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            const solutions = await generateCommonSolutions({
+                problema,
+                persona: finalPersona,
+                autor: finalAutor,
+                model: settings.gemini_model,
+                apiKey: settings.gemini_api_key
+            });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [commonSolutions.length, problema, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign, settings]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -321,14 +337,20 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            const solutions = await generateCommonSolutions({
+                problema,
+                persona: finalPersona,
+                autor: finalAutor,
+                model: settings.gemini_model,
+                apiKey: settings.gemini_api_key
+            });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [problema, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign, settings]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {

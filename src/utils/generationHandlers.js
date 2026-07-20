@@ -91,12 +91,12 @@ const formatObjectForPrompt = (obj, excludeKeys = [], indentation = '') => {
 /**
  * Generates the main campaign content using an AI API.
  */
-export const generateCampaignContent = async ({ problema, solucao, objetivo, tomDeVoz, persona = null, autor = null }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+export const generateCampaignContent = async ({ problema, solucao, objetivo, tomDeVoz, persona = null, autor = null, model = null, apiKey = null }) => {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
@@ -122,7 +122,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
     tomDeVoz: stripHtml(tomDeVoz)
   });
 
-  const selectedModel = getGeminiModel();
+  const selectedModel = model || getGeminiModel();
   if (!selectedModel) {
     throw new Error('Nenhum modelo de texto foi selecionado. Por favor, configure um modelo em Configurações.');
   }
@@ -172,15 +172,15 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
 /**
  * Generates a prompt for the campaign image using an AI API.
  */
-export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null, palette = null }) => {
+export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null, palette = null, model = null, apiKey = null }) => {
     if (!content) {
         throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
     }
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
+    const actualApiKey = apiKey || getGeminiApiKey();
+    if (!actualApiKey) {
         throw new Error('Chave de API Gemini não configurada.');
     }
-    geminiAPI.initialize(apiKey);
+    geminiAPI.initialize(actualApiKey);
 
     const autorString = formatObjectForPrompt(autor);
 
@@ -200,7 +200,7 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
       colorPalettePrompt: colorPalettePrompt,
     });
 
-    const selectedModel = getGeminiModel();
+    const selectedModel = model || getGeminiModel();
     if (!selectedModel) {
       throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
     }
@@ -211,15 +211,15 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
 /**
  * Generates an image for the campaign using an AI API.
  */
-export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }) => {
+export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [], model = null, apiKey = null }) => {
   if (!prompt) {
     throw new Error("O prompt da imagem deve ser gerado primeiro.");
   }
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   const colorPalettePrompt = colors && colors.length > 0
     ? `The image should predominantly use the following color palette: ${colors.map(c => c.hex).join(', ')}.`
@@ -237,7 +237,7 @@ export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }
     finalImagePrompt = `${finalImagePrompt.trim()} --ar ${aspectRatio}`;
   }
 
-  const selectedImageModel = getGeminiImageModel();
+  const selectedImageModel = model || getGeminiImageModel();
   if (!selectedImageModel) {
     throw new Error('Nenhum modelo de imagem foi selecionado. Por favor, configure um modelo em Configurações.');
   }
@@ -262,15 +262,15 @@ export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }
 /**
  * Generates formatted HTML content for the campaign post.
  */
-export const generateFormattedContent = async ({ content }) => {
+export const generateFormattedContent = async ({ content, model = null, apiKey = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   const promptTemplate = await getPrompt('generateFormattedContent');
   const prompt = fillPrompt(promptTemplate, {
@@ -279,7 +279,7 @@ export const generateFormattedContent = async ({ content }) => {
       cta: stripHtml(content.cta),
   });
 
-  const selectedModel = getGeminiModel();
+  const selectedModel = model || getGeminiModel();
   if (!selectedModel) {
     throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
   }
@@ -292,15 +292,15 @@ export const generateFormattedContent = async ({ content }) => {
 /**
  * Generates a plan for follow-up posts for the campaign.
  */
-export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [], persona = null, autor = null }) => {
+export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [], persona = null, autor = null, model = null, apiKey = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
@@ -328,7 +328,7 @@ ${existingPosts.map(p => `- Título: "${p.titulo}", Etapa AIDA: ${p.etapa_aida}`
     existingPostsString: existingPostsString,
   });
 
-  const selectedModel = getGeminiModel();
+  const selectedModel = model || getGeminiModel();
   if (!selectedModel) {
     throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
   }
@@ -354,7 +354,7 @@ ${existingPosts.map(p => `- Título: "${p.titulo}", Etapa AIDA: ${p.etapa_aida}`
 /**
  * Generates follow-up posts for the campaign based on a plan.
  */
-export const generateFollowupPosts = async ({ content, plan, persona = null, autor = null }) => {
+export const generateFollowupPosts = async ({ content, plan, persona = null, autor = null, model = null, apiKey = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -362,11 +362,11 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
     throw new Error("O plano de follow-up deve ser gerado primeiro.");
   }
 
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
@@ -394,7 +394,7 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
     });
 
     let postGenerated = false;
-    const selectedModel = getGeminiModel();
+    const selectedModel = model || getGeminiModel();
     if (!selectedModel) {
       throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
     }
@@ -457,12 +457,12 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
 /**
  * Generates a list of common solutions for a given problem and persona.
  */
-export const generateCommonSolutions = async ({ problema, persona, autor }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+export const generateCommonSolutions = async ({ problema, persona, autor, model = null, apiKey = null }) => {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   if (!problema || problema.trim() === '') {
     throw new Error('Problema não definido. Por favor, descreva o problema primeiro.');
@@ -484,7 +484,7 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
     problema: problema,
   });
 
-  const selectedModel = getGeminiModel();
+  const selectedModel = model || getGeminiModel();
   if (!selectedModel) {
     throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
   }
@@ -510,12 +510,12 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
 /**
  * Generates a list of common problems for a given persona.
  */
-export const generateCommonProblems = async ({ persona, autor }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+export const generateCommonProblems = async ({ persona, autor, model = null, apiKey = null }) => {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   if (!persona) {
     throw new Error('Persona não definida. Por favor, configure a persona primeiro.');
@@ -536,7 +536,7 @@ export const generateCommonProblems = async ({ persona, autor }) => {
       autorString: autorString,
   });
 
-  const selectedModel = getGeminiModel();
+  const selectedModel = model || getGeminiModel();
   if (!selectedModel) {
     throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
   }
@@ -562,12 +562,12 @@ export const generateCommonProblems = async ({ persona, autor }) => {
 /**
  * Generates CSV data content from a text prompt using an AI API.
  */
-export const generateIAContent = async ({ promptText, promptNumRecords }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+export const generateIAContent = async ({ promptText, promptNumRecords, model = null, apiKey = null }) => {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
   if (!promptText.trim()) {
     throw new Error('Por favor, forneça um texto descritivo para o prompt.');
   }
@@ -581,7 +581,7 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
     promptText: stripHtml(promptText),
   });
 
-  const selectedModel = getGeminiModel();
+  const selectedModel = model || getGeminiModel();
   if (!selectedModel) {
     throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
   }
@@ -594,18 +594,18 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
  * @param {string} briefing - The user's briefing for the color palette.
  * @returns {Promise<Object>} A promise that resolves to the generated palette object.
  */
-export const generateColorPalette = async (briefing) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+export const generateColorPalette = async (briefing, { model = null, apiKey = null } = {}) => {
+  const actualApiKey = apiKey || getGeminiApiKey();
+  if (!actualApiKey) {
     throw new Error('Por favor, configure sua chave de API Gemini primeiro.');
   }
-  geminiAPI.initialize(apiKey);
+  geminiAPI.initialize(actualApiKey);
 
   const promptTemplate = await getPrompt('generateColorPalette');
   const prompt = fillPrompt(promptTemplate, { briefing: briefing });
 
   try {
-    const selectedModel = getGeminiModel();
+    const selectedModel = model || getGeminiModel();
     if (!selectedModel) {
       throw new Error('Nenhum modelo de texto Gemini foi selecionado nas configurações.');
     }

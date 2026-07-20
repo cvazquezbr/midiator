@@ -5,6 +5,7 @@ import {
   loadSettingsFromDb,
   saveSettingsToDb,
   gatherCredentials,
+  applySettings,
 } from '../utils/credentialsManager';
 
 const SettingsContext = createContext(null);
@@ -111,6 +112,10 @@ export const SettingsProvider = ({ children }) => {
     setSettings(prev => {
       console.log(`[SettingsContext] Updating setting: ${key} =`, value);
       const newSettings = { ...prev, [key]: value };
+
+      // Update localStorage in real-time
+      applySettings({ [key]: value });
+
       // Se a chave da API Gemini for atualizada e tiver um valor,
       // busca os modelos imediatamente.
       if (key === 'gemini_api_key' && value) {
@@ -124,6 +129,7 @@ export const SettingsProvider = ({ children }) => {
     setIsSaving(true);
     try {
       await saveSettingsToDb(settings);
+      applySettings(settings); // Propagate all settings to localStorage after successful save
       toast.success('Settings saved successfully!');
       if (settings.gemini_api_key) {
         fetchModels();

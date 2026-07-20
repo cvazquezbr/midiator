@@ -762,7 +762,16 @@ function HomePage() {
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-      const content = await generateCampaignContent({ problema: campaignState.problema, solucao: campaignState.solucao, objetivo: campaignState.objetivo, tomDeVoz: campaignState.tomDeVoz, persona: finalPersona, autor: finalAutor });
+      const content = await generateCampaignContent({
+        problema: campaignState.problema,
+        solucao: campaignState.solucao,
+        objetivo: campaignState.objetivo,
+        tomDeVoz: campaignState.tomDeVoz,
+        persona: finalPersona,
+        autor: finalAutor,
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
       setCampaignState(prev => ({ ...prev, campaignContent: content, promptText: `${content.titulo || ''}\n\n${content.conteudo || ''}\n\n${content.cta || ''}` }));
       if (regenerate) { toast.success("Conteúdo principal regenerado."); return; }
       setCampaignState(prev => ({ ...prev, followupPosts: [] }));
@@ -786,8 +795,21 @@ function HomePage() {
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
-      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, palette });
-      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
+      const imagePrompt = await generateCampaignImagePrompt({
+        content: finalContent,
+        aspectRatio,
+        autor: finalAutor,
+        palette,
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
+      const base64Data = await generateCampaignImage({
+        prompt: imagePrompt,
+        aspectRatio,
+        colors: palette?.colors || [],
+        model: settings.gemini_image_model,
+        apiKey: settings.gemini_api_key
+      });
       const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
       const managedUrl = addPendingAsset(imageBlob);
       if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
@@ -854,7 +876,11 @@ function HomePage() {
     if (!content?.conteudo) { toast.error("Gere o conteúdo principal primeiro."); return; }
     setIsGeneratingConteudoFormatado(true);
     try {
-      const finalContent = await generateFormattedContent({ content });
+      const finalContent = await generateFormattedContent({
+        content,
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
       setCampaignState(prev => ({ ...prev, campaignContent: { ...prev.campaignContent, conteudoFormatado: finalContent } }));
     } catch (error) {
       toast.error(`Erro ao formatar conteúdo: ${error.message}`);
@@ -872,8 +898,23 @@ function HomePage() {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const neededQuantity = followupPostsQuantity - followupPosts.length;
-      const plan = await generateFollowupPlan({ content, neededQuantity, existingPosts: followupPosts, persona: finalPersona, autor: finalAutor });
-      const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
+      const plan = await generateFollowupPlan({
+        content,
+        neededQuantity,
+        existingPosts: followupPosts,
+        persona: finalPersona,
+        autor: finalAutor,
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
+      const newPosts = await generateFollowupPosts({
+        content,
+        plan,
+        persona: finalPersona,
+        autor: finalAutor,
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
       setCampaignState(prev => ({ ...prev, followupPosts: [...followupPosts, ...newPosts] }));
     } catch (error) {
       toast.error(`Erro ao gerar posts de follow-up: ${error.message}`);
@@ -896,7 +937,12 @@ function HomePage() {
     setIsGenerating(true); setGenerationStatus('Gerando posts...');
     try {
       const { promptText, promptNumRecords } = campaignState;
-      const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
+      const iaResponseText = await generateIAContent({
+        promptText,
+        promptNumRecords,
+        model: settings.gemini_model,
+        apiKey: settings.gemini_api_key
+      });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
       if (!parsedResult?.data?.length) {
         toast.error('Não foi possível processar a resposta da IA.');
@@ -973,7 +1019,13 @@ function HomePage() {
         const sourceStyle = effectivePageTemplate.images?.[0] ? (({ id, src, ...style }) => style)(effectivePageTemplate.images[0]) : { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const oldImage = (effectivePageTemplate.images || [])[0];
 
-        const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
+        const base64Data = await generateCampaignImage({
+          prompt: imagePrompt,
+          aspectRatio,
+          colors: memorialColors,
+          model: settings.gemini_image_model,
+          apiKey: settings.gemini_api_key
+        });
         if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
 
         const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
