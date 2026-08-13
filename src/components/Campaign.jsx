@@ -26,6 +26,9 @@ import {
   Tab,
   Divider,
   Tooltip,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
@@ -218,6 +221,10 @@ const Campaign = ({
     const [jsonImportOpen, setJsonImportOpen] = useState(false);
     const [jsonText, setJsonText] = useState('');
     const [jsonError, setJsonError] = useState('');
+
+    // Export MD Modal State
+    const [exportMdOpen, setExportMdOpen] = useState(false);
+    const [exportSelections, setExportSelections] = useState({});
     const [isRevisaoModalOpen, setRevisaoModalOpen] = useState(false);
     const [campoEmRevisao, setCampoEmRevisao] = useState({ nome: '', texto: '' });
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
@@ -542,6 +549,188 @@ const Campaign = ({
         } catch (e) {
             setJsonError(`Erro de parsing JSON: ${e.message}`);
         }
+    };
+
+    const getExportableFields = useCallback(() => {
+        const fields = [];
+
+        // Tab 1: Problema e Solução
+        if (selectedPersonaForCampaign) {
+            const personaObj = personaList.find(p => p.id === selectedPersonaForCampaign);
+            if (personaObj) {
+                fields.push({ id: 'persona', label: 'Persona', value: personaObj.name, tab: 'Problema e Solução' });
+            }
+        }
+        if (problema && problema.trim()) {
+            fields.push({ id: 'problema', label: 'Problema', value: problema.trim(), tab: 'Problema e Solução' });
+        }
+        if (selectedAutorForCampaign) {
+            const autorObj = autorList.find(a => a.id === selectedAutorForCampaign);
+            if (autorObj) {
+                fields.push({ id: 'autor', label: 'Autor', value: autorObj.name, tab: 'Problema e Solução' });
+            }
+        }
+        if (solucao && solucao.trim()) {
+            fields.push({ id: 'solucao', label: 'Solução', value: solucao.trim(), tab: 'Problema e Solução' });
+        }
+        if (objetivo && objetivo.trim()) {
+            fields.push({ id: 'objetivo', label: 'Objetivo', value: objetivo.trim(), tab: 'Problema e Solução' });
+        }
+        if (tomDeVoz && tomDeVoz.trim()) {
+            fields.push({ id: 'tomDeVoz', label: 'Tom de Voz', value: tomDeVoz.trim(), tab: 'Problema e Solução' });
+        }
+
+        // Tab 2: Conteúdo Principal
+        if (campaignContent) {
+            if (campaignContent.titulo && campaignContent.titulo.trim()) {
+                fields.push({ id: 'titulo', label: 'Título', value: campaignContent.titulo.trim(), tab: 'Conteúdo Principal' });
+            }
+            if (campaignContent.conteudo && campaignContent.conteudo.trim()) {
+                fields.push({ id: 'conteudo', label: 'Conteúdo', value: campaignContent.conteudo.trim(), tab: 'Conteúdo Principal' });
+            }
+            if (campaignContent.conteudoMedio && campaignContent.conteudoMedio.trim()) {
+                fields.push({ id: 'conteudoMedio', label: 'Conteúdo Médio', value: campaignContent.conteudoMedio.trim(), tab: 'Conteúdo Principal' });
+            }
+            if (campaignContent.notification_email && campaignContent.notification_email.trim()) {
+                fields.push({ id: 'notification_email', label: 'E-mail de Notificação', value: campaignContent.notification_email.trim(), tab: 'Conteúdo Principal' });
+            }
+            if (campaignContent.conteudoPequeno && campaignContent.conteudoPequeno.trim()) {
+                fields.push({ id: 'conteudoPequeno', label: 'Conteúdo Pequeno', value: campaignContent.conteudoPequeno.trim(), tab: 'Conteúdo Principal' });
+            }
+            if (campaignContent.cta && campaignContent.cta.trim()) {
+                fields.push({ id: 'cta', label: 'CTA', value: campaignContent.cta.trim(), tab: 'Conteúdo Principal' });
+            }
+            if (campaignContent.hashtags && campaignContent.hashtags.length > 0) {
+                fields.push({ id: 'hashtags', label: 'Hashtags', value: campaignContent.hashtags.join(', '), tab: 'Conteúdo Principal' });
+            }
+        }
+
+        // Tab 3: Página
+        const selectedPaletteObj = paletteId === 'custom'
+            ? customPalette
+            : (palettes || []).find(p => p.id === paletteId);
+        if (selectedPaletteObj && selectedPaletteObj.colors && selectedPaletteObj.colors.length > 0) {
+            const colorsStr = selectedPaletteObj.colors.map(c => `${c.name || c.hex} (${c.hex})`).join(', ');
+            fields.push({ id: 'paletaCores', label: 'Paleta de Cores', value: `${selectedPaletteObj.name || 'Customizada'}: ${colorsStr}`, tab: 'Página' });
+        }
+        if (aspectRatio && aspectRatio.trim()) {
+            fields.push({ id: 'aspectRatio', label: 'Proporção', value: aspectRatio.trim(), tab: 'Página' });
+        }
+        if (generatedPageUrl && generatedPageUrl.trim()) {
+            fields.push({ id: 'generatedPageUrl', label: 'Imagem Gerada (URL)', value: generatedPageUrl.trim(), tab: 'Página' });
+        }
+
+        // Tab 4: Posts de Follow-Up
+        if (followupPosts && followupPosts.length > 0) {
+            fields.push({ id: 'followupPosts', label: 'Posts de Follow-up (exportar todos)', value: followupPosts, tab: 'Posts de Follow-Up' });
+        }
+
+        // Tab 5: Conteúdo WordPress
+        if (campaignContent && campaignContent.conteudoFormatado && campaignContent.conteudoFormatado.trim()) {
+            fields.push({ id: 'conteudoFormatado', label: 'Conteúdo WordPress (HTML)', value: campaignContent.conteudoFormatado.trim(), tab: 'Conteúdo WordPress' });
+        }
+
+        return fields;
+    }, [selectedPersonaForCampaign, personaList, problema, selectedAutorForCampaign, autorList, solucao, objetivo, tomDeVoz, campaignContent, paletteId, customPalette, palettes, aspectRatio, generatedPageUrl, followupPosts]);
+
+    const handleOpenExportMd = () => {
+        const availableFields = getExportableFields();
+        const initialSelections = {};
+        availableFields.forEach(f => {
+            initialSelections[f.id] = true;
+        });
+        setExportSelections(initialSelections);
+        setExportMdOpen(true);
+    };
+
+    const handleToggleAllExportSelections = (checked) => {
+        const availableFields = getExportableFields();
+        const updated = {};
+        availableFields.forEach(f => {
+            updated[f.id] = checked;
+        });
+        setExportSelections(updated);
+    };
+
+    const generateMarkdownText = () => {
+        const availableFields = getExportableFields();
+        const selectedFields = availableFields.filter(f => exportSelections[f.id]);
+
+        if (selectedFields.length === 0) {
+            return '';
+        }
+
+        let markdown = `# Campanha\n\n`;
+
+        // Group by tab
+        const groups = {};
+        selectedFields.forEach(f => {
+            if (!groups[f.tab]) {
+                groups[f.tab] = [];
+            }
+            groups[f.tab].push(f);
+        });
+
+        const tabOrder = [
+            'Problema e Solução',
+            'Conteúdo Principal',
+            'Página',
+            'Posts de Follow-Up',
+            'Conteúdo WordPress'
+        ];
+
+        tabOrder.forEach(tabName => {
+            if (groups[tabName] && groups[tabName].length > 0) {
+                markdown += `## ${tabName}\n\n`;
+                groups[tabName].forEach(f => {
+                    if (f.id === 'followupPosts') {
+                        // Special formatting for all follow-up posts
+                        const posts = f.value;
+                        posts.forEach((post) => {
+                            markdown += `### ${post.titulo || `Post ${post.post_numero}`}\n`;
+                            if (post.etapa_aida) markdown += `- **Etapa AIDA**: ${post.etapa_aida}\n`;
+                            if (post.tipo_gancho) markdown += `- **Tipo de Gancho**: ${post.tipo_gancho}\n`;
+                            if (post.conteudo) markdown += `\n${post.conteudo}\n\n`;
+                            if (post.cta) markdown += `**CTA**: ${post.cta}\n\n`;
+                            if (post.hashtags_sugeridas && post.hashtags_sugeridas.length > 0) {
+                                markdown += `**Hashtags**: ${post.hashtags_sugeridas.map(h => `#${h}`).join(' ')}\n\n`;
+                            }
+                            markdown += `---\n\n`;
+                        });
+                    } else if (f.id === 'conteudoFormatado') {
+                        // Option 3B: HTML inside code block
+                        markdown += `\`\`\`html\n${f.value}\n\`\`\`\n\n`;
+                    } else if (f.id === 'hashtags') {
+                        markdown += `**${f.label}**: ${f.value.split(/[\s,]+/).map(h => h.trim().startsWith('#') ? h.trim() : `#${h.trim()}`).join(' ')}\n\n`;
+                    } else {
+                        // Normal fields (multiline values should be handled nicely)
+                        if (f.value.includes('\n')) {
+                            markdown += `### ${f.label}\n${f.value}\n\n`;
+                        } else {
+                            markdown += `**${f.label}**: ${f.value}\n\n`;
+                        }
+                    }
+                });
+            }
+        });
+
+        return markdown.trim();
+    };
+
+    const handleCopyMarkdownToClipboard = () => {
+        const text = generateMarkdownText();
+        if (!text) {
+            toast.error("Nenhum dado selecionado para exportar!");
+            return;
+        }
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                toast.success("Markdown copiado para a área de transferência!");
+            })
+            .catch(err => {
+                console.error("Falha ao copiar:", err);
+                toast.error("Erro ao copiar Markdown.");
+            });
     };
 
     return (
@@ -1075,6 +1264,9 @@ const Campaign = ({
                                 <Button onClick={() => setJsonImportOpen(true)} startIcon={<CodeIcon />} variant="outlined">
                                     Importar JSON
                                 </Button>
+                                <Button onClick={handleOpenExportMd} startIcon={<CodeIcon />} variant="outlined">
+                                    Exportar MD
+                                </Button>
                             </Grid>
                         </Grid>
                     )}
@@ -1436,6 +1628,111 @@ const Campaign = ({
                         <Button onClick={() => setSolucaoHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
+                {/* Export Markdown Dialog */}
+                <Dialog
+                    open={exportMdOpen}
+                    onClose={() => setExportMdOpen(false)}
+                    fullWidth
+                    maxWidth="md"
+                    PaperProps={{
+                        sx: {
+                            backgroundColor: 'background.paper',
+                            backgroundImage: 'none',
+                        }
+                    }}
+                >
+                    <DialogTitle>Exportar Campanha no Formato Markdown</DialogTitle>
+                    <DialogContent dividers>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                            Selecione abaixo os dados que deseja incluir no arquivo Markdown (.md). Apenas os campos preenchidos são listados.
+                        </Typography>
+
+                        {getExportableFields().length > 0 ? (
+                            <>
+                                <Box sx={{ mb: 2 }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={getExportableFields().every(f => exportSelections[f.id])}
+                                                indeterminate={
+                                                    getExportableFields().some(f => exportSelections[f.id]) &&
+                                                    !getExportableFields().every(f => exportSelections[f.id])
+                                                }
+                                                onChange={(e) => handleToggleAllExportSelections(e.target.checked)}
+                                            />
+                                        }
+                                        label={<strong>Selecionar Todos / Desmarcar Todos</strong>}
+                                    />
+                                </Box>
+
+                                {(() => {
+                                    const available = getExportableFields();
+                                    const groups = {};
+                                    available.forEach(f => {
+                                        if (!groups[f.tab]) groups[f.tab] = [];
+                                        groups[f.tab].push(f);
+                                    });
+
+                                    const tabOrder = [
+                                        'Problema e Solução',
+                                        'Conteúdo Principal',
+                                        'Página',
+                                        'Posts de Follow-Up',
+                                        'Conteúdo WordPress'
+                                    ];
+
+                                    return tabOrder.map(tabName => {
+                                        if (!groups[tabName] || groups[tabName].length === 0) return null;
+                                        return (
+                                            <Box key={tabName} sx={{ mb: 3 }}>
+                                                <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                                    {tabName}
+                                                </Typography>
+                                                <Divider sx={{ mb: 1.5 }} />
+                                                <FormGroup row sx={{ pl: 1 }}>
+                                                    {groups[tabName].map(f => (
+                                                        <FormControlLabel
+                                                            key={f.id}
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={!!exportSelections[f.id]}
+                                                                    onChange={(e) => {
+                                                                        setExportSelections(prev => ({
+                                                                            ...prev,
+                                                                            [f.id]: e.target.checked
+                                                                        }));
+                                                                    }}
+                                                                />
+                                                            }
+                                                            label={f.label}
+                                                            sx={{ width: { xs: '100%', sm: '48%' }, mb: 0.5 }}
+                                                        />
+                                                    ))}
+                                                </FormGroup>
+                                            </Box>
+                                        );
+                                    });
+                                })()}
+                            </>
+                        ) : (
+                            <Typography variant="body1" color="textSecondary" align="center" sx={{ py: 4 }}>
+                                Nenhum conteúdo preenchido disponível para exportação no momento.
+                            </Typography>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setExportMdOpen(false)}>Fechar</Button>
+                        <Button
+                            onClick={handleCopyMarkdownToClipboard}
+                            variant="contained"
+                            color="primary"
+                            disabled={!getExportableFields().some(f => exportSelections[f.id])}
+                        >
+                            Copiar para Área de Transferência
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
                 {isPaletteWizardOpen && (
                     <PaletteWizard
                         open={isPaletteWizardOpen}
