@@ -604,7 +604,7 @@ function HomePage() {
   const canProceedToStep = (step) => {
     switch (step) {
       case 1: return true;
-      case 2: return campaignState.campaignContent !== null;
+      case 2: return true;
       case 3: return csvData.length > 0;
       case 4: return true;
       case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.url)) { toast.error("Gere todas as páginas antes de prosseguir."); return false; } return true;

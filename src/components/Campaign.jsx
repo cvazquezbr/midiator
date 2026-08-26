@@ -266,6 +266,24 @@ const Campaign = ({
         }
     }, [campaignContent, prevCampaignContent, isGeneratingCampaign]);
 
+    useEffect(() => {
+        if (activeTab > 0 && !campaignContent) {
+            setCampaignState(prev => ({
+                ...prev,
+                campaignContent: {
+                    titulo: '',
+                    conteudo: '',
+                    conteudoMedio: '',
+                    conteudoPequeno: '',
+                    cta: '',
+                    hashtags: [],
+                    notification_email: '',
+                    conteudoFormatado: '',
+                }
+            }));
+        }
+    }, [activeTab, campaignContent, setCampaignState]);
+
     const handleTabChange = (event, newValue) => {
       setActiveTab(newValue);
     };
@@ -432,17 +450,32 @@ const Campaign = ({
     };
 
     const handleAddHashtag = () => {
-        const tagToAdd = newHashtag.trim();
-        if (tagToAdd) {
-            const currentHashtags = campaignContent.hashtags || [];
-            setCampaignState(prev => ({
-                ...prev,
-                campaignContent: {
-                    ...campaignContent,
-                    hashtags: [...currentHashtags, tagToAdd],
-                },
-            }));
-            setNewHashtag('');
+        const rawInput = newHashtag.trim();
+        if (rawInput) {
+            const parsedTags = rawInput
+                .split(/[\s,#]+/)
+                .map(t => t.trim())
+                .filter(Boolean);
+
+            if (parsedTags.length > 0) {
+                const currentHashtags = campaignContent?.hashtags || [];
+                const updatedHashtags = [...currentHashtags];
+
+                parsedTags.forEach(tag => {
+                    if (!updatedHashtags.includes(tag)) {
+                        updatedHashtags.push(tag);
+                    }
+                });
+
+                setCampaignState(prev => ({
+                    ...prev,
+                    campaignContent: {
+                        ...(campaignContent || {}),
+                        hashtags: updatedHashtags,
+                    },
+                }));
+                setNewHashtag('');
+            }
         }
     };
 
@@ -475,8 +508,8 @@ const Campaign = ({
 
     const handleSaveFollowupForm = () => {
         const processedHashtags = followupForm.hashtags_sugeridas
-            .split(/[\s,]+/)
-            .map(h => h.trim().replace(/^#/, ''))
+            .split(/[\s,#]+/)
+            .map(h => h.trim())
             .filter(Boolean);
 
         const newPost = {
@@ -527,7 +560,7 @@ const Campaign = ({
                 if (Array.isArray(item.hashtags_sugeridas)) {
                     hashtags_sugeridas = item.hashtags_sugeridas.map(h => h.trim().replace(/^#/, ''));
                 } else if (typeof item.hashtags_sugeridas === 'string') {
-                    hashtags_sugeridas = item.hashtags_sugeridas.split(/[\s,]+/).map(h => h.trim().replace(/^#/, '')).filter(Boolean);
+                    hashtags_sugeridas = item.hashtags_sugeridas.split(/[\s,#]+/).map(h => h.trim()).filter(Boolean);
                 }
 
                 return {
@@ -744,10 +777,10 @@ const Campaign = ({
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                     <Tabs value={activeTab} onChange={handleTabChange} aria-label="abas da campanha" variant="scrollable" scrollButtons="auto">
                         <Tab label="Problema e Solução" />
-                        <Tab label="Conteúdo Principal" disabled={!campaignContent} />
-                        <Tab label="Página" disabled={!campaignContent} />
-                        <Tab label="Posts de Follow-Up" disabled={!campaignContent} />
-                        <Tab label="Conteúdo WordPress" disabled={!campaignContent} />
+                        <Tab label="Conteúdo Principal" />
+                        <Tab label="Página" />
+                        <Tab label="Posts de Follow-Up" />
+                        <Tab label="Conteúdo WordPress" />
                     </Tabs>
                 </Box>
 
@@ -1052,6 +1085,7 @@ const Campaign = ({
                                     <TextField
                                         label="Nova Hashtag"
                                         size="small"
+                                        placeholder="Ex: #SRE #Metricas #FattoConsultoria"
                                         value={newHashtag}
                                         onChange={(e) => setNewHashtag(e.target.value)}
                                         onKeyDown={(e) => {
