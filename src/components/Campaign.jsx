@@ -32,6 +32,7 @@ import {
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
+import { useCampaign } from '../context/CampaignContext';
 import PaletteWizard from './PaletteWizard';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import { toast } from 'sonner';
@@ -51,6 +52,7 @@ import {
     Spellcheck as SpellcheckIcon,
     Delete as DeleteIcon,
     Code as CodeIcon,
+    CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 import RevisaoTextoModal from './RevisaoTextoModal/RevisaoTextoModal';
 import AspectRatioSelector from './ui/AspectRatioSelector';
@@ -201,9 +203,12 @@ const Campaign = ({
     customPalette,
 }) => {
     const { settings } = useSettings();
+    const { addPendingAsset, removePendingAsset } = useCampaign();
     const problemaRef = useRef(null);
+    const pageImageInputRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(0);
+    const [isDraggingOverPage, setIsDraggingOverPage] = useState(false);
 
     // Manual / Edit Follow-up Modal State
     const [followupFormOpen, setFollowupFormOpen] = useState(false);
@@ -399,6 +404,83 @@ const Campaign = ({
             fetchSolutionsOnOpen();
         }
     }, [isSolucaoHintModalOpen, fetchSolutionsOnOpen]);
+
+    const handleProcessImageFile = useCallback((file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            toast.error("Selecione um arquivo de imagem válido.");
+            return;
+        }
+
+        setImageTabError('');
+        try {
+            const managedUrl = addPendingAsset ? addPendingAsset(file) : URL.createObjectURL(file);
+            if (!managedUrl) {
+                throw new Error("Falha ao registrar a imagem.");
+            }
+
+            setCampaignState(prev => {
+                const oldUrls = prev.pageUrls || [];
+                oldUrls.forEach(url => {
+                    if (url !== managedUrl && removePendingAsset) {
+                        removePendingAsset(url);
+                    }
+                });
+                return {
+                    ...prev,
+                    generatedPageUrl: managedUrl,
+                    pageUrls: [managedUrl],
+                };
+            });
+            toast.success("Imagem carregada com sucesso!");
+        } catch (error) {
+            console.error("Erro ao fazer upload de imagem:", error);
+            setImageTabError(error.message || "Falha ao carregar a imagem.");
+            toast.error("Erro ao carregar a imagem.");
+        }
+    }, [addPendingAsset, removePendingAsset, setCampaignState]);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleProcessImageFile(file);
+        }
+    };
+
+    const handlePageDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOverPage(true);
+    };
+
+    const handlePageDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOverPage(false);
+    };
+
+    const handlePageDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOverPage(false);
+        const file = e.dataTransfer?.files?.[0];
+        if (file) {
+            handleProcessImageFile(file);
+        }
+    };
+
+    const handlePagePaste = (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    handleProcessImageFile(file);
+                    break;
+                }
+            }
+        }
+    };
 
     const handleSaveToDrive = async () => {
         setIsSavingToDrive(true);
@@ -1104,7 +1186,29 @@ const Campaign = ({
 
                 <TabPanel value={activeTab} index={2}>
                     {campaignContent && (
-                        <Box sx={{ mt: 2 }}>
+                        <Box
+                            sx={{
+                                mt: 2,
+                                p: 2,
+                                border: isDraggingOverPage ? '2px dashed #1976d2' : '2px dashed transparent',
+                                borderRadius: 2,
+                                bgcolor: isDraggingOverPage ? 'action.hover' : 'transparent',
+                                transition: 'all 0.2s ease',
+                            }}
+                            onDragOver={handlePageDragOver}
+                            onDragLeave={handlePageDragLeave}
+                            onDrop={handlePageDrop}
+                            onPaste={handlePagePaste}
+                            tabIndex={0}
+                        >
+                            <input
+                                type="file"
+                                ref={pageImageInputRef}
+                                style={{ display: 'none' }}
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+
                             <Grid container spacing={2}>
                                 <Grid item xs={12} md={6}>
                                     <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
@@ -1205,22 +1309,30 @@ const Campaign = ({
                             {generatedPageUrl && !isGeneratingImage && (
                                 <Box sx={{ maxWidth: '600px', margin: 'auto' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
-                                        <Typography variant="h6" gutterBottom>Página Gerada</Typography>
-                                        <Box>
+                                        <Typography variant="h6" gutterBottom>Página Gerada / Carregada</Typography>
+                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                             <Button onClick={handleSaveToDrive} disabled={isSavingToDrive || isGeneratingImage} startIcon={<SaveIcon />}>
                                                 {isSavingToDrive ? 'Salvando...' : 'Salvar na Coleção'}
+                                            </Button>
+                                            <Button
+                                                onClick={() => pageImageInputRef.current?.click()}
+                                                startIcon={<CloudUploadIcon />}
+                                                variant="outlined"
+                                                disabled={isGeneratingImage || isSavingToDrive}
+                                            >
+                                                Upload Imagem
                                             </Button>
                                             <Button onClick={() => {
                                                 const selectedPalette = paletteId === 'custom'
                                                     ? customPalette
                                                     : palettes.find(p => p.id === paletteId);
                                                 handleGenerateImage(campaignContent, selectedPalette);
-                                            }} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />} sx={{ ml: 1 }}>
-                                                {isGeneratingImage ? 'Gerando...' : 'Regerar Página'}
+                                            }} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />}>
+                                                {isGeneratingImage ? 'Gerando...' : 'Regerar com IA'}
                                             </Button>
                                         </Box>
                                     </Box>
-                                    <img src={generatedPageUrl} alt="Página gerada pela IA" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
+                                    <img src={generatedPageUrl} alt="Página da campanha" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
                                 </Box>
                             )}
                             {isGeneratingImage && (
@@ -1230,7 +1342,7 @@ const Campaign = ({
                                 </Box>
                             )}
                             {!generatedPageUrl && !isGeneratingImage && (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, flexWrap: 'wrap' }}>
                                     <Button
                                         variant="contained"
                                         color="secondary"
@@ -1243,7 +1355,16 @@ const Campaign = ({
                                         startIcon={<ImageIcon />}
                                         disabled={isGeneratingImage}
                                     >
-                                        Gerar Página
+                                        Gerar Página com IA
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        onClick={() => pageImageInputRef.current?.click()}
+                                        startIcon={<CloudUploadIcon />}
+                                        disabled={isGeneratingImage}
+                                    >
+                                        Fazer Upload de Imagem
                                     </Button>
                                 </Box>
                             )}
@@ -1252,21 +1373,32 @@ const Campaign = ({
                                     <Alert severity="error" sx={{ mb: 2 }}>
                                         <strong>Falha na geração de página:</strong> {generationError}
                                     </Alert>
-                                    <Button
-                                        variant="contained"
-                                        color="secondary"
-                                        size="large"
-                                        onClick={() => {
-                                            const selectedPalette = paletteId === 'custom'
-                                                ? customPalette
-                                                : palettes.find(p => p.id === paletteId);
-                                            handleGenerateImage(campaignContent, selectedPalette);
-                                        }}
-                                        disabled={isGeneratingImage}
-                                        startIcon={<ImageIcon />}
-                                    >
-                                        {isGeneratingImage ? 'Gerando Página...' : 'Tentar Gerar Apenas a Página'}
-                                    </Button>
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                        <Button
+                                            variant="contained"
+                                            color="secondary"
+                                            size="large"
+                                            onClick={() => {
+                                                const selectedPalette = paletteId === 'custom'
+                                                    ? customPalette
+                                                    : palettes.find(p => p.id === paletteId);
+                                                handleGenerateImage(campaignContent, selectedPalette);
+                                            }}
+                                            disabled={isGeneratingImage}
+                                            startIcon={<ImageIcon />}
+                                        >
+                                            {isGeneratingImage ? 'Gerando Página...' : 'Tentar Gerar Apenas a Página com IA'}
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            size="large"
+                                            onClick={() => pageImageInputRef.current?.click()}
+                                            startIcon={<CloudUploadIcon />}
+                                        >
+                                            Fazer Upload de Imagem
+                                        </Button>
+                                    </Box>
                                 </Box>
                             )}
                             </Grid>
