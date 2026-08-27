@@ -22,6 +22,7 @@ import { checkAuthStatus } from '../utils/auth';
 import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
 import { getAutores } from '../utils/autorState';
 import { getPalettes } from '../utils/paletteState';
+import { hasProblemaSolucao, getAvailableCampaignPosts, buildPromptTextFromPosts } from '../utils/campaignUtils';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
 import SharedCampaignsStep from '../components/SharedCampaignsStep';
@@ -357,6 +358,28 @@ function HomePage() {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
     document.documentElement.classList.toggle('dark-mode-active', darkMode);
   }, [darkMode]);
+
+  // Sincroniza a quantidade de posts e o texto base quando não houver problema/solução, mas existirem posts
+  useEffect(() => {
+    if (activeStep === 2) {
+      if (!hasProblemaSolucao(campaignState)) {
+        const posts = getAvailableCampaignPosts(campaignState);
+        if (posts.length > 0) {
+          const autoPromptText = buildPromptTextFromPosts(posts);
+          setCampaignState(prev => {
+            if (prev.promptNumRecords !== posts.length || prev.promptText !== autoPromptText) {
+              return {
+                ...prev,
+                promptNumRecords: posts.length,
+                promptText: autoPromptText,
+              };
+            }
+            return prev;
+          });
+        }
+      }
+    }
+  }, [activeStep, campaignState.problema, campaignState.solucao, campaignState.campaignContent, campaignState.followupPosts, setCampaignState]);
 
   const extractColorPalette = useCallback((url, setter) => {
     if (!url) { setter([]); return; }
@@ -936,10 +959,26 @@ function HomePage() {
   const handleGenerateIAContent = async () => {
     setIsGenerating(true); setGenerationStatus('Gerando posts...');
     try {
-      const { promptText, promptNumRecords } = campaignState;
+      let effectivePromptText = campaignState.promptText;
+      let effectivePromptNumRecords = campaignState.promptNumRecords;
+
+      if (!hasProblemaSolucao(campaignState)) {
+        const posts = getAvailableCampaignPosts(campaignState);
+        if (posts.length > 0) {
+          effectivePromptNumRecords = posts.length;
+          effectivePromptText = buildPromptTextFromPosts(posts);
+        } else if (!effectivePromptText?.trim()) {
+          toast.error('Nenhum conteúdo de post ou problema/solução foi fornecido.');
+          return;
+        }
+      } else if (!effectivePromptText?.trim()) {
+        toast.error('Por favor, forneça uma descrição do conteúdo para gerar com IA.');
+        return;
+      }
+
       const iaResponseText = await generateIAContent({
-        promptText,
-        promptNumRecords,
+        promptText: effectivePromptText,
+        promptNumRecords: effectivePromptNumRecords,
         model: settings.gemini_model,
         apiKey: settings.gemini_api_key
       });
@@ -1165,7 +1204,7 @@ function HomePage() {
               {activeStep === 0 && campaignsView === 'my-campaigns' && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, onCloneComplete: handleLoadClonedCampaign, autorList, personaList }} />}
               {activeStep === 0 && campaignsView === 'shared-campaigns' && <SharedCampaignsStep {...{ onEditCampaign: handleEditCampaign }} />}
               {activeStep === 1 && <Campaign {...{ steps, activeStep, ...campaignState, setCampaignState, isGeneratingCampaign, campaignGenerationFailed, generationError, handleGenerateCampaignContent, handleResetCampaign, handleExportHtml: () => exportHtml(memorialCampaignData), editingField, setEditingField: (field) => { setEditingField(field); setIsHtmlField(field === 'conteudoFormatado'); }, isGeneratingSummaryMedio, handleGenerateSummary, isGeneratingSummaryPequeno, isGeneratingConteudoFormatado, handleGenerateFormattedContent, isGeneratingFollowup: campaignState.isGeneratingFollowup, handleGenerateFollowupPosts, isGeneratingImage, handleGenerateImage, onEditFollowup: handleEditFollowup, palettes, autorList, selectedAutorForCampaign, personaList, selectedPersonaForCampaign, onRequestNewAutor: handleRequestNewAutor, onRequestNewPersona: handleRequestNewPersona, paletteId: campaignState.paletteId, customPalette: campaignState.customPalette }} />}
-              {activeStep === 2 && <PostsCurtosStep {...{ steps, inputMethod, setInputMethod, handleDrop, handleDragOver, fileInputRef, handleCSVUpload, downloadExampleCsv, setShowSetupModal, promptNumRecords: campaignState.promptNumRecords, setPromptNumRecords: (v) => setCampaignState({ promptNumRecords: v }), promptText: campaignState.promptText, setPromptText: (v) => setCampaignState({ promptText: v }), handleGenerateIAContent, isGenerating, csvData, csvHeaders, onDadosAlterados: handleDadosAlterados, darkMode, exportCsv: () => exportCsv(csvData, csvHeaders), aspectRatio, setAspectRatio: (v) => setCampaignState({ aspectRatio: v }), sidebarOpen }} />}
+              {activeStep === 2 && <PostsCurtosStep {...{ steps, inputMethod, setInputMethod, handleDrop, handleDragOver, fileInputRef, handleCSVUpload, downloadExampleCsv, setShowSetupModal, promptNumRecords: campaignState.promptNumRecords, setPromptNumRecords: (v) => setCampaignState({ promptNumRecords: v }), promptText: campaignState.promptText, setPromptText: (v) => setCampaignState({ promptText: v }), handleGenerateIAContent, isGenerating, csvData, csvHeaders, onDadosAlterados: handleDadosAlterados, darkMode, exportCsv: () => exportCsv(csvData, csvHeaders), aspectRatio, setAspectRatio: (v) => setCampaignState({ aspectRatio: v }), sidebarOpen, hasProblemaSolucao: hasProblemaSolucao(campaignState), hasPosts: getAvailableCampaignPosts(campaignState).length > 0 }} />}
               {activeStep === 3 && <ImageStep {...{ steps, isLoading, isDraggingOverImage: false, handleImageDrop: (e) => handleImageSelected(e.dataTransfer.files[0]), handleImageDragOver, handleImageDragEnter: () => {}, handleImageDragLeave: () => {}, imageInputRef, handleImageUpload: handleForegroundImageUpload, onOpenImageGallery: handleOpenImageGallery, initialFieldStyles: campaignState.initialFieldStyles, onImageDisplayedSizeChange: () => {}, onCsvDataUpdate: handleCsvRecordContentUpdate, originalImageSize, onZIndexChange: handleZIndexChange, isMobile, onDeselectField: () => setCampaignState({ selectedField: null }), onOpenHtmlEditor: (fieldId) => setEditingField(fieldId), currentPreviewIndex, setCurrentPreviewIndex, onFontScaleChange: (v) => setCampaignState({ fontScale: v }), templateFieldStyles: campaignState.templateFieldStyles, activeStep, addPendingAsset }} />}
               {activeStep === 4 &&
                 <PageGeneratorFrontendOnly

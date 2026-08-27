@@ -49,6 +49,8 @@ const PostsCurtosStep = ({
   aspectRatio,
   setAspectRatio,
   sidebarOpen,
+  hasProblemaSolucao = true,
+  hasPosts = true,
 }) => {
   const [isDraggingOverSpreadsheet, setIsDraggingOverSpreadsheet] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
@@ -141,6 +143,16 @@ const PostsCurtosStep = ({
                 {!isGeminiKeyConfigured && (
                   <Alert severity="warning" sx={{ mb: 2 }}>
                     A chave de API do Gemini não está configurada. Por favor, vá para <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)}>Configurações</MuiLink> para adicioná-la.
+                  </Alert>
+                )}
+                {!hasProblemaSolucao && !hasPosts && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Nenhum post de origem ou problema/solução foi encontrado na campanha. Você pode digitar a descrição do conteúdo abaixo, ou utilizar <strong>Carregar Planilha</strong> ou <strong>Criação Manual</strong>.
+                  </Alert>
+                )}
+                {!hasProblemaSolucao && hasPosts && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Sem problema/solução definidos. A IA utilizará os {promptNumRecords} post(s) da campanha (Post Principal e Follow-ups) como base para gerar os posts curtos.
                   </Alert>
                 )}
                 <Typography gutterBottom>Quantidade de Posts</Typography>

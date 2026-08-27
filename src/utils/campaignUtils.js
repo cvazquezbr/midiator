@@ -184,3 +184,58 @@ export async function importPageSetToCampaign(pageSet) {
 
   return { campaign_data, pendingAssets };
 }
+
+/**
+ * Checks if a campaign has problem and solution defined.
+ * @param {object} campaignState - The campaign state.
+ * @returns {boolean}
+ */
+export function hasProblemaSolucao(campaignState) {
+  return Boolean(campaignState?.problema?.trim() && campaignState?.solucao?.trim());
+}
+
+/**
+ * Extracts all available posts (main post + follow-up posts) from campaignState.
+ * @param {object} campaignState - The campaign state.
+ * @returns {Array<{tipo: string, titulo: string, conteudo: string, cta: string}>}
+ */
+export function getAvailableCampaignPosts(campaignState) {
+  const posts = [];
+  const mainContent = campaignState?.campaignContent;
+  if (mainContent && (mainContent.titulo?.trim() || mainContent.conteudo?.trim())) {
+    posts.push({
+      tipo: 'Post Principal',
+      titulo: mainContent.titulo || '',
+      conteudo: mainContent.conteudo || '',
+      cta: mainContent.cta || '',
+    });
+  }
+  const followups = campaignState?.followupPosts || [];
+  followups.forEach((post, idx) => {
+    if (post && (post.titulo?.trim() || post.conteudo?.trim())) {
+      posts.push({
+        tipo: `Post Follow-up ${idx + 1}`,
+        titulo: post.titulo || '',
+        conteudo: post.conteudo || '',
+        cta: post.cta || '',
+      });
+    }
+  });
+  return posts;
+}
+
+/**
+ * Builds structured prompt text from available campaign posts.
+ * @param {Array<{tipo: string, titulo: string, conteudo: string, cta: string}>} posts - The list of available posts.
+ * @returns {string}
+ */
+export function buildPromptTextFromPosts(posts) {
+  if (!posts || posts.length === 0) return '';
+  return posts.map((post, idx) => {
+    const parts = [`--- ${post.tipo.toUpperCase()} (${idx + 1}/${posts.length}) ---`];
+    if (post.titulo) parts.push(`Título: ${post.titulo}`);
+    if (post.conteudo) parts.push(`Conteúdo: ${post.conteudo}`);
+    if (post.cta) parts.push(`CTA: ${post.cta}`);
+    return parts.join('\n');
+  }).join('\n\n');
+}
