@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 const IGNORE_KEYS = new Set([
   'id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio',
   'page_id', 'campaign_id', 'original_url', 'hex', 'rgb', 'prompt_imagem_carrossel',
@@ -222,6 +224,41 @@ export function getAvailableCampaignPosts(campaignState) {
     }
   });
   return posts;
+}
+
+/**
+ * Returns promptText containing only Main Post Content + CTA.
+ * @param {object} campaignState
+ * @returns {string}
+ */
+export function getMainPostPromptText(campaignState) {
+  const content = campaignState?.campaignContent;
+  if (!content) return '';
+  const parts = [];
+  if (content.conteudo?.trim()) parts.push(content.conteudo.trim());
+  if (content.cta?.trim()) parts.push(content.cta.trim());
+  return parts.join('\n\n');
+}
+
+/**
+ * Converts available campaign posts (Main Post + Follow-up Posts) directly into short post records for csvData.
+ * @param {object} campaignState
+ * @returns {{data: Array<object>, headers: Array<string>}}
+ */
+export function convertPostsToCsvData(campaignState) {
+  const posts = getAvailableCampaignPosts(campaignState);
+  if (posts.length === 0) return { data: [], headers: [] };
+
+  const headers = ["Título", "Texto Principal", "Ponte para o Próximo", "prompt_imagem_carrossel"];
+  const data = posts.map((post, index) => ({
+    id: uuidv4(),
+    "Título": post.titulo || `Página ${index + 1}`,
+    "Texto Principal": post.conteudo || '',
+    "Ponte para o Próximo": post.cta || '',
+    "prompt_imagem_carrossel": '',
+  }));
+
+  return { data, headers };
 }
 
 /**

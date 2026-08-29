@@ -152,7 +152,7 @@ const PostsCurtosStep = ({
                 )}
                 {!hasProblemaSolucao && hasPosts && (
                   <Alert severity="info" sx={{ mb: 2 }}>
-                    Sem problema/solução definidos. A IA utilizará os {promptNumRecords} post(s) da campanha (Post Principal e Follow-ups) como base para gerar os posts curtos.
+                    Sem problema/solução definidos. Ao gerar, a aplicação converterá os {promptNumRecords} post(s) da campanha (Post Principal e Follow-ups) diretamente como registros de posts curtos.
                   </Alert>
                 )}
                 <Typography gutterBottom>Quantidade de Posts</Typography>
