@@ -3,6 +3,8 @@ import {
   hasProblemaSolucao,
   getAvailableCampaignPosts,
   buildPromptTextFromPosts,
+  convertPostsToCsvData,
+  getMainPostPromptText,
 } from './campaignUtils';
 
 describe('campaignUtils - short post generation helpers', () => {
@@ -20,6 +22,22 @@ describe('campaignUtils - short post generation helpers', () => {
       expect(hasProblemaSolucao({ problema: 'Apenas problema' })).toBe(false);
       expect(hasProblemaSolucao({ solucao: 'Apenas solução' })).toBe(false);
       expect(hasProblemaSolucao({ problema: '   ', solucao: '  ' })).toBe(false);
+    });
+  });
+
+  describe('getMainPostPromptText', () => {
+    it('returns empty string if campaignContent is missing', () => {
+      expect(getMainPostPromptText({})).toBe('');
+    });
+
+    it('returns formatted content and CTA', () => {
+      const campaignState = {
+        campaignContent: {
+          conteudo: 'Conteúdo do post principal.',
+          cta: 'Clique aqui',
+        },
+      };
+      expect(getMainPostPromptText(campaignState)).toBe('Conteúdo do post principal.\n\nClique aqui');
     });
   });
 
@@ -69,6 +87,43 @@ describe('campaignUtils - short post generation helpers', () => {
         conteudo: 'Conteúdo do followup 2.',
         cta: 'Inscreva-se',
       });
+    });
+  });
+
+  describe('convertPostsToCsvData', () => {
+    it('returns empty data and headers if no posts exist', () => {
+      expect(convertPostsToCsvData({})).toEqual({ data: [], headers: [] });
+    });
+
+    it('converts campaign posts directly into short post records for csvData', () => {
+      const campaignState = {
+        campaignContent: {
+          titulo: 'Título Principal',
+          conteudo: 'Texto Principal',
+          cta: 'CTA Principal',
+        },
+        followupPosts: [
+          {
+            titulo: 'Título Followup 1',
+            conteudo: 'Texto Followup 1',
+            cta: 'CTA Followup 1',
+          },
+        ],
+      };
+
+      const { data, headers } = convertPostsToCsvData(campaignState);
+
+      expect(headers).toEqual(['Título', 'Texto Principal', 'Ponte para o Próximo', 'prompt_imagem_carrossel']);
+      expect(data.length).toBe(2);
+
+      expect(data[0]['Título']).toBe('Título Principal');
+      expect(data[0]['Texto Principal']).toBe('Texto Principal');
+      expect(data[0]['Ponte para o Próximo']).toBe('CTA Principal');
+      expect(data[0]['id']).toBeDefined();
+
+      expect(data[1]['Título']).toBe('Título Followup 1');
+      expect(data[1]['Texto Principal']).toBe('Texto Followup 1');
+      expect(data[1]['Ponte para o Próximo']).toBe('CTA Followup 1');
     });
   });
 

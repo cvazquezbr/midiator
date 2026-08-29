@@ -22,7 +22,7 @@ import { checkAuthStatus } from '../utils/auth';
 import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
 import { getAutores } from '../utils/autorState';
 import { getPalettes } from '../utils/paletteState';
-import { hasProblemaSolucao, getAvailableCampaignPosts, buildPromptTextFromPosts } from '../utils/campaignUtils';
+import { hasProblemaSolucao, getAvailableCampaignPosts, convertPostsToCsvData, getMainPostPromptText } from '../utils/campaignUtils';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
 import SharedCampaignsStep from '../components/SharedCampaignsStep';
@@ -359,27 +359,26 @@ function HomePage() {
     document.documentElement.classList.toggle('dark-mode-active', darkMode);
   }, [darkMode]);
 
-  // Sincroniza a quantidade de posts e o texto base quando não houver problema/solução, mas existirem posts
+  // Sincroniza a quantidade de posts e a descrição do conteúdo (Conteúdo + CTA)
   useEffect(() => {
     if (activeStep === 2) {
-      if (!hasProblemaSolucao(campaignState)) {
-        const posts = getAvailableCampaignPosts(campaignState);
-        if (posts.length > 0) {
-          const autoPromptText = buildPromptTextFromPosts(posts);
-          setCampaignState(prev => {
-            if (prev.promptNumRecords !== posts.length || prev.promptText !== autoPromptText) {
-              return {
-                ...prev,
-                promptNumRecords: posts.length,
-                promptText: autoPromptText,
-              };
-            }
-            return prev;
-          });
+      const posts = getAvailableCampaignPosts(campaignState);
+      const mainPromptText = getMainPostPromptText(campaignState);
+      setCampaignState(prev => {
+        let updates = {};
+        if (posts.length > 0 && prev.promptNumRecords !== posts.length) {
+          updates.promptNumRecords = posts.length;
         }
-      }
+        if (mainPromptText && (!prev.promptText || !prev.promptText.trim())) {
+          updates.promptText = mainPromptText;
+        }
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
     }
-  }, [activeStep, campaignState.problema, campaignState.solucao, campaignState.campaignContent, campaignState.followupPosts, setCampaignState]);
+  }, [activeStep, campaignState.campaignContent, campaignState.followupPosts, setCampaignState]);
 
   const extractColorPalette = useCallback((url, setter) => {
     if (!url) { setter([]); return; }
@@ -795,7 +794,8 @@ function HomePage() {
         model: settings.gemini_model,
         apiKey: settings.gemini_api_key
       });
-      setCampaignState(prev => ({ ...prev, campaignContent: content, promptText: `${content.titulo || ''}\n\n${content.conteudo || ''}\n\n${content.cta || ''}` }));
+      const mainPromptText = `${content.conteudo || ''}\n\n${content.cta || ''}`.trim();
+      setCampaignState(prev => ({ ...prev, campaignContent: content, promptText: mainPromptText }));
       if (regenerate) { toast.success("Conteúdo principal regenerado."); return; }
       setCampaignState(prev => ({ ...prev, followupPosts: [] }));
       await Promise.all([ handleGenerateSummary(1800, content), handleGenerateSummary(130, content) ]);
@@ -959,19 +959,49 @@ function HomePage() {
   const handleGenerateIAContent = async () => {
     setIsGenerating(true); setGenerationStatus('Gerando posts...');
     try {
-      let effectivePromptText = campaignState.promptText;
-      let effectivePromptNumRecords = campaignState.promptNumRecords;
-
       if (!hasProblemaSolucao(campaignState)) {
         const posts = getAvailableCampaignPosts(campaignState);
         if (posts.length > 0) {
-          effectivePromptNumRecords = posts.length;
-          effectivePromptText = buildPromptTextFromPosts(posts);
-        } else if (!effectivePromptText?.trim()) {
-          toast.error('Nenhum conteúdo de post ou problema/solução foi fornecido.');
+          const { data: convertedData, headers: convertedHeaders } = convertPostsToCsvData(campaignState);
+
+          const { newPositions, newStyles } = autoArrangeFields({
+            csvHeaders: convertedHeaders,
+            fieldPositions: {},
+            fieldStyles: {},
+            csvData: convertedData,
+            effectiveImageSize: originalImageSize
+          });
+
+          const newGeneratedPagesData = convertedData.map((record, index) => ({
+            index,
+            record,
+            blob: null,
+            url: null,
+            filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
+          }));
+
+          setCampaignState(prev => ({
+            ...prev,
+            csvData: convertedData,
+            csvHeaders: convertedHeaders,
+            fieldPositions: newPositions,
+            fieldStyles: newStyles,
+            initialFieldStyles: newStyles,
+            generatedPagesData: newGeneratedPagesData,
+            promptText: getMainPostPromptText(prev) || prev.promptText,
+            promptNumRecords: convertedData.length,
+          }));
+
+          setInputMethod('manual');
+          toast.success(`${convertedData.length} post(s) da campanha convertidos em registros.`);
           return;
         }
-      } else if (!effectivePromptText?.trim()) {
+      }
+
+      const effectivePromptText = campaignState.promptText || getMainPostPromptText(campaignState);
+      const effectivePromptNumRecords = campaignState.promptNumRecords || 1;
+
+      if (!effectivePromptText?.trim()) {
         toast.error('Por favor, forneça uma descrição do conteúdo para gerar com IA.');
         return;
       }
