@@ -829,6 +829,7 @@ const Publisher = React.memo(({
             targetType: selectedTarget.type,
             images: imageUrns,
             video: videoUrn,
+            title: campaignContent?.titulo || 'Vídeo',
         };
 
         const result = await publishToLinkedIn(campaignData, settings?.linkedin);
