@@ -454,10 +454,10 @@ export async function handleRunScheduler(response) {
           }
         } // end if images
 
-        // If video present (payload.videoUrl OR payload.video)
+        // If video present (payload.videoUrl OR payload.video OR payload.content.videoUrl OR payload.content.video)
         let videoUrn = null;
-        if (payload.videoUrl || payload.video) {
-          const videoRef = payload.videoUrl || payload.video;
+        const videoRef = payload.videoUrl || payload.video || (payload.content && (payload.content.videoUrl || payload.content.video));
+        if (videoRef) {
           let videoUrl = typeof videoRef === 'string' ? videoRef : (videoRef.url || videoRef.src);
           if (videoUrl) {
             try {
@@ -469,7 +469,7 @@ export async function handleRunScheduler(response) {
               console.log(`[Cron LinkedIn UploadVideo] Upload complete, videoUrn: ${videoUrn}`);
             } catch (err) {
               console.error(`[Cron LinkedIn UploadVideo] Video upload failed for post ${postId}:`, err);
-              // fallback: proceed without video
+              throw new Error(`Falha no upload do vídeo agendado: ${err.message || err}`);
             }
           }
         }
@@ -489,10 +489,11 @@ export async function handleRunScheduler(response) {
         };
 
         if (videoUrn) {
+          const videoTitle = (payload.title || payload.videoTitle || (payload.content && (payload.content.titulo || payload.content.title)) || '').trim() || 'Video Post';
           postPayload.content = {
             media: {
               id: videoUrn,
-              title: payload.title || payload.videoTitle || 'Video Post'
+              title: videoTitle
             }
           };
         } else if (uploadedUrns.length === 1) {

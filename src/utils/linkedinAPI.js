@@ -207,7 +207,8 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
     const initializeResponse = await api._proxyFetch('initializeVideoUpload', {
         payload: { "initializeUploadRequest": { "owner": authorUrn, "fileSizeBytes": videoBlob.size } }
     });
-    const { video: videoUrn, uploadInstructions, mediaArtifact } = initializeResponse;
+    const videoUrn = initializeResponse.video || initializeResponse.value?.video || initializeResponse.asset || initializeResponse.value?.asset;
+    const uploadInstructions = initializeResponse.uploadInstructions || initializeResponse.value?.uploadInstructions;
     if (!videoUrn || !uploadInstructions || uploadInstructions.length === 0) {
         throw new Error('A resposta de inicialização do upload de vídeo é inválida.');
     }
@@ -260,6 +261,9 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
         const statusResponse = await api._proxyFetch('checkVideoStatus', { videoUrn });
         videoStatus = statusResponse.status;
         attempts++;
+        if (videoStatus === 'PROCESSING_FAILED' || videoStatus === 'FAILED') {
+            throw new Error(`Processamento do vídeo falhou no LinkedIn (Status: ${videoStatus}).`);
+        }
         setStatus(`Processando vídeo no LinkedIn... (${videoStatus} - ${attempts}/${maxAttempts})`);
     }
 
