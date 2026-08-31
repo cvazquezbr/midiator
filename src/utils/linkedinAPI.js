@@ -17,20 +17,26 @@ class LinkedInAPI {
       }),
     });
 
+    const responseText = await response.text();
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (e) {
+      data = { raw: responseText };
+    }
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
-      let errorMessage = errorData.message || errorData.error || response.statusText;
-      if (errorData.details) {
-        errorMessage += ` | Details: ${errorData.details}`;
+      let errorMessage = data.message || data.error || response.statusText;
+      if (data.details) {
+        errorMessage += ` | Details: ${data.details}`;
       }
-      if (errorData.stack) {
-        // For debugging, we can log the stack to the console
-        console.error("LinkedIn Proxy Error Stack:", errorData.stack);
+      if (data.stack) {
+        console.error("LinkedIn Proxy Error Stack:", data.stack);
       }
       throw new Error(`LinkedIn Proxy Error for action '${action}': ${errorMessage}`);
     }
 
-    return response.json();
+    return data;
   }
 
   async getAdministeredPages() {

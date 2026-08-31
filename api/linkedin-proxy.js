@@ -329,7 +329,7 @@ async function handleFinalizeVideoUpload(request, response) {
     const { accessToken, payload } = request.body;
     const url = 'https://api.linkedin.com/rest/videos?action=finalizeUpload';
     const result = await fetchLinkedInWithFallback(url, accessToken, { method: 'POST', body: JSON.stringify(payload) });
-    if (result.ok) return response.status(result.status).send();
+    if (result.ok) return response.status(result.status).json({ success: true });
     return response.status(result.status).json({ error: result.error });
 }
 
