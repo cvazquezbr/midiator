@@ -518,7 +518,17 @@ const mainHandler = async (request, response) => {
 
     if (process.env.INTERNAL_API_SECRET && request.headers['x-internal-secret'] === process.env.INTERNAL_API_SECRET) {
         const { action } = body;
-        if (['uploadImage', 'uploadAndCheckImage', 'createPost', 'getShareStatistics', 'getMemberPostStatistics'].includes(action)) {
+        if ([
+            'uploadImage',
+            'uploadAndCheckImage',
+            'createPost',
+            'getShareStatistics',
+            'getMemberPostStatistics',
+            'initializeVideoUpload',
+            'uploadVideo',
+            'finalizeVideoUpload',
+            'checkVideoStatus'
+        ].includes(action)) {
             return protectedHandler(request, response);
         }
         if (action === 'refreshTokenInternal') return handleRefreshToken(request, response);
