@@ -76,14 +76,17 @@ async function uploadImageViaProxy(accessToken, authorUrn, imageBase64, imageTyp
 }
 
 // Initialize video upload via proxy, then upload binary and return video URN.
-async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoType) {
+async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoType, videoSize) {
   console.log('[Cron LinkedIn UploadVideo] initializing upload for author:', authorUrn);
   // Step 1: initialize upload via proxy
   const initBody = {
     action: 'initializeVideoUpload',
     accessToken,
     payload: {
-      initializeUploadRequest: { owner: authorUrn }
+      initializeUploadRequest: {
+        owner: authorUrn,
+        ...(videoSize ? { fileSizeBytes: videoSize } : {})
+      }
     }
   };
 
@@ -465,7 +468,7 @@ export async function handleRunScheduler(response) {
               const { base64, mimeType, size } = await downloadToBase64(videoUrl);
               console.log(`[Cron LinkedIn UploadVideo] Downloaded video (${size} bytes, ${mimeType})`);
               // Upload video via proxy (initialize + upload)
-              videoUrn = await uploadVideoViaProxy(accessToken, authorUrn, base64, mimeType);
+              videoUrn = await uploadVideoViaProxy(accessToken, authorUrn, base64, mimeType, size);
               console.log(`[Cron LinkedIn UploadVideo] Upload complete, videoUrn: ${videoUrn}`);
             } catch (err) {
               console.error(`[Cron LinkedIn UploadVideo] Video upload failed for post ${postId}:`, err);
