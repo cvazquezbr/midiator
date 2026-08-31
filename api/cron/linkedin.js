@@ -106,7 +106,11 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
 
   // Extract uploadUrl
   let uploadUrl = null;
-  if (initData.value && initData.value.uploadMechanism &&
+  if (Array.isArray(initData.uploadInstructions) && initData.uploadInstructions.length > 0) {
+    uploadUrl = initData.uploadInstructions[0].uploadUrl;
+  } else if (Array.isArray(initData.value?.uploadInstructions) && initData.value.uploadInstructions.length > 0) {
+    uploadUrl = initData.value.uploadInstructions[0].uploadUrl;
+  } else if (initData.value && initData.value.uploadMechanism &&
       initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] &&
       initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl) {
     uploadUrl = initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
@@ -147,10 +151,14 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
     throw new Error('[Cron LinkedIn UploadVideo] upload failed: ' + uploadText);
   }
 
-  // After upload, the video URN may be in initData.value.asset or returned separately.
+  // After upload, the video URN may be in initData.video, initData.value.video, initData.value.asset, or returned separately.
   // Try to derive video URN:
   let videoUrn = null;
-  if (initData.value && initData.value.asset) {
+  if (initData.video) {
+    videoUrn = initData.video;
+  } else if (initData.value && initData.value.video) {
+    videoUrn = initData.value.video;
+  } else if (initData.value && initData.value.asset) {
     videoUrn = initData.value.asset;
   } else if (initData.asset) {
     videoUrn = initData.asset;
