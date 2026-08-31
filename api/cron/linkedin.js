@@ -101,47 +101,79 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBuffer, videoTyp
     throw new Error('[Cron LinkedIn UploadVideo] initialize failed: ' + initText);
   }
 
-  // Extract uploadUrl
-  let uploadUrl = null;
-  if (Array.isArray(initData.uploadInstructions) && initData.uploadInstructions.length > 0) {
-    uploadUrl = initData.uploadInstructions[0].uploadUrl;
-  } else if (Array.isArray(initData.value?.uploadInstructions) && initData.value.uploadInstructions.length > 0) {
-    uploadUrl = initData.value.uploadInstructions[0].uploadUrl;
-  } else if (initData.value && initData.value.uploadMechanism &&
-      initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] &&
-      initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl) {
-    uploadUrl = initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
-  } else if (initData.uploadUrl) {
-    uploadUrl = initData.uploadUrl;
-  } else if (initData.value && initData.value.uploadUrl) {
-    uploadUrl = initData.value.uploadUrl;
-  }
+  // Extract upload instructions
+  const instructions = initData.uploadInstructions || initData.value?.uploadInstructions || [];
+  const uploadedPartIds = [];
 
-  if (!uploadUrl) {
-    throw new Error('[Cron LinkedIn UploadVideo] uploadUrl not found in initialize response: ' + JSON.stringify(initData));
-  }
+  if (Array.isArray(instructions) && instructions.length > 0) {
+    console.log(`[Cron LinkedIn UploadVideo] Uploading ${instructions.length} part(s) to LinkedIn...`);
+    for (let i = 0; i < instructions.length; i++) {
+      const inst = instructions[i];
+      const partUrl = inst.uploadUrl;
+      const firstByte = typeof inst.firstByte === 'number' ? inst.firstByte : 0;
+      const lastByte = typeof inst.lastByte === 'number' ? inst.lastByte : videoBuffer.length - 1;
 
-  // Step 2: Upload binary directly to LinkedIn uploadUrl (bypassing Vercel proxy payload limits)
-  console.log('[Cron LinkedIn UploadVideo] uploading binary directly to uploadUrl...');
-  const uploadRes = await fetchWithRetry(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': videoType,
-      'Content-Length': String(videoSize)
-    },
-    body: videoBuffer
-  }, 3, 2000);
+      const partBuffer = videoBuffer.subarray(firstByte, lastByte + 1);
+      console.log(`[Cron LinkedIn UploadVideo] Uploading part ${i + 1}/${instructions.length} (${partBuffer.length} bytes)...`);
 
-  if (!uploadRes.ok) {
-    const uploadText = await uploadRes.text().catch(() => '');
-    throw new Error('[Cron LinkedIn UploadVideo] upload failed: ' + uploadRes.status + ' ' + uploadText);
-  }
+      const partRes = await fetchWithRetry(partUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': videoType,
+          'Content-Length': String(partBuffer.length)
+        },
+        body: partBuffer
+      }, 3, 2000);
 
-  const rawETag = uploadRes.headers.get('ETag');
-  if (!rawETag) {
-    throw new Error('[Cron LinkedIn UploadVideo] ETag missing from LinkedIn upload response');
+      if (!partRes.ok) {
+        const partText = await partRes.text().catch(() => '');
+        throw new Error(`[Cron LinkedIn UploadVideo] upload part ${i + 1} failed: ${partRes.status} ${partText}`);
+      }
+
+      const rawETag = partRes.headers.get('ETag');
+      if (!rawETag) {
+        throw new Error(`[Cron LinkedIn UploadVideo] ETag missing for part ${i + 1}`);
+      }
+      uploadedPartIds.push(rawETag.replace(/"/g, ''));
+    }
+  } else {
+    // Single URL fallback
+    let uploadUrl = null;
+    if (initData.value && initData.value.uploadMechanism &&
+        initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] &&
+        initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl) {
+      uploadUrl = initData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+    } else if (initData.uploadUrl) {
+      uploadUrl = initData.uploadUrl;
+    } else if (initData.value && initData.value.uploadUrl) {
+      uploadUrl = initData.value.uploadUrl;
+    }
+
+    if (!uploadUrl) {
+      throw new Error('[Cron LinkedIn UploadVideo] uploadUrl not found in initialize response: ' + JSON.stringify(initData));
+    }
+
+    console.log('[Cron LinkedIn UploadVideo] Uploading single binary part to uploadUrl...');
+    const uploadRes = await fetchWithRetry(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': videoType,
+        'Content-Length': String(videoSize)
+      },
+      body: videoBuffer
+    }, 3, 2000);
+
+    if (!uploadRes.ok) {
+      const uploadText = await uploadRes.text().catch(() => '');
+      throw new Error('[Cron LinkedIn UploadVideo] upload failed: ' + uploadRes.status + ' ' + uploadText);
+    }
+
+    const rawETag = uploadRes.headers.get('ETag');
+    if (!rawETag) {
+      throw new Error('[Cron LinkedIn UploadVideo] ETag missing from LinkedIn upload response');
+    }
+    uploadedPartIds.push(rawETag.replace(/"/g, ''));
   }
-  const eTag = rawETag.replace(/"/g, '');
 
   // After upload, the video URN may be in initData.video, initData.value.video, initData.value.asset, or returned separately.
   // Try to derive video URN:
@@ -171,7 +203,7 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBuffer, videoTyp
       finalizeUploadRequest: {
         video: videoUrn,
         uploadToken: "",
-        uploadedPartIds: [eTag]
+        uploadedPartIds
       }
     }
   };
