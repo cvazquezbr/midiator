@@ -88,14 +88,25 @@ async function handleCreateSchedule(request, response) {
 async function handleGetSchedules(request, response) {
     try {
         const userId = request.user.sub;
-        // Also get campaign data to have access to images
+        // Optimization: Do NOT load the heavy c.campaign_data for listing schedules.
+        // Post images and thumbnails are already stored in ls.post_content -> images/video.
         const { rows } = await query(
             `SELECT
-                ls.*,
-                c.campaign_data,
+                ls.id,
+                ls.user_id,
+                ls.campaign_id,
+                ls.parent_id,
+                ls.scheduled_at,
+                ls.user_selected_time,
+                ls.post_content,
+                ls.status,
+                ls.error_message,
+                ls.linkedin_post_url,
+                ls.linkedin_post_id,
+                ls.notification_email,
+                ls.created_at,
                 ps.linkedin_post_url AS parent_post_url
              FROM linkedin_schedules ls
-             LEFT JOIN campaigns c ON ls.campaign_id = c.id
              LEFT JOIN linkedin_schedules ps ON ls.parent_id = ps.id
              WHERE ls.user_id = $1
              ORDER BY ls.scheduled_at DESC`,
