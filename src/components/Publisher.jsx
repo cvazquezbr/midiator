@@ -254,33 +254,13 @@ const Publisher = React.memo(({
     setIsLoadingSchedules(true);
     try {
       const schedules = await getSchedulesForUser();
-      const allNewlyCreatedAssets = {};
-
-      const hydrationPromises = schedules.map(async (schedule) => {
-        if (schedule.campaign_data) {
-          try {
-            // deserializeCampaignData now directly returns the assets
-            const { finalState, newlyCreatedAssets } = await deserializeCampaignData(schedule.campaign_data);
-            if (newlyCreatedAssets) {
-              Object.assign(allNewlyCreatedAssets, newlyCreatedAssets);
-            }
-            return { ...schedule, campaign_data: finalState };
-          } catch (e) {
-            console.error(`Failed to hydrate schedule ${schedule.id}`, e);
-            return schedule;
-          }
-        }
-        return schedule;
-      });
-
-      const hydratedSchedules = await Promise.all(hydrationPromises);
-      const parsedSchedules = hydratedSchedules.map(s => ({
+      const parsedSchedules = schedules.map(s => ({
         ...s,
         post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
       }));
       parsedSchedules.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-      return { schedules: parsedSchedules, assets: allNewlyCreatedAssets };
+      return { schedules: parsedSchedules, assets: {} };
     } catch (error) {
       console.error("Failed to fetch user schedules:", error);
       toast.error(`Failed to fetch schedules: ${error.message}`);
