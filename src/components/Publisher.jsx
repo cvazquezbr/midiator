@@ -654,6 +654,19 @@ const Publisher = React.memo(({
       mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
       const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
       const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
+      const selectedVideoIndexes = Object.keys(selectedVideos).filter(index => selectedVideos[index]);
+
+      let permanentVideoUrl = null;
+      if (selectedVideoIndexes.length > 0) {
+        const videoIndex = parseInt(selectedVideoIndexes[0]);
+        const videoData = generatedVideos[videoIndex];
+        const videoUrl = videoData?.url;
+        if (videoUrl) {
+          const videoUrlMap = await uploadPendingAssets([videoUrl]);
+          permanentVideoUrl = videoUrlMap[videoUrl] || videoUrl;
+        }
+      }
+
       const blobImageUrls = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].url);
 
       // Upload images with blob URLs and get their permanent URLs
@@ -671,8 +684,10 @@ const Publisher = React.memo(({
             // Adiciona CTA e Hashtags para consistência com follow-ups
             cta: campaignContent?.cta || '',
             hashtags: campaignContent?.hashtags || [],
-            // Mantém as imagens associadas.
+            // Mantém as imagens e vídeo associados.
             images: permanentImageUrls,
+            videoUrl: permanentVideoUrl,
+            video: permanentVideoUrl,
             // Mantém o título para exibição na lista de agendamentos.
             titulo: campaignContent?.titulo || 'Post Agendado',
         },
@@ -754,11 +769,19 @@ const Publisher = React.memo(({
         if (selectedVideoIndexes.length > 0) {
             const videoIndex = parseInt(selectedVideoIndexes[0]);
             const videoData = generatedVideos[videoIndex];
-            let videoBlob = videoData.blob;
+            let videoBlob = videoData ? videoData.blob : null;
 
-            // If blob is not directly on the object, try to find it in the pendingAssets map.
-            if (!videoBlob && videoData.url && pendingAssets) {
-              videoBlob = pendingAssets[videoData.url];
+            // If blob is not directly on the object, try to find it in the pendingAssets map or fetch via URL
+            if (!videoBlob && videoData && videoData.url) {
+              if (pendingAssets && pendingAssets[videoData.url]) {
+                videoBlob = pendingAssets[videoData.url];
+              } else {
+                try {
+                  videoBlob = await urlToBlob(videoData.url);
+                } catch (e) {
+                  console.error("Failed to fetch video blob from URL:", e);
+                }
+              }
             }
 
             if (!videoBlob) {
@@ -823,13 +846,14 @@ const Publisher = React.memo(({
 
         finalContent = commentaryParts.join('\n----\n');
 
+        const videoTitle = (campaignContent?.titulo || '').trim() || 'Vídeo';
         const campaignData = {
             content: finalContent,
             targetId: selectedTarget.id,
             targetType: selectedTarget.type,
             images: imageUrns,
             video: videoUrn,
-            title: campaignContent?.titulo || 'Vídeo',
+            title: videoTitle,
         };
 
         const result = await publishToLinkedIn(campaignData, settings?.linkedin);
