@@ -57,7 +57,7 @@ class LinkedInAPI {
     return personal;
   }
 
-  async publishPost(content, targetId, targetType = 'person', images = [], video = null) {
+  async publishPost(content, targetId, targetType = 'person', images = [], video = null, title = 'Vídeo') {
     const authorUrn = `urn:li:${targetType}:${targetId}`;
 
     const payload = {
@@ -74,7 +74,7 @@ class LinkedInAPI {
     };
 
     if (video) {
-        payload.content = { media: { id: video } };
+        payload.content = { media: { id: video, title: title || 'Vídeo' } };
     } else if (images && images.length > 0) {
         if (images.length === 1) {
             payload.content = { media: { id: images[0] } };
@@ -167,11 +167,11 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
         throw new Error('Campaign data, content, and targetId are required for publishing.');
     }
 
-    const { content, targetId, targetType, images, video } = campaignData;
+    const { content, targetId, targetType, images, video, title } = campaignData;
 
     const api = new LinkedInAPI(linkedinConfig.accessToken);
     // A lógica de construção do payload agora está centralizada no método publishPost.
-    const result = await api.publishPost(content, targetId, targetType, images, video);
+    const result = await api.publishPost(content, targetId, targetType, images, video, title);
 
     console.log('Post created successfully on LinkedIn!', result);
     return result;
@@ -254,21 +254,20 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
     setStatus('Aguardando processamento do vídeo pelo LinkedIn...');
     let videoStatus = '';
     let attempts = 0;
-    const maxAttempts = 20; // Poll for 2 minutes max (20 * 6s = 120s)
+    const maxAttempts = 40; // Poll for 4 minutes max (40 * 6s = 240s)
     while (videoStatus !== 'AVAILABLE' && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 6000)); // Wait 6 seconds
         const statusResponse = await api._proxyFetch('checkVideoStatus', { videoUrn });
         videoStatus = statusResponse.status;
         attempts++;
-        setStatus(`Verificando status do vídeo... (${videoStatus})`);
+        setStatus(`Processando vídeo no LinkedIn... (${videoStatus} - ${attempts}/${maxAttempts})`);
     }
 
     if (videoStatus !== 'AVAILABLE') {
-        console.warn(`[LinkedIn API UploadVideo] Video ${videoUrn} not AVAILABLE after ${maxAttempts} attempts. Status: ${videoStatus}. Proceeding with publication.`);
-        setStatus(`Vídeo em processamento pelo LinkedIn (${videoStatus}). Prosseguindo com a publicação...`);
-    } else {
-        setStatus('Vídeo pronto para publicação!');
+        throw new Error(`O vídeo ainda está em processamento pelo LinkedIn (Status: ${videoStatus}). Aguarde alguns instantes e tente publicar novamente.`);
     }
+
+    setStatus('Vídeo pronto para publicação!');
     return videoUrn;
 };
 
