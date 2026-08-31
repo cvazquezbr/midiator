@@ -22,21 +22,15 @@ async function fetchWithRetry(url, opts = {}, retries = 4, backoff = 1000) {
   }
 }
 
-// Download a remote URL and return { base64, mimeType, size }
-async function downloadToBase64(url) {
+// Download a remote URL and return { base64, buffer, mimeType, size }
+async function downloadMedia(url) {
   const res = await fetchWithRetry(url, { method: 'GET' }, 3, 500);
   if (!res.ok) throw new Error(`Failed to download ${url}: ${res.status}`);
   const contentType = res.headers.get('content-type') || 'application/octet-stream';
-  const buffer = await res.arrayBuffer();
-  const uint8 = new Uint8Array(buffer);
-  // Convert to base64
-  let binary = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < uint8.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunk));
-  }
-  const base64 = Buffer.from(binary, 'binary').toString('base64');
-  return { base64, mimeType: contentType, size: uint8.length };
+  const arrayBuffer = await res.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const base64 = buffer.toString('base64');
+  return { base64, buffer, mimeType: contentType, size: buffer.length };
 }
 
 // Upload image via proxy (uploadAndCheckImage). Returns assetUrn.
@@ -75,8 +69,8 @@ async function uploadImageViaProxy(accessToken, authorUrn, imageBase64, imageTyp
   throw new Error('[Cron LinkedIn UploadImage] assetUrn not found in proxy response: ' + JSON.stringify(data));
 }
 
-// Initialize video upload via proxy, then upload binary and return video URN.
-async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoType, videoSize) {
+// Initialize video upload via proxy, then upload binary directly to uploadUrl and return video URN.
+async function uploadVideoViaProxy(accessToken, authorUrn, videoBuffer, videoType, videoSize) {
   console.log('[Cron LinkedIn UploadVideo] initializing upload for author:', authorUrn);
   // Step 1: initialize upload via proxy
   const initBody = {
@@ -127,32 +121,27 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
     throw new Error('[Cron LinkedIn UploadVideo] uploadUrl not found in initialize response: ' + JSON.stringify(initData));
   }
 
-  // Step 2: upload binary via proxy action uploadVideo (proxy will PUT to uploadUrl)
-  console.log('[Cron LinkedIn UploadVideo] uploading binary to uploadUrl...');
-  const uploadBody = {
-    action: 'uploadVideo',
-    // pass uploadUrl and binary + mime type
-    uploadUrl,
-    videoBase64,
-    videoContentType: videoType
-  };
-
-  const uploadRes = await fetchWithRetry(`${PROXY_BASE}/api/linkedin-proxy`, {
-    method: 'POST',
+  // Step 2: Upload binary directly to LinkedIn uploadUrl (bypassing Vercel proxy payload limits)
+  console.log('[Cron LinkedIn UploadVideo] uploading binary directly to uploadUrl...');
+  const uploadRes = await fetchWithRetry(uploadUrl, {
+    method: 'PUT',
     headers: {
-      'Content-Type': 'application/json',
-      'x-internal-secret': INTERNAL_API_SECRET
+      'Content-Type': videoType,
+      'Content-Length': String(videoSize)
     },
-    body: JSON.stringify(uploadBody)
+    body: videoBuffer
   }, 3, 2000);
 
-  const uploadText = await uploadRes.text().catch(() => '');
-  let uploadData;
-  try { uploadData = uploadText ? JSON.parse(uploadText) : {}; } catch (e) { uploadData = { raw: uploadText }; }
-
   if (!uploadRes.ok) {
-    throw new Error('[Cron LinkedIn UploadVideo] upload failed: ' + uploadText);
+    const uploadText = await uploadRes.text().catch(() => '');
+    throw new Error('[Cron LinkedIn UploadVideo] upload failed: ' + uploadRes.status + ' ' + uploadText);
   }
+
+  const rawETag = uploadRes.headers.get('ETag');
+  if (!rawETag) {
+    throw new Error('[Cron LinkedIn UploadVideo] ETag missing from LinkedIn upload response');
+  }
+  const eTag = rawETag.replace(/"/g, '');
 
   // After upload, the video URN may be in initData.video, initData.value.video, initData.value.asset, or returned separately.
   // Try to derive video URN:
@@ -182,7 +171,7 @@ async function uploadVideoViaProxy(accessToken, authorUrn, videoBase64, videoTyp
       finalizeUploadRequest: {
         video: videoUrn,
         uploadToken: "",
-        uploadedPartIds: [uploadData.eTag]
+        uploadedPartIds: [eTag]
       }
     }
   };
@@ -431,7 +420,7 @@ export async function handleRunScheduler(response) {
 
             // Download image and convert to base64
             try {
-              const { base64, mimeType, size } = await downloadToBase64(imgUrl);
+              const { base64, mimeType, size } = await downloadMedia(imgUrl);
               console.log(`[Cron LinkedIn UploadImage] Downloaded ${imgUrl} (${size} bytes, ${mimeType})`);
               // Upload via proxy to LinkedIn and get assetUrn
               const assetUrn = await uploadImageViaProxy(accessToken, authorUrn, base64, mimeType);
@@ -465,10 +454,10 @@ export async function handleRunScheduler(response) {
           if (videoUrl) {
             try {
               console.log(`[Cron LinkedIn UploadVideo] Downloading video for post ${postId}...`);
-              const { base64, mimeType, size } = await downloadToBase64(videoUrl);
+              const { buffer, mimeType, size } = await downloadMedia(videoUrl);
               console.log(`[Cron LinkedIn UploadVideo] Downloaded video (${size} bytes, ${mimeType})`);
-              // Upload video via proxy (initialize + upload)
-              videoUrn = await uploadVideoViaProxy(accessToken, authorUrn, base64, mimeType, size);
+              // Upload video directly to uploadUrl (initialize via proxy, PUT directly, finalize via proxy)
+              videoUrn = await uploadVideoViaProxy(accessToken, authorUrn, buffer, mimeType, size);
               console.log(`[Cron LinkedIn UploadVideo] Upload complete, videoUrn: ${videoUrn}`);
             } catch (err) {
               console.error(`[Cron LinkedIn UploadVideo] Video upload failed for post ${postId}:`, err);
