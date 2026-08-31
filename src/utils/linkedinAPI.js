@@ -264,10 +264,11 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
     }
 
     if (videoStatus !== 'AVAILABLE') {
-        throw new Error(`O vídeo não ficou disponível a tempo. Status final: ${videoStatus}`);
+        console.warn(`[LinkedIn API UploadVideo] Video ${videoUrn} not AVAILABLE after ${maxAttempts} attempts. Status: ${videoStatus}. Proceeding with publication.`);
+        setStatus(`Vídeo em processamento pelo LinkedIn (${videoStatus}). Prosseguindo com a publicação...`);
+    } else {
+        setStatus('Vídeo pronto para publicação!');
     }
-
-    setStatus('Vídeo pronto para publicação!');
     return videoUrn;
 };
 
