@@ -28,11 +28,13 @@ export const SettingsProvider = ({ children }) => {
   const [errorModels, setErrorModels] = useState(null);
   const { user } = useUserAuth();
 
+  const isFetchingModelsRef = useRef(false);
+
   const fetchModels = useCallback(async () => {
+    if (isFetchingModelsRef.current) return;
+    isFetchingModelsRef.current = true;
     setLoadingModels(true);
     setErrorModels(null);
-    setModels([]);
-    setImageModels([]);
 
     try {
       const headers = {};
@@ -70,8 +72,9 @@ export const SettingsProvider = ({ children }) => {
       console.error(e);
     } finally {
       setLoadingModels(false);
+      isFetchingModelsRef.current = false;
     }
-  }, []);
+  }, [settings.gemini_api_key]);
 
   const loadSettings = useCallback(async () => {
     if (!user) {
@@ -92,9 +95,6 @@ export const SettingsProvider = ({ children }) => {
       console.log('[SettingsContext] Merged Settings keys:', Object.keys(mergedSettings));
 
       setSettings(mergedSettings);
-      if (dbSettings.gemini_api_key) {
-        fetchModels();
-      }
     } catch (error) {
        if (!error.message.includes('Failed to load settings')) {
           toast.error(`Failed to load settings: ${error.message}`);
@@ -102,7 +102,7 @@ export const SettingsProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, fetchModels]);
+  }, [user]);
 
   useEffect(() => {
     loadSettings();
@@ -116,14 +116,9 @@ export const SettingsProvider = ({ children }) => {
       // Update localStorage in real-time
       applySettings({ [key]: value });
 
-      // Se a chave da API Gemini for atualizada e tiver um valor,
-      // busca os modelos imediatamente.
-      if (key === 'gemini_api_key' && value) {
-        fetchModels();
-      }
       return newSettings;
     });
-  }, [fetchModels]);
+  }, []);
 
   const saveSettings = useCallback(async () => {
     setIsSaving(true);
@@ -131,16 +126,13 @@ export const SettingsProvider = ({ children }) => {
       await saveSettingsToDb(settings);
       applySettings(settings); // Propagate all settings to localStorage after successful save
       toast.success('Settings saved successfully!');
-      if (settings.gemini_api_key) {
-        fetchModels();
-      }
     } catch (error) {
       toast.error(`Failed to save settings: ${error.message}`);
       throw error;
     } finally {
       setIsSaving(false);
     }
-  }, [settings, fetchModels]);
+  }, [settings]);
 
   const value = {
     settings,

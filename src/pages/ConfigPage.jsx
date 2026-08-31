@@ -26,8 +26,13 @@ const ConfigPage = () => {
         errorModels,
         settings,
         updateSetting,
-        saveSettings
+        saveSettings,
+        fetchModels
     } = useSettings();
+
+    useEffect(() => {
+        fetchModels();
+    }, [fetchModels]);
 
     const [selectedModel, setSelectedModel] = useState(settings.gemini_model || '');
     const [selectedImageModel, setSelectedImageModel] = useState(settings.gemini_image_model || '');

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import geminiAPI from '../utils/geminiAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
@@ -8,7 +8,11 @@ import { toast } from 'sonner';
 import GeminiInfobox from './GeminiInfobox';
 
 const GeminiAuthSetup = () => {
-  const { settings, updateSetting, models, imageModels, loadingModels, errorModels } = useSettings();
+  const { settings, updateSetting, models, imageModels, loadingModels, errorModels, fetchModels } = useSettings();
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);

@@ -1,12 +1,16 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
 import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import VertexAIInfobox from './VertexAIInfobox';
 
 const VertexAIAuthSetup = () => {
-  const { settings, updateSetting, imageModels, loadingModels, errorModels } = useSettings();
+  const { settings, updateSetting, imageModels, loadingModels, errorModels, fetchModels } = useSettings();
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
