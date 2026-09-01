@@ -362,6 +362,8 @@ export async function handleRunScheduler(response) {
               url: parentRow.linkedin_post_url,
               cta: parentPostContent.cta || (parentPostContent.content && parentPostContent.content.cta) || '',
               hashtags: parentPostContent.hashtags || (parentPostContent.content && parentPostContent.content.hashtags) || [],
+              videoRef: parentPostContent.videoUrl || parentPostContent.video || (parentPostContent.content && (parentPostContent.content.videoUrl || parentPostContent.content.video)),
+              videoUrn: parentPostContent._uploadedVideoUrn || null
             };
           }
         }
@@ -479,9 +481,24 @@ export async function handleRunScheduler(response) {
         } // end if images
 
         // If video present (payload.videoUrl OR payload.video OR payload.content.videoUrl OR payload.content.video)
+        // Or if it's a follow-up post, inherit the parent post's video if no video is specified
         let videoUrn = null;
-        const videoRef = payload.videoUrl || payload.video || (payload.content && (payload.content.videoUrl || payload.content.video));
-        if (videoRef) {
+        let videoRef = payload.videoUrl || payload.video || (payload.content && (payload.content.videoUrl || payload.content.video));
+
+        if (!videoRef && row.parent_id) {
+          const parentData = parentPostData.get(row.parent_id);
+          if (parentData) {
+            if (parentData.videoUrn) {
+              videoUrn = parentData.videoUrn;
+              console.log(`[Cron LinkedIn UploadVideo] Inherited uploaded videoUrn ${videoUrn} from parent post ${row.parent_id}`);
+            } else if (parentData.videoRef) {
+              videoRef = parentData.videoRef;
+              console.log(`[Cron LinkedIn UploadVideo] Inherited videoRef from parent post ${row.parent_id}`);
+            }
+          }
+        }
+
+        if (!videoUrn && videoRef) {
           let videoUrl = typeof videoRef === 'string' ? videoRef : (videoRef.url || videoRef.src);
           if (videoUrl) {
             try {
@@ -565,6 +582,8 @@ export async function handleRunScheduler(response) {
               url: postUrl,
               cta: (payload.content && payload.content.cta) || payload.cta || '',
               hashtags: (payload.content && payload.content.hashtags) || payload.hashtags || [],
+              videoUrn: videoUrn || null,
+              videoRef: payload.videoUrl || payload.video || (payload.content && (payload.content.videoUrl || payload.content.video)) || null
             });
           }
 
