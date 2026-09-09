@@ -706,6 +706,8 @@ const Publisher = React.memo(({
               hashtags: post.hashtags_sugeridas || [],
               // Clone the array to prevent potential mutation issues across loop iterations
               images: [...permanentImageUrls],
+              videoUrl: permanentVideoUrl,
+              video: permanentVideoUrl,
             },
           };
           await createSchedule(followupPayload);

@@ -342,8 +342,9 @@ export async function handleRunScheduler(response) {
       // to selectively escape content and preserve hashtags.
       let commentary = '';
 
+      let parentData = null;
       if (row.parent_id) {
-        let parentData = parentPostData.get(row.parent_id);
+        parentData = parentPostData.get(row.parent_id);
 
         // Fallback: If parent data is not in the map (e.g., processed in a previous run), query the DB.
         if (!parentData) {
@@ -365,6 +366,7 @@ export async function handleRunScheduler(response) {
               videoRef: parentPostContent.videoUrl || parentPostContent.video || (parentPostContent.content && (parentPostContent.content.videoUrl || parentPostContent.content.video)),
               videoUrn: parentPostContent._uploadedVideoUrn || null
             };
+            parentPostData.set(row.parent_id, parentData);
           }
         }
 
@@ -485,16 +487,13 @@ export async function handleRunScheduler(response) {
         let videoUrn = null;
         let videoRef = payload.videoUrl || payload.video || (payload.content && (payload.content.videoUrl || payload.content.video));
 
-        if (!videoRef && row.parent_id) {
-          const parentData = parentPostData.get(row.parent_id);
-          if (parentData) {
-            if (parentData.videoUrn) {
-              videoUrn = parentData.videoUrn;
-              console.log(`[Cron LinkedIn UploadVideo] Inherited uploaded videoUrn ${videoUrn} from parent post ${row.parent_id}`);
-            } else if (parentData.videoRef) {
-              videoRef = parentData.videoRef;
-              console.log(`[Cron LinkedIn UploadVideo] Inherited videoRef from parent post ${row.parent_id}`);
-            }
+        if (!videoUrn && row.parent_id && parentData) {
+          if (parentData.videoUrn) {
+            videoUrn = parentData.videoUrn;
+            console.log(`[Cron LinkedIn UploadVideo] Inherited uploaded videoUrn ${videoUrn} from parent post ${row.parent_id}`);
+          } else if (parentData.videoRef) {
+            videoRef = parentData.videoRef;
+            console.log(`[Cron LinkedIn UploadVideo] Inherited videoRef from parent post ${row.parent_id}`);
           }
         }
 
@@ -585,6 +584,21 @@ export async function handleRunScheduler(response) {
               videoUrn: videoUrn || null,
               videoRef: payload.videoUrl || payload.video || (payload.content && (payload.content.videoUrl || payload.content.video)) || null
             });
+
+            if (videoUrn) {
+              try {
+                const updatedContent = {
+                  ...payload,
+                  _uploadedVideoUrn: videoUrn
+                };
+                await query(
+                  'UPDATE linkedin_schedules SET post_content = $1 WHERE id = $2',
+                  [JSON.stringify(updatedContent), postId]
+                );
+              } catch (dbErr) {
+                console.error(`[Cron LinkedIn DB] Error updating post_content with _uploadedVideoUrn for post ${postId}:`, dbErr);
+              }
+            }
           }
 
           console.log(`[Cron LinkedIn DB] Attempting to update post ${postId} to 'published' with URL...`);
